@@ -33,21 +33,33 @@ function cleanProductName(string $name): string {
     return $v !== '' ? $v : 'Unnamed product';
 }
 
+function clampInt($v): int {
+    $n = (int)$v;
+    return $n < 0 ? 0 : $n;
+}
+
 $criticalAlerts = [];
 $warningAlerts = [];
 $infoAlerts = [];
 $errorText = '';
 $inventoryAgentId = 0;
+$revenueAgentId = 0;
+$productAgentId = 0;
 
 try {
     $mysqli = db();
     $shopName = makeShopName($shop);
     $ordersTable = perStoreTableName($shopName, 'order');
     $inventoryTable = perStoreTableName($shopName, 'products_inventory');
-    $agentRes = $mysqli->query("SELECT id FROM ai_agents WHERE agent_key = 'inventory' LIMIT 1");
+    $agentRes = $mysqli->query("SELECT id, agent_key FROM ai_agents WHERE agent_key IN ('inventory','revenue','product')");
     if ($agentRes) {
-        $ar = $agentRes->fetch_assoc();
-        $inventoryAgentId = (int)($ar['id'] ?? 0);
+        while ($ar = $agentRes->fetch_assoc()) {
+            $key = (string)($ar['agent_key'] ?? '');
+            $id = (int)($ar['id'] ?? 0);
+            if ($key === 'inventory') $inventoryAgentId = $id;
+            if ($key === 'revenue') $revenueAgentId = $id;
+            if ($key === 'product') $productAgentId = $id;
+        }
     }
 
     $tz = (string)($shopRecord['iana_timezone'] ?? 'UTC');
@@ -96,6 +108,7 @@ try {
             $criticalAlerts[] = [
                 'title' => '🚨 Revenue dropped by ' . round($dropPct) . '% this week',
                 'meta' => 'Previous 7 days: ' . money($prevTotal) . ' · Last 7 days: ' . money($curTotal),
+                'details_url_key' => 'revenue',
             ];
         }
     }
@@ -110,7 +123,7 @@ try {
                 $title = cleanProductName((string)($r['sku'] ?? ''));
             }
             if ($title === 'Unnamed product') continue;
-            $inventory[$title] = (int)($r['inventory_quantity'] ?? 0);
+            $inventory[$title] = clampInt($r['inventory_quantity'] ?? 0);
         }
     }
 
@@ -163,7 +176,7 @@ try {
             $criticalAlerts[] = [
                 'title' => '🚨 Bestseller running low on stock',
                 'meta' => cleanProductName((string)$title) . ' has only ' . $invQty . ' units left. Restock soon to avoid lost sales.',
-                'type' => 'inventory',
+                'details_url_key' => 'inventory',
             ];
             break; // single concise alert
         }
@@ -183,7 +196,7 @@ try {
         $warningAlerts[] = [
             'title' => '⚠️ ' . count($stopped) . ' products stopped selling',
             'list' => array_map(fn($x) => (string)$x['title'], $topStopped),
-            'type' => 'inventory',
+            'details_url_key' => 'product',
         ];
     }
 
@@ -199,7 +212,7 @@ try {
         $warningAlerts[] = [
             'title' => '⚠️ Low stock products',
             'list' => array_map(fn($x) => cleanProductName((string)$x['title']) . ' - only ' . (int)$x['qty'] . ' left', array_slice($lowStock, 0, 5)),
-            'type' => 'inventory',
+            'details_url_key' => 'inventory',
         ];
     }
 
@@ -213,8 +226,8 @@ try {
     if (!empty($dead)) {
         $warningAlerts[] = [
             'title' => '⚠️ Dead stock identified',
-            'meta' => count($dead) . ' products have stock but no sales in 30 days',
-            'type' => 'inventory',
+            'meta' => count($dead) . ' products have inventory but no sales in last 30 days.',
+            'details_url_key' => 'inventory',
         ];
     }
 
@@ -230,8 +243,8 @@ try {
         usort($slow, fn($a, $b) => ((float)$a['v']) <=> ((float)$b['v']));
         $warningAlerts[] = [
             'title' => '⚠️ Slow-moving products',
-            'meta' => count($slow) . ' products have low sales velocity',
-            'type' => 'inventory',
+            'meta' => count($slow) . ' products have low sales velocity.',
+            'details_url_key' => 'inventory',
         ];
     }
 } catch (Throwable $e) {
@@ -268,9 +281,15 @@ try {
     <?php endif; ?>
 
     <?php
-      $inventoryDetailsUrl = $inventoryAgentId > 0
-        ? (BASE_URL . '/agent-report.php?agent_id=' . $inventoryAgentId . '&shop=' . urlencode($shop) . ($host !== '' ? '&host=' . urlencode($host) : ''))
-        : '#';
+      function agentReportUrl(int $agentId, string $shop, string $host): string {
+          if ($agentId <= 0) return '#';
+          $url = BASE_URL . '/agent-report.php?agent_id=' . $agentId . '&shop=' . urlencode($shop);
+          if ($host !== '') $url .= '&host=' . urlencode($host);
+          return $url;
+      }
+      $inventoryDetailsUrl = agentReportUrl($inventoryAgentId, $shop, $host);
+      $revenueDetailsUrl = agentReportUrl($revenueAgentId, $shop, $host);
+      $productDetailsUrl = agentReportUrl($productAgentId, $shop, $host);
     ?>
 
     <?php if (!empty($criticalAlerts)): ?>
@@ -279,11 +298,18 @@ try {
         <div class="hero-subtitle" style="margin-bottom:10px;">Serious issues. Immediate action needed.</div>
         <div class="alerts-grid">
           <?php foreach ($criticalAlerts as $alert): ?>
+            <?php
+              $detailsUrl = $inventoryDetailsUrl;
+              $key = (string)($alert['details_url_key'] ?? '');
+              if ($key === 'revenue') $detailsUrl = $revenueDetailsUrl;
+              if ($key === 'inventory') $detailsUrl = $inventoryDetailsUrl;
+              if ($key === 'product') $detailsUrl = $productDetailsUrl;
+            ?>
             <div class="card alert-card alert-card-critical">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Alert')); ?></div>
               <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
               <div style="margin-top:12px;">
-                <a class="btn btn-primary" href="<?php echo e($inventoryDetailsUrl); ?>">View Details</a>
+                <a class="btn btn-primary" href="<?php echo e($detailsUrl); ?>">View Details</a>
               </div>
             </div>
           <?php endforeach; ?>
@@ -297,6 +323,13 @@ try {
         <div class="hero-subtitle" style="margin-bottom:10px;">Needs attention. Not urgent.</div>
         <div class="alerts-grid">
           <?php foreach ($warningAlerts as $alert): ?>
+            <?php
+              $detailsUrl = $inventoryDetailsUrl;
+              $key = (string)($alert['details_url_key'] ?? '');
+              if ($key === 'revenue') $detailsUrl = $revenueDetailsUrl;
+              if ($key === 'inventory') $detailsUrl = $inventoryDetailsUrl;
+              if ($key === 'product') $detailsUrl = $productDetailsUrl;
+            ?>
             <div class="card alert-card alert-card-warning">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Warning')); ?></div>
               <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
@@ -308,7 +341,7 @@ try {
                 </ul>
               <?php endif; ?>
               <div style="margin-top:12px;">
-                <a class="btn btn-primary" href="<?php echo e($inventoryDetailsUrl); ?>">View Details</a>
+                <a class="btn btn-primary" href="<?php echo e($detailsUrl); ?>">View Details</a>
               </div>
             </div>
           <?php endforeach; ?>
@@ -321,11 +354,18 @@ try {
         <div class="section-title">🔵 Info</div>
         <div class="alerts-grid">
           <?php foreach ($infoAlerts as $alert): ?>
+            <?php
+              $detailsUrl = $inventoryDetailsUrl;
+              $key = (string)($alert['details_url_key'] ?? '');
+              if ($key === 'revenue') $detailsUrl = $revenueDetailsUrl;
+              if ($key === 'inventory') $detailsUrl = $inventoryDetailsUrl;
+              if ($key === 'product') $detailsUrl = $productDetailsUrl;
+            ?>
             <div class="card alert-card alert-card-info">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Insight')); ?></div>
               <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
               <div style="margin-top:12px;">
-                <a class="btn btn-primary" href="<?php echo e($inventoryDetailsUrl); ?>">View Details</a>
+                <a class="btn btn-primary" href="<?php echo e($detailsUrl); ?>">View Details</a>
               </div>
             </div>
           <?php endforeach; ?>
