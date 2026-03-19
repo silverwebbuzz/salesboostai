@@ -1,25 +1,17 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/metrics.php';
-
-sendEmbeddedAppHeaders();
-
-$shop = sanitizeShopDomain($_GET['shop'] ?? null);
-$host = $_GET['host'] ?? '';
 $agentId = isset($_GET['agent_id']) ? (int)$_GET['agent_id'] : 0;
 $demoMode = (isset($_GET['demo']) && (string)$_GET['demo'] === '1');
 
-if ($shop === null || $agentId <= 0) {
+if ($agentId <= 0) {
     http_response_code(400);
     echo 'Missing or invalid shop/agent_id parameter.';
     exit;
 }
 
-$shopRecord = getShopByDomain($shop);
-if (!$shopRecord) {
-    header('Location: ' . BASE_URL . '/auth/install?shop=' . urlencode($shop) . ($host ? '&host=' . urlencode($host) : ''));
-    exit;
-}
+require_once __DIR__ . '/lib/embedded_bootstrap.php';
+[$shop, $host, $shopRecord] = sbm_bootstrap_embedded(['shopInvalidMessage' => 'Missing or invalid shop/agent_id parameter.']);
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 

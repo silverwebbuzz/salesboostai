@@ -2,22 +2,8 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/metrics.php';
 
-sendEmbeddedAppHeaders();
-
-$shop = sanitizeShopDomain($_GET['shop'] ?? null);
-$host = $_GET['host'] ?? '';
-
-if ($shop === null) {
-    http_response_code(400);
-    echo 'Missing or invalid shop parameter.';
-    exit;
-}
-
-$shopRecord = getShopByDomain($shop);
-if (!$shopRecord) {
-    header('Location: ' . BASE_URL . '/auth/install?shop=' . urlencode($shop) . ($host ? '&host=' . urlencode($host) : ''));
-    exit;
-}
+require_once __DIR__ . '/lib/embedded_bootstrap.php';
+[$shop, $host, $shopRecord] = sbm_bootstrap_embedded();
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
