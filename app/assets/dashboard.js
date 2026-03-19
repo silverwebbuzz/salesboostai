@@ -357,6 +357,14 @@ function computeStoreHealth(data) {
   else if (criticalCount >= 1) alertScore = 12;
 
   const score = clamp(Math.round(revenueScore + inventoryScore + customerScore + alertScore), 0, 100);
+  if (!Number.isFinite(score)) {
+    return {
+      score: 0,
+      status: 'Needs Attention',
+      biggestIssue: 'No health data available yet.',
+      breakdown: { revenue: 0, inventory: 0, customers: 0, alerts: 0 }
+    };
+  }
   let status = 'Critical';
   if (score >= 80) status = 'Good';
   else if (score >= 50) status = 'Needs Attention';

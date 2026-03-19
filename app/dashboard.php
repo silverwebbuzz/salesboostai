@@ -212,7 +212,7 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
     </div>
   </main>
 
-  <script src="<?php echo e(BASE_URL); ?>/assets/dashboard.js"></script>
+  <script src="<?php echo e(BASE_URL); ?>/assets/dashboard.js?v=<?php echo (int)@filemtime(__DIR__ . '/assets/dashboard.js'); ?>"></script>
 
   <script>
     // Shopify App Bridge init (no manual postMessage usage).
