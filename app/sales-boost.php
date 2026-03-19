@@ -30,11 +30,14 @@ function cleanProductTitle(string $title): string
     return $t !== '' ? $t : 'Unnamed product';
 }
 
+$infoMessage = 'Recommendations improve as more orders are placed.';
+
 $shopName = (string)($shopRecord['store_name'] ?? $shop);
 
 $errorText = '';
 $topProducts = [];
 $recommendationsByProduct = [];
+$hasAnyRecommendations = false;
 
 try {
     $mysqli = db();
@@ -77,9 +80,10 @@ try {
                 $qty = (int)($li['quantity'] ?? 0);
                 if ($qty <= 0) continue;
 
-                $title = (string)($li['title'] ?? '');
-                if (trim($title) === '') $title = (string)($li['sku'] ?? '');
-                $title = cleanProductTitle($title);
+                // Prefer common Shopify line-item product fields first.
+                $titleRaw = (string)($li['product_title'] ?? $li['name'] ?? $li['title'] ?? $li['sku'] ?? '');
+                $title = cleanProductTitle($titleRaw);
+                if ($title === 'Unnamed product') continue;
                 $uniqueSet[$title] = true;
             }
 
@@ -128,6 +132,14 @@ try {
                 $recommendationsByProduct[$a] = [];
             }
         }
+
+        // Global empty state trigger: no cross-sell suggestions available for any top product.
+        foreach ($topProducts as $productA) {
+            if (!empty($recommendationsByProduct[$productA])) {
+                $hasAnyRecommendations = true;
+                break;
+            }
+        }
     }
 
     $stmt->close();
@@ -157,6 +169,12 @@ try {
         <div class="hero-subtitle"><?php echo e($shopName); ?></div>
     </div>
 
+    <div class="section" style="margin-top:-12px;">
+        <div class="card" style="border:1px solid #e0e7ff;background:#f8fafc;">
+            <div class="hero-subtitle" style="margin:0;"><?php echo e($infoMessage); ?></div>
+        </div>
+    </div>
+
     <?php if ($errorText !== ''): ?>
         <div class="section">
             <div class="card" style="border:1px solid #fecaca;background:#fef2f2;">
@@ -168,22 +186,23 @@ try {
     <div class="section">
         <div class="section-title">Top product recommendations</div>
 
-        <?php if (empty($topProducts)): ?>
+        <?php if (empty($topProducts) || !$hasAnyRecommendations): ?>
             <div class="card report-empty">
-                <div class="section-title">Not enough order data yet</div>
-                <div class="sb-muted">Once you have more orders, recommendations will appear here.</div>
+                <div class="section-title" style="margin-bottom:6px;">No recommendations available yet</div>
+                <div class="sb-muted" style="margin-top:6px;">We need more order data to generate cross-sell suggestions.</div>
+                <div class="hero-subtitle" style="margin-top:12px;color:#6b7280;">
+                    Recommendations appear when customers buy multiple products together.
+                </div>
             </div>
         <?php else: ?>
             <div class="agents-grid">
                 <?php foreach ($topProducts as $productA): ?>
-                    <?php
-                        $recs = $recommendationsByProduct[$productA] ?? [];
-                    ?>
+                    <?php $recs = $recommendationsByProduct[$productA] ?? []; ?>
                     <div class="card agent-card">
                         <div class="agent-title"><?php echo e($productA); ?></div>
                         <div class="sb-muted" style="margin-top:2px;">Customers also bought:</div>
                         <?php if (empty($recs)): ?>
-                            <div class="sb-muted" style="margin-top:6px;">No recommendations yet.</div>
+                            <div class="sb-muted" style="margin-top:6px;">Not enough data yet</div>
                         <?php else: ?>
                             <ul class="report-list" style="margin-top:10px;">
                                 <?php foreach ($recs as $b): ?>
