@@ -28,7 +28,7 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SalesBoost AI Analytics</title>
-  <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=1">
+  <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=<?php echo (int)@filemtime(__DIR__ . '/assets/styles.css'); ?>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -75,7 +75,9 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
               <button type="button" class="btn btn-primary btn-sm time-filter" data-range="30">30 days</button>
             </div>
           </div>
-          <canvas id="analyticsRevenueChart"></canvas>
+          <div class="chart-wrap">
+            <canvas id="analyticsRevenueChart"></canvas>
+          </div>
         </div>
       </div>
       <div class="section">
@@ -84,6 +86,14 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
     </div>
 
     <div id="tab-products" class="tab-panel">
+      <div class="section">
+        <div class="card chart-card">
+          <div class="kpi-title">Product Revenue (Top 5)</div>
+          <div class="chart-wrap">
+            <canvas id="analyticsProductsChart"></canvas>
+          </div>
+        </div>
+      </div>
       <div class="section grid-50-50">
         <div class="card">
           <div class="kpi-title">Top Products</div>
@@ -100,6 +110,14 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
     </div>
 
     <div id="tab-customers" class="tab-panel">
+      <div class="section">
+        <div class="card chart-card">
+          <div class="kpi-title">New vs Returning</div>
+          <div class="chart-wrap">
+            <canvas id="analyticsCustomersChart"></canvas>
+          </div>
+        </div>
+      </div>
       <div class="section grid-50-50">
         <div class="card">
           <div class="kpi-title">New vs Returning Customers</div>
@@ -123,7 +141,9 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
             <div class="kpi-title">AOV</div>
             <div class="kpi-value" id="aovValue">—</div>
           </div>
-          <canvas id="analyticsAovChart"></canvas>
+          <div class="chart-wrap">
+            <canvas id="analyticsAovChart"></canvas>
+          </div>
         </div>
       </div>
       <div class="section">
@@ -132,6 +152,6 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
     </div>
   </main>
 
-  <script src="<?php echo e(BASE_URL); ?>/assets/analytics.js"></script>
+  <script src="<?php echo e(BASE_URL); ?>/assets/analytics.js?v=<?php echo (int)@filemtime(__DIR__ . '/assets/analytics.js'); ?>"></script>
 </body>
 </html>

@@ -34,8 +34,20 @@
 
   var charts = {
     revenue: null,
+    products: null,
+    customers: null,
     aov: null
   };
+
+  function baseChartOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      resizeDelay: 100,
+      plugins: { legend: { display: false } }
+    };
+  }
 
   async function fetchJson(url) {
     var res = await fetch(url, { credentials: 'same-origin' });
@@ -68,11 +80,7 @@
             tension: 0.35
           }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } }
-        }
+        options: baseChartOptions()
       });
     }
   }
@@ -82,6 +90,33 @@
     if (!shop) throw new Error('Missing shop parameter.');
 
     var data = await fetchJson(apiUrl('products.php', { shop: shop }));
+
+    // Chart (top 5)
+    var pctx = document.getElementById('analyticsProductsChart');
+    if (pctx && window.Chart) {
+      if (charts.products) charts.products.destroy();
+      var labels = (data.top || []).map(function (p) { return p.title || '—'; });
+      var vals = (data.top || []).map(function (p) { return Number(p.revenue || 0); });
+      charts.products = new Chart(pctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: vals,
+            backgroundColor: 'rgba(99, 102, 241, 0.22)',
+            borderColor: '#6366f1',
+            borderWidth: 1,
+            borderRadius: 8
+          }]
+        },
+        options: Object.assign({}, baseChartOptions(), {
+          scales: {
+            x: { ticks: { maxRotation: 0, autoSkip: true } },
+            y: { beginAtZero: true }
+          }
+        })
+      });
+    }
 
     var top = (data.top || []).map(function (p) {
       return '<div class="SbListRow"><div class="sb-list-left">' +
@@ -115,6 +150,28 @@
 
     setText('customersNew', String(data.new ?? 0));
     setText('customersReturning', String(data.returning ?? 0));
+
+    // Chart (new vs returning)
+    var cctx = document.getElementById('analyticsCustomersChart');
+    if (cctx && window.Chart) {
+      if (charts.customers) charts.customers.destroy();
+      charts.customers = new Chart(cctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['New', 'Returning'],
+          datasets: [{
+            data: [Number(data.new || 0), Number(data.returning || 0)],
+            backgroundColor: ['rgba(99, 102, 241, 0.28)', 'rgba(16, 185, 129, 0.28)'],
+            borderColor: ['#6366f1', '#10b981'],
+            borderWidth: 1
+          }]
+        },
+        options: Object.assign({}, baseChartOptions(), {
+          plugins: { legend: { display: true, position: 'bottom' } },
+          cutout: '65%'
+        })
+      });
+    }
 
     var top = (data.top || []).map(function (c) {
       return '<div class="SbListRow"><div class="sb-list-left">' +
@@ -153,11 +210,7 @@
             tension: 0.35
           }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } }
-        }
+        options: baseChartOptions()
       });
     }
   }
@@ -173,7 +226,11 @@
 
   async function onTab(tabName) {
     activateTab(tabName);
-    if (tabName === 'revenue') return await loadRevenue(7);
+    if (tabName === 'revenue') {
+      var active = document.querySelector('.time-filter.active');
+      var range = active ? Number(active.getAttribute('data-range') || 7) : 7;
+      return await loadRevenue(range);
+    }
     if (tabName === 'products') return await loadProducts();
     if (tabName === 'customers') return await loadCustomers();
     if (tabName === 'aov') return await loadAOV();

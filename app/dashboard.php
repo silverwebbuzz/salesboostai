@@ -29,7 +29,7 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SalesBoost AI Dashboard</title>
-  <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=1">
+  <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=<?php echo (int)@filemtime(__DIR__ . '/assets/styles.css'); ?>">
 
   <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
   <script src="https://unpkg.com/@shopify/app-bridge-utils@3"></script>
