@@ -606,3 +606,35 @@ body {
   margin-bottom: 4px;
 }
 
+.inventory-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .inventory-insights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inventory-insight-card {
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.inventory-block-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.velocity-counters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+

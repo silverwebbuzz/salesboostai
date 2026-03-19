@@ -154,6 +154,123 @@ $summary = (string)($report['summary'] ?? '');
 $keyPoints = isset($report['key_points']) && is_array($report['key_points']) ? $report['key_points'] : [];
 $issues = isset($report['issues']) && is_array($report['issues']) ? $report['issues'] : [];
 $actions = isset($report['actions']) && is_array($report['actions']) ? $report['actions'] : [];
+
+$isInventoryAgent = strtolower((string)($agent['agent_key'] ?? '')) === 'inventory';
+$inventoryInsights = [
+    'low_stock' => [],
+    'out_of_stock' => [],
+    'velocity_counts' => ['fast' => 0, 'medium' => 0, 'slow' => 0, 'dead' => 0],
+    'velocity_top' => ['fast' => [], 'medium' => [], 'slow' => [], 'dead' => []],
+];
+
+if ($isInventoryAgent) {
+    try {
+        $mysqli = db();
+        $shopName = makeShopName($shop);
+        $ordersTable = perStoreTableName($shopName, 'order');
+        $inventoryTable = perStoreTableName($shopName, 'products_inventory');
+
+        $inventoryByTitle = [];
+        $invRes = $mysqli->query("SELECT title, sku, inventory_quantity FROM `{$inventoryTable}`");
+        if ($invRes) {
+            while ($r = $invRes->fetch_assoc()) {
+                $title = trim((string)($r['title'] ?? ''));
+                if ($title === '') {
+                    $title = trim((string)($r['sku'] ?? ''));
+                }
+                if ($title === '') {
+                    continue;
+                }
+                $qty = (int)($r['inventory_quantity'] ?? 0);
+                $inventoryByTitle[$title] = [
+                    'title' => $title,
+                    'inventory_quantity' => $qty,
+                ];
+            }
+        }
+
+        $lowStock = [];
+        $outStock = [];
+        foreach ($inventoryByTitle as $item) {
+            $q = (int)$item['inventory_quantity'];
+            if ($q === 0) {
+                $outStock[] = $item;
+            } elseif ($q < 5) {
+                $lowStock[] = $item;
+            }
+        }
+        usort($lowStock, fn($a, $b) => ((int)$a['inventory_quantity']) <=> ((int)$b['inventory_quantity']));
+        usort($outStock, fn($a, $b) => strcmp((string)$a['title'], (string)$b['title']));
+        $inventoryInsights['low_stock'] = array_slice($lowStock, 0, 5);
+        $inventoryInsights['out_of_stock'] = array_slice($outStock, 0, 5);
+
+        $salesByTitle = [];
+        $since = (new DateTime('now'))->modify('-29 days')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+        $stmtOrders = $mysqli->prepare(
+            "SELECT payload_json
+             FROM `{$ordersTable}`
+             WHERE COALESCE(created_at, fetched_at) >= ?
+             ORDER BY COALESCE(created_at, fetched_at) DESC
+             LIMIT 500"
+        );
+        if ($stmtOrders) {
+            $stmtOrders->bind_param('s', $since);
+            $stmtOrders->execute();
+            $resO = $stmtOrders->get_result();
+            while ($row = $resO->fetch_assoc()) {
+                $payload = json_decode((string)($row['payload_json'] ?? ''), true);
+                if (!is_array($payload)) continue;
+                $lineItems = isset($payload['line_items']) && is_array($payload['line_items']) ? $payload['line_items'] : [];
+                foreach ($lineItems as $li) {
+                    if (!is_array($li)) continue;
+                    $title = trim((string)($li['title'] ?? ''));
+                    if ($title === '') continue;
+                    $qty = (int)($li['quantity'] ?? 0);
+                    if (!isset($salesByTitle[$title])) $salesByTitle[$title] = 0;
+                    $salesByTitle[$title] += max(0, $qty);
+                }
+            }
+            $stmtOrders->close();
+        }
+
+        $allTitles = array_unique(array_merge(array_keys($inventoryByTitle), array_keys($salesByTitle)));
+        $buckets = ['fast' => [], 'medium' => [], 'slow' => [], 'dead' => []];
+        foreach ($allTitles as $title) {
+            $sales30 = (int)($salesByTitle[$title] ?? 0);
+            $velocity = $sales30 / 30;
+            $row = [
+                'title' => $title,
+                'sales_30' => $sales30,
+                'velocity' => round($velocity, 2),
+            ];
+            if ($sales30 === 0) {
+                $inventoryInsights['velocity_counts']['dead']++;
+                $buckets['dead'][] = $row;
+            } elseif ($velocity > 5) {
+                $inventoryInsights['velocity_counts']['fast']++;
+                $buckets['fast'][] = $row;
+            } elseif ($velocity >= 2) {
+                $inventoryInsights['velocity_counts']['medium']++;
+                $buckets['medium'][] = $row;
+            } else {
+                $inventoryInsights['velocity_counts']['slow']++;
+                $buckets['slow'][] = $row;
+            }
+        }
+
+        usort($buckets['fast'], fn($a, $b) => ((float)$b['velocity']) <=> ((float)$a['velocity']));
+        usort($buckets['medium'], fn($a, $b) => ((float)$b['velocity']) <=> ((float)$a['velocity']));
+        usort($buckets['slow'], fn($a, $b) => ((float)$b['velocity']) <=> ((float)$a['velocity']));
+        usort($buckets['dead'], fn($a, $b) => strcmp((string)$a['title'], (string)$b['title']));
+
+        $inventoryInsights['velocity_top']['fast'] = array_slice($buckets['fast'], 0, 5);
+        $inventoryInsights['velocity_top']['medium'] = array_slice($buckets['medium'], 0, 5);
+        $inventoryInsights['velocity_top']['slow'] = array_slice($buckets['slow'], 0, 5);
+        $inventoryInsights['velocity_top']['dead'] = array_slice($buckets['dead'], 0, 5);
+    } catch (Throwable $e) {
+        // Silent fail: report page should still load.
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -276,6 +393,90 @@ $actions = isset($report['actions']) && is_array($report['actions']) ? $report['
               <?php endforeach; ?>
             </ul>
           <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($isInventoryAgent): ?>
+      <div class="section">
+        <div class="card">
+          <div class="section-title">Inventory Insights</div>
+
+          <div class="inventory-insights-grid">
+            <div class="card inventory-insight-card">
+              <div class="section-title">Stock Alerts</div>
+              <div class="inventory-block-title">Low stock (Top 5)</div>
+              <?php if (empty($inventoryInsights['low_stock'])): ?>
+                <div class="sb-muted">No low stock products.</div>
+              <?php else: ?>
+                <ul class="report-list">
+                  <?php foreach ($inventoryInsights['low_stock'] as $p): ?>
+                    <li>
+                      <span class="severity severity-medium">LOW</span>
+                      <?php echo e((string)$p['title']); ?> (<?php echo (int)$p['inventory_quantity']; ?> left)
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+
+              <div class="inventory-block-title" style="margin-top:12px;">Out of stock (Top 5)</div>
+              <?php if (empty($inventoryInsights['out_of_stock'])): ?>
+                <div class="sb-muted">No out-of-stock products.</div>
+              <?php else: ?>
+                <ul class="report-list">
+                  <?php foreach ($inventoryInsights['out_of_stock'] as $p): ?>
+                    <li>
+                      <span class="severity severity-high">OUT</span>
+                      <?php echo e((string)$p['title']); ?>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+            </div>
+
+            <div class="card inventory-insight-card">
+              <div class="section-title">Product Velocity (Last 30 days)</div>
+              <div class="velocity-counters">
+                <span class="severity severity-low">FAST: <?php echo (int)$inventoryInsights['velocity_counts']['fast']; ?></span>
+                <span class="severity severity-medium">MEDIUM: <?php echo (int)$inventoryInsights['velocity_counts']['medium']; ?></span>
+                <span class="severity" style="background:#eef2ff;color:#4338ca;">SLOW: <?php echo (int)$inventoryInsights['velocity_counts']['slow']; ?></span>
+                <span class="severity severity-high">DEAD: <?php echo (int)$inventoryInsights['velocity_counts']['dead']; ?></span>
+              </div>
+
+              <div class="inventory-block-title">Fast moving</div>
+              <?php if (empty($inventoryInsights['velocity_top']['fast'])): ?>
+                <div class="sb-muted">No fast-moving products.</div>
+              <?php else: ?>
+                <ul class="report-list">
+                  <?php foreach ($inventoryInsights['velocity_top']['fast'] as $p): ?>
+                    <li><?php echo e((string)$p['title']); ?> (<?php echo e((string)$p['velocity']); ?>/day)</li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+
+              <div class="inventory-block-title">Slow moving</div>
+              <?php if (empty($inventoryInsights['velocity_top']['slow'])): ?>
+                <div class="sb-muted">No slow-moving products.</div>
+              <?php else: ?>
+                <ul class="report-list">
+                  <?php foreach ($inventoryInsights['velocity_top']['slow'] as $p): ?>
+                    <li><?php echo e((string)$p['title']); ?> (<?php echo e((string)$p['velocity']); ?>/day)</li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+
+              <div class="inventory-block-title">Dead products</div>
+              <?php if (empty($inventoryInsights['velocity_top']['dead'])): ?>
+                <div class="sb-muted">No dead products.</div>
+              <?php else: ?>
+                <ul class="report-list">
+                  <?php foreach ($inventoryInsights['velocity_top']['dead'] as $p): ?>
+                    <li><?php echo e((string)$p['title']); ?> (0/day)</li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+            </div>
+          </div>
         </div>
       </div>
     <?php endif; ?>
