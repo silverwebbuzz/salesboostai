@@ -6,6 +6,7 @@ sendEmbeddedAppHeaders();
 $shop = sanitizeShopDomain($_GET['shop'] ?? null);
 $host = $_GET['host'] ?? '';
 $agentId = isset($_GET['agent_id']) ? (int)$_GET['agent_id'] : 0;
+$demoMode = (isset($_GET['demo']) && (string)$_GET['demo'] === '1');
 
 if ($shop === null || $agentId <= 0) {
     http_response_code(400);
@@ -122,6 +123,30 @@ if (!$agent) {
     http_response_code(404);
     echo 'Agent not found.';
     exit;
+}
+
+$dummyReport = [
+    'summary' => 'Your revenue depends heavily on a few products.',
+    'key_points' => [
+        'Top 2 products generate 70% revenue',
+        'Average order value increased by 12%',
+        'Repeat customers are declining',
+    ],
+    'issues' => [
+        ['title' => 'High product dependency', 'severity' => 'high'],
+    ],
+    'actions' => [
+        'Promote low-selling products',
+        'Create bundle offers',
+        'Run retention campaigns',
+    ],
+];
+
+if (!$report && $demoMode) {
+    $report = $dummyReport;
+    $reportMeta['status'] = 'completed';
+    $reportMeta['agent_version'] = (int)($agent['version'] ?? 1);
+    $reportMeta['created_at'] = date('Y-m-d H:i:s');
 }
 
 $hasReport = is_array($report);
@@ -263,6 +288,11 @@ $actions = isset($report['actions']) && is_array($report['actions']) ? $report['
         btn.addEventListener('click', function () {
           btn.disabled = true;
           btn.textContent = 'Analyzing your store...';
+          setTimeout(function () {
+            var url = new URL(window.location.href);
+            url.searchParams.set('demo', '1');
+            window.location.href = url.toString();
+          }, 700);
         });
       }
       wireGenerateButton('generateAiBtn');

@@ -153,7 +153,7 @@ try {
               <div class="agent-footer">
                 <a
                   class="btn btn-primary"
-                  href="<?php echo e(BASE_URL); ?>/agent-report.php?agent_id=<?php echo (int)$agent['id']; ?>&shop=<?php echo urlencode($shop); ?><?php if ($host !== ''): ?>&host=<?php echo urlencode($host); ?><?php endif; ?>"
+                  href="<?php echo e(BASE_URL); ?>/agent-report.php?agent_id=<?php echo (int)$agent['id']; ?>&shop=<?php echo urlencode($shop); ?><?php if ($host !== ''): ?>&host=<?php echo urlencode($host); ?><?php endif; ?><?php if (!$hasReport): ?>&demo=1<?php endif; ?>"
                 ><?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?></a>
               </div>
             </div>
