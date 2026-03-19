@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib/metrics.php';
 
 sendEmbeddedAppHeaders();
 
@@ -20,24 +21,6 @@ if (!$shopRecord) {
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
-function money(float $v): string {
-    return '$' . number_format($v, 2);
-}
-
-function salesVelocity(int $sales30): float {
-    return $sales30 / 30.0;
-}
-
-function cleanProductName(string $name): string {
-    $v = trim(preg_replace('/\s+/', ' ', str_replace(["\r", "\n", "\t"], ' ', $name)));
-    return $v !== '' ? $v : 'Unnamed product';
-}
-
-function clampInt($v): int {
-    $n = (int)$v;
-    return $n < 0 ? 0 : $n;
-}
-
 $criticalAlerts = [];
 $warningAlerts = [];
 $infoAlerts = [];
@@ -47,206 +30,13 @@ $revenueAgentId = 0;
 $productAgentId = 0;
 
 try {
-    $mysqli = db();
-    $shopName = makeShopName($shop);
-    $ordersTable = perStoreTableName($shopName, 'order');
-    $inventoryTable = perStoreTableName($shopName, 'products_inventory');
-    $agentRes = $mysqli->query("SELECT id, agent_key FROM ai_agents WHERE agent_key IN ('inventory','revenue','product')");
-    if ($agentRes) {
-        while ($ar = $agentRes->fetch_assoc()) {
-            $key = (string)($ar['agent_key'] ?? '');
-            $id = (int)($ar['id'] ?? 0);
-            if ($key === 'inventory') $inventoryAgentId = $id;
-            if ($key === 'revenue') $revenueAgentId = $id;
-            if ($key === 'product') $productAgentId = $id;
-        }
-    }
-
-    $tz = (string)($shopRecord['iana_timezone'] ?? 'UTC');
-    if ($tz === '') $tz = 'UTC';
-    $now = new DateTimeImmutable('now', new DateTimeZone($tz));
-
-    // --- Revenue Drop Alert: last 7 vs previous 7 ---
-    $curStart = $now->modify('-6 days')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-    $prevStart = $now->modify('-13 days')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-    $prevEnd = $now->modify('-7 days')->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-
-    $curTotal = 0.0;
-    $prevTotal = 0.0;
-
-    $stmtCur = $mysqli->prepare(
-        "SELECT SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.total_price')) AS DECIMAL(12,2))) AS s
-         FROM `{$ordersTable}`
-         WHERE COALESCE(created_at, fetched_at) >= ?"
-    );
-    if ($stmtCur) {
-        $stmtCur->bind_param('s', $curStart);
-        $stmtCur->execute();
-        $res = $stmtCur->get_result();
-        $row = $res ? ($res->fetch_assoc() ?: null) : null;
-        $curTotal = (float)($row['s'] ?? 0);
-        $stmtCur->close();
-    }
-
-    $stmtPrev = $mysqli->prepare(
-        "SELECT SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.total_price')) AS DECIMAL(12,2))) AS s
-         FROM `{$ordersTable}`
-         WHERE COALESCE(created_at, fetched_at) BETWEEN ? AND ?"
-    );
-    if ($stmtPrev) {
-        $stmtPrev->bind_param('ss', $prevStart, $prevEnd);
-        $stmtPrev->execute();
-        $res = $stmtPrev->get_result();
-        $row = $res ? ($res->fetch_assoc() ?: null) : null;
-        $prevTotal = (float)($row['s'] ?? 0);
-        $stmtPrev->close();
-    }
-
-    if ($prevTotal > 0) {
-        $dropPct = (($prevTotal - $curTotal) / $prevTotal) * 100;
-        if ($dropPct >= 20) {
-            $criticalAlerts[] = [
-                'title' => '🚨 Revenue dropped by ' . round($dropPct) . '% this week',
-                'meta' => 'Previous 7 days: ' . money($prevTotal) . ' · Last 7 days: ' . money($curTotal),
-                'details_url_key' => 'revenue',
-            ];
-        }
-    }
-
-    // --- Inventory snapshot ---
-    $inventory = [];
-    $invRes = $mysqli->query("SELECT title, sku, inventory_quantity FROM `{$inventoryTable}` WHERE inventory_quantity IS NOT NULL");
-    if ($invRes) {
-        while ($r = $invRes->fetch_assoc()) {
-            $title = cleanProductName((string)($r['title'] ?? ''));
-            if ($title === 'Unnamed product') {
-                $title = cleanProductName((string)($r['sku'] ?? ''));
-            }
-            if ($title === 'Unnamed product') continue;
-            $inventory[$title] = clampInt($r['inventory_quantity'] ?? 0);
-        }
-    }
-
-    // --- Sales by product for last 30d + last 7d ---
-    $sales30 = [];
-    $sales7 = [];
-    $since30 = $now->modify('-29 days')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-    $since7Ts = $now->modify('-6 days')->setTime(0, 0, 0)->getTimestamp();
-
-    $stmtOrders = $mysqli->prepare(
-        "SELECT COALESCE(created_at, fetched_at) AS event_at, payload_json
-         FROM `{$ordersTable}`
-         WHERE COALESCE(created_at, fetched_at) >= ?
-         ORDER BY COALESCE(created_at, fetched_at) DESC
-         LIMIT 700"
-    );
-    if ($stmtOrders) {
-        $stmtOrders->bind_param('s', $since30);
-        $stmtOrders->execute();
-        $resOrders = $stmtOrders->get_result();
-        while ($row = $resOrders->fetch_assoc()) {
-            $eventAt = (string)($row['event_at'] ?? '');
-            $eventTs = $eventAt !== '' ? strtotime($eventAt) : false;
-            $payload = json_decode((string)($row['payload_json'] ?? ''), true);
-            if (!is_array($payload)) continue;
-            $lineItems = isset($payload['line_items']) && is_array($payload['line_items']) ? $payload['line_items'] : [];
-            foreach ($lineItems as $li) {
-                if (!is_array($li)) continue;
-                $title = cleanProductName((string)($li['title'] ?? ''));
-                if ($title === 'Unnamed product') continue;
-                $qty = (int)($li['quantity'] ?? 0);
-                if (!isset($sales30[$title])) $sales30[$title] = 0;
-                $sales30[$title] += max(0, $qty);
-                if ($eventTs !== false && $eventTs >= $since7Ts) {
-                    if (!isset($sales7[$title])) $sales7[$title] = 0;
-                    $sales7[$title] += max(0, $qty);
-                }
-            }
-        }
-        $stmtOrders->close();
-    }
-
-    // Critical: Bestseller running low on stock.
-    $topSelling = $sales30;
-    arsort($topSelling);
-    $topSelling = array_slice($topSelling, 0, 5, true);
-    foreach ($topSelling as $title => $qty) {
-        $invQty = isset($inventory[$title]) ? (int)$inventory[$title] : 0;
-        if ($invQty < 5) {
-            $criticalAlerts[] = [
-                'title' => '🚨 Bestseller running low on stock',
-                'meta' => cleanProductName((string)$title) . ' has only ' . $invQty . ' units left. Restock soon to avoid lost sales.',
-                'details_url_key' => 'inventory',
-            ];
-            break; // single concise alert
-        }
-    }
-
-    // Warning: product stopped selling.
-    $stopped = [];
-    foreach ($sales30 as $title => $qty30) {
-        $qty7 = (int)($sales7[$title] ?? 0);
-        if ($qty30 > 0 && $qty7 === 0) {
-            $stopped[] = ['title' => $title, 'qty30' => (int)$qty30];
-        }
-    }
-    if (!empty($stopped)) {
-        usort($stopped, fn($a, $b) => ((int)$b['qty30']) <=> ((int)$a['qty30']));
-        $topStopped = array_slice($stopped, 0, 3);
-        $warningAlerts[] = [
-            'title' => '⚠️ ' . count($stopped) . ' products stopped selling',
-            'list' => array_map(fn($x) => (string)$x['title'], $topStopped),
-            'details_url_key' => 'product',
-        ];
-    }
-
-    // Warning: low stock products list (<5, >0)
-    $lowStock = [];
-    foreach ($inventory as $title => $qty) {
-        if ($qty > 0 && $qty < 5) {
-            $lowStock[] = ['title' => $title, 'qty' => $qty];
-        }
-    }
-    if (!empty($lowStock)) {
-        usort($lowStock, fn($a, $b) => ((int)$a['qty']) <=> ((int)$b['qty']));
-        $warningAlerts[] = [
-            'title' => '⚠️ Low stock products',
-            'list' => array_map(fn($x) => cleanProductName((string)$x['title']) . ' - only ' . (int)$x['qty'] . ' left', array_slice($lowStock, 0, 5)),
-            'details_url_key' => 'inventory',
-        ];
-    }
-
-    // Warnings: dead stock (in stock, no sales in 30d)
-    $dead = [];
-    foreach ($inventory as $title => $qty) {
-        if ($qty > 0 && ((int)($sales30[$title] ?? 0) === 0)) {
-            $dead[] = $title;
-        }
-    }
-    if (!empty($dead)) {
-        $warningAlerts[] = [
-            'title' => '⚠️ Dead stock identified',
-            'meta' => count($dead) . ' products have inventory but no sales in last 30 days.',
-            'details_url_key' => 'inventory',
-        ];
-    }
-
-    // Warnings: slow products (velocity < 2/day and >0 sales)
-    $slow = [];
-    foreach ($sales30 as $title => $qty30) {
-        $v = salesVelocity((int)$qty30);
-        if ($qty30 > 0 && $v < 2) {
-            $slow[] = ['title' => $title, 'v' => $v];
-        }
-    }
-    if (!empty($slow)) {
-        usort($slow, fn($a, $b) => ((float)$a['v']) <=> ((float)$b['v']));
-        $warningAlerts[] = [
-            'title' => '⚠️ Slow-moving products',
-            'meta' => count($slow) . ' products have low sales velocity.',
-            'details_url_key' => 'inventory',
-        ];
-    }
+    $alerts = sbm_getAlertsData($shop, $shopRecord, 180);
+    $criticalAlerts = $alerts['criticalAlerts'] ?? [];
+    $warningAlerts = $alerts['warningAlerts'] ?? [];
+    $infoAlerts = $alerts['infoAlerts'] ?? [];
+    $inventoryAgentId = (int)($alerts['inventoryAgentId'] ?? 0);
+    $revenueAgentId = (int)($alerts['revenueAgentId'] ?? 0);
+    $productAgentId = (int)($alerts['productAgentId'] ?? 0);
 } catch (Throwable $e) {
     $errorText = 'Unable to load alerts right now.';
 }

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib/metrics.php';
 
 sendEmbeddedAppHeaders();
 
@@ -165,108 +166,7 @@ $inventoryInsights = [
 
 if ($isInventoryAgent) {
     try {
-        $mysqli = db();
-        $shopName = makeShopName($shop);
-        $ordersTable = perStoreTableName($shopName, 'order');
-        $inventoryTable = perStoreTableName($shopName, 'products_inventory');
-
-        $inventoryByTitle = [];
-        $invRes = $mysqli->query("SELECT title, sku, inventory_quantity FROM `{$inventoryTable}`");
-        if ($invRes) {
-            while ($r = $invRes->fetch_assoc()) {
-                $title = trim((string)($r['title'] ?? ''));
-                if ($title === '') {
-                    $title = trim((string)($r['sku'] ?? ''));
-                }
-                if ($title === '') {
-                    continue;
-                }
-                $qty = (int)($r['inventory_quantity'] ?? 0);
-                $inventoryByTitle[$title] = [
-                    'title' => $title,
-                    'inventory_quantity' => $qty,
-                ];
-            }
-        }
-
-        $lowStock = [];
-        $outStock = [];
-        foreach ($inventoryByTitle as $item) {
-            $q = (int)$item['inventory_quantity'];
-            if ($q === 0) {
-                $outStock[] = $item;
-            } elseif ($q < 5) {
-                $lowStock[] = $item;
-            }
-        }
-        usort($lowStock, fn($a, $b) => ((int)$a['inventory_quantity']) <=> ((int)$b['inventory_quantity']));
-        usort($outStock, fn($a, $b) => strcmp((string)$a['title'], (string)$b['title']));
-        $inventoryInsights['low_stock'] = array_slice($lowStock, 0, 5);
-        $inventoryInsights['out_of_stock'] = array_slice($outStock, 0, 5);
-
-        $salesByTitle = [];
-        $since = (new DateTime('now'))->modify('-29 days')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-        $stmtOrders = $mysqli->prepare(
-            "SELECT payload_json
-             FROM `{$ordersTable}`
-             WHERE COALESCE(created_at, fetched_at) >= ?
-             ORDER BY COALESCE(created_at, fetched_at) DESC
-             LIMIT 500"
-        );
-        if ($stmtOrders) {
-            $stmtOrders->bind_param('s', $since);
-            $stmtOrders->execute();
-            $resO = $stmtOrders->get_result();
-            while ($row = $resO->fetch_assoc()) {
-                $payload = json_decode((string)($row['payload_json'] ?? ''), true);
-                if (!is_array($payload)) continue;
-                $lineItems = isset($payload['line_items']) && is_array($payload['line_items']) ? $payload['line_items'] : [];
-                foreach ($lineItems as $li) {
-                    if (!is_array($li)) continue;
-                    $title = trim((string)($li['title'] ?? ''));
-                    if ($title === '') continue;
-                    $qty = (int)($li['quantity'] ?? 0);
-                    if (!isset($salesByTitle[$title])) $salesByTitle[$title] = 0;
-                    $salesByTitle[$title] += max(0, $qty);
-                }
-            }
-            $stmtOrders->close();
-        }
-
-        $allTitles = array_unique(array_merge(array_keys($inventoryByTitle), array_keys($salesByTitle)));
-        $buckets = ['fast' => [], 'medium' => [], 'slow' => [], 'dead' => []];
-        foreach ($allTitles as $title) {
-            $sales30 = (int)($salesByTitle[$title] ?? 0);
-            $velocity = $sales30 / 30;
-            $row = [
-                'title' => $title,
-                'sales_30' => $sales30,
-                'velocity' => round($velocity, 2),
-            ];
-            if ($sales30 === 0) {
-                $inventoryInsights['velocity_counts']['dead']++;
-                $buckets['dead'][] = $row;
-            } elseif ($velocity > 5) {
-                $inventoryInsights['velocity_counts']['fast']++;
-                $buckets['fast'][] = $row;
-            } elseif ($velocity >= 2) {
-                $inventoryInsights['velocity_counts']['medium']++;
-                $buckets['medium'][] = $row;
-            } else {
-                $inventoryInsights['velocity_counts']['slow']++;
-                $buckets['slow'][] = $row;
-            }
-        }
-
-        usort($buckets['fast'], fn($a, $b) => ((float)$b['velocity']) <=> ((float)$a['velocity']));
-        usort($buckets['medium'], fn($a, $b) => ((float)$b['velocity']) <=> ((float)$a['velocity']));
-        usort($buckets['slow'], fn($a, $b) => ((float)$b['velocity']) <=> ((float)$a['velocity']));
-        usort($buckets['dead'], fn($a, $b) => strcmp((string)$a['title'], (string)$b['title']));
-
-        $inventoryInsights['velocity_top']['fast'] = array_slice($buckets['fast'], 0, 5);
-        $inventoryInsights['velocity_top']['medium'] = array_slice($buckets['medium'], 0, 5);
-        $inventoryInsights['velocity_top']['slow'] = array_slice($buckets['slow'], 0, 5);
-        $inventoryInsights['velocity_top']['dead'] = array_slice($buckets['dead'], 0, 5);
+        $inventoryInsights = sbm_getInventoryInsights($shop, 180);
     } catch (Throwable $e) {
         // Silent fail: report page should still load.
     }
