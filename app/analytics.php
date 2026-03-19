@@ -33,6 +33,8 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
 </head>
 <body>
   <main class="container">
+    <?php include __DIR__ . '/nav.php'; ?>
+
     <div class="hero">
       <div class="hero-head">
         <div>

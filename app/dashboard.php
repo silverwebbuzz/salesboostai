@@ -37,6 +37,8 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
 </head>
 <body>
   <main class="container">
+    <?php include __DIR__ . '/nav.php'; ?>
+
     <div id="sbError" style="display:none;">
       <div><strong>Something went wrong loading your data.</strong></div>
       <div id="sbErrorText">Failed to load.</div>
