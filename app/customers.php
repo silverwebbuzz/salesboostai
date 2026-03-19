@@ -28,6 +28,11 @@ function formatInt($n): string {
     return number_format((int)$n);
 }
 
+function pct(int $count, int $total): string {
+    if ($total <= 0) return '0.00%';
+    return number_format(($count / max(1, $total)) * 100, 2) . '%';
+}
+
 $shopName = (string)($shopRecord['store_name'] ?? $shop);
 $ordersTable = perStoreTableName(makeShopName($shop), 'order');
 $customersTable = perStoreTableName(makeShopName($shop), 'customer');
@@ -40,6 +45,7 @@ $repeatCustomers = 0;
 $vipCustomers = 0;
 $atRiskCustomers = 0;
 $inactiveCustomers = 0;
+$ordersScanned = 0;
 
 $vipTotalSpent = 0.0;
 $avgLtv = 0.0;
@@ -80,6 +86,7 @@ try {
         $stmtOrders->execute();
         $resO = $stmtOrders->get_result();
         while ($row = $resO->fetch_assoc()) {
+            $ordersScanned++;
             $eventAt = (string)($row['event_at'] ?? '');
             $eventTs = $eventAt !== '' ? strtotime($eventAt) : false;
             $payload = json_decode((string)($row['payload_json'] ?? ''), true);
@@ -129,9 +136,23 @@ try {
         }
     }
 
-    $orderedLast60Count = count($orderedLast60Set);
-    $atRiskCustomers = max(0, $totalCustomers - $orderedLast60Count);
-    $inactiveCustomers = $atRiskCustomers;
+    // At-risk: repeat customers (orders > 1) whose latest order is older than 60 days.
+    foreach ($ordersAgg as $agg) {
+        $orders = (int)($agg['orders'] ?? 0);
+        $lastOrderTs = (int)($agg['lastOrderTs'] ?? 0);
+        if ($orders > 1 && $lastOrderTs > 0 && $lastOrderTs < $cutoffTs60) {
+            $atRiskCustomers++;
+        }
+    }
+
+    // Inactive: no order in last 60 days among known order-linked customers.
+    $inactiveCustomers = 0;
+    foreach ($ordersAgg as $agg) {
+        $lastOrderTs = (int)($agg['lastOrderTs'] ?? 0);
+        if ($lastOrderTs <= 0 || $lastOrderTs < $cutoffTs60) {
+            $inactiveCustomers++;
+        }
+    }
 
     // LTV
     if ($totalCustomers > 0) {
@@ -143,6 +164,10 @@ try {
 } catch (Throwable $e) {
     // Keep page renderable even if DB errors happen.
 }
+
+$repeatRate = $totalCustomers > 0 ? ($repeatCustomers / max(1, $totalCustomers)) : 0.0;
+$inactiveRate = $totalCustomers > 0 ? ($inactiveCustomers / max(1, $totalCustomers)) : 0.0;
+$showLimitedDataNote = ($ordersScanned < 100 || $totalCustomers < 20);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -161,10 +186,19 @@ try {
         <div>
           <div class="hero-title">Customers</div>
           <div class="hero-subtitle">Understand your customers and improve retention</div>
+          <div class="hero-subtitle" style="margin-top:6px;">Based on recent order activity</div>
         </div>
       </div>
       <div class="hero-subtitle"><?php echo e($shopName); ?></div>
     </div>
+
+    <?php if ($showLimitedDataNote): ?>
+      <div class="section" style="margin-top:-8px;">
+        <div class="card" style="border:1px solid #e5e7eb;background:#f8fafc;">
+          <div class="hero-subtitle" style="margin:0;">Data may be limited for this store</div>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <div class="section">
       <div class="section-title">Customer Overview</div>
@@ -190,29 +224,36 @@ try {
         <div class="card">
           <div class="kpi-title">New</div>
           <div class="kpi-value"><span class="highlight-number"><?php echo e(formatInt($newCustomers)); ?></span></div>
+          <div class="hero-subtitle" style="margin-top:6px;"><?php echo e(pct($newCustomers, $totalCustomers)); ?> of customers</div>
         </div>
         <div class="card">
           <div class="kpi-title">Repeat</div>
           <div class="kpi-value"><span class="highlight-number"><?php echo e(formatInt($repeatCustomers)); ?></span></div>
+          <div class="hero-subtitle" style="margin-top:6px;"><?php echo e(pct($repeatCustomers, $totalCustomers)); ?> of customers</div>
         </div>
         <div class="card">
           <div class="kpi-title">VIP</div>
           <div class="kpi-value"><span class="highlight-number"><?php echo e(formatInt($vipCustomers)); ?></span></div>
+          <div class="hero-subtitle" style="margin-top:6px;"><?php echo e(pct($vipCustomers, $totalCustomers)); ?> of customers</div>
         </div>
         <div class="card">
           <div class="kpi-title">At Risk</div>
           <div class="kpi-value"><span class="highlight-number"><?php echo e(formatInt($atRiskCustomers)); ?></span></div>
+          <div class="hero-subtitle" style="margin-top:6px;"><?php echo e(pct($atRiskCustomers, $totalCustomers)); ?> of customers</div>
         </div>
       </div>
+      <?php if ($repeatRate < 0.30 && $totalCustomers > 0): ?>
+        <div class="hero-subtitle" style="margin-top:10px;color:#b45309;">⚠️ Low repeat rate</div>
+      <?php endif; ?>
     </div>
 
     <div class="section grid-50-50">
       <div class="card">
         <div class="section-title" style="margin-bottom:8px;">LTV</div>
-        <div class="kpi-title">Average LTV</div>
+        <div class="kpi-title">Average LTV (all customers)</div>
         <div class="kpi-value"><span class="highlight-number"><?php echo e($totalCustomers > 0 ? money($avgLtv) : '—'); ?></span></div>
         <div style="height:10px;"></div>
-        <div class="kpi-title">VIP LTV</div>
+        <div class="kpi-title">VIP LTV (high-value customers)</div>
         <div class="kpi-value"><span class="highlight-number"><?php echo e($vipCustomers > 0 ? money($vipLtv) : '—'); ?></span></div>
       </div>
       <div class="card">
@@ -220,6 +261,10 @@ try {
         <div class="kpi-title">Inactive customers</div>
         <div class="kpi-value"><span class="highlight-number"><?php echo e(formatInt($inactiveCustomers)); ?></span></div>
         <div class="hero-subtitle" style="margin-top:8px;">No orders in last 60 days</div>
+        <?php if ($inactiveRate >= 0.30 && $inactiveCustomers > 0): ?>
+          <div class="hero-subtitle" style="margin-top:10px;color:#b45309;">⚠️ Many customers inactive</div>
+          <div class="hero-subtitle" style="margin-top:4px;">→ Consider email or discount campaigns</div>
+        <?php endif; ?>
       </div>
     </div>
   </main>
