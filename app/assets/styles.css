@@ -700,3 +700,41 @@ body {
   color: #4b5563;
 }
 
+/* Store health score card */
+.store-health-card {
+  border: 1px solid #e0e7ff;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+}
+
+.store-health-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.store-health-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4338ca;
+  background: #e0e7ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.store-health-score {
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.store-health-breakdown {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #c7d2fe;
+}
+

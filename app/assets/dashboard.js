@@ -308,6 +308,84 @@ function setTrend(elId, pct) {
   el.className = `kpi-trend ${pct >= 0 ? 'kpi-trend--up' : 'kpi-trend--down'}`;
 }
 
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function computeStoreHealth(data) {
+  const issues = data?.critical_issues || [];
+
+  // 1) Revenue score (30)
+  const rev = data?.charts?.revenue || [];
+  const last7Rev = rev.slice(-7).reduce((a, b) => a + Number(b || 0), 0);
+  const prev7Rev = rev.slice(-14, -7).reduce((a, b) => a + Number(b || 0), 0);
+  const revTrend = computeTrend(last7Rev, prev7Rev);
+  let revenueScore = 30;
+  if (revTrend !== null && revTrend < 0) {
+    const drop = Math.abs(revTrend);
+    if (drop >= 20) revenueScore = 10;
+    else revenueScore = 20;
+  }
+
+  // 2) Inventory score (25)
+  const inv = data?.inventory_metrics || {};
+  const deadStock = Number(inv.dead_stock_value || 0);
+  const restockNeeded = Number(inv.restock_needed_value || 0);
+  let inventoryScore = 25;
+  if (deadStock > 1000) {
+    inventoryScore = 10; // High dead stock
+  } else if (deadStock > 0 || restockNeeded > 0) {
+    inventoryScore = 18; // Some dead stock / stock pressure
+  }
+
+  // 3) Customer score (25)
+  // Repeat-rate proxy from existing metrics:
+  // if orders ~= customers => low repeat, if orders much higher => stronger repeat.
+  const totalOrders = Number(data?.kpi?.orders || 0);
+  const totalCustomers = Number(data?.kpi?.customers || 0);
+  const repeatRate = totalCustomers > 0
+    ? clamp((totalOrders - totalCustomers) / totalCustomers, 0, 1)
+    : 0;
+  let customerScore = 25;
+  if (repeatRate < 0.2) customerScore = 10;
+  else if (repeatRate < 0.3) customerScore = 18;
+
+  // 4) Alert score (20)
+  const criticalCount = issues.filter((i) => String(i?.severity || '').toLowerCase() === 'high').length;
+  let alertScore = 20;
+  if (criticalCount >= 3) alertScore = 5;
+  else if (criticalCount >= 1) alertScore = 12;
+
+  const score = clamp(Math.round(revenueScore + inventoryScore + customerScore + alertScore), 0, 100);
+  let status = 'Critical';
+  if (score >= 80) status = 'Good';
+  else if (score >= 50) status = 'Needs Attention';
+
+  let biggestIssue = 'No major issue detected.';
+  if (revenueScore <= 10) {
+    biggestIssue = 'Revenue dropped by more than 20% versus last week.';
+  } else if (alertScore <= 12 && criticalCount > 0) {
+    const highIssue = issues.find((i) => String(i?.severity || '').toLowerCase() === 'high');
+    biggestIssue = (highIssue?.description || highIssue?.title || 'Critical alerts need immediate action.');
+  } else if (inventoryScore <= 18) {
+    biggestIssue = deadStock > 1000 ? 'High dead stock is tying up inventory value.' : 'Some inventory is not moving or needs restock.';
+  } else if (customerScore <= 18) {
+    biggestIssue = 'Repeat customer rate is low.';
+  }
+
+  return {
+    score,
+    status,
+    biggestIssue,
+    breakdown: {
+      revenue: revenueScore,
+      inventory: inventoryScore,
+      customers: customerScore,
+      alerts: alertScore
+    }
+  };
+}
+
 function renderCriticalIssues(issues) {
   const grid = document.getElementById('criticalIssuesGrid');
   if (!grid) return;
@@ -373,6 +451,20 @@ async function loadDashboard() {
 
     // AI summary
     setHtml('aiSummaryText', formatInsight(getDashboardSummary(data)));
+
+    // Store health score
+    const health = computeStoreHealth(data);
+    setText('storeHealthScore', `${health.score} / 100`);
+    setText('storeHealthStatus', health.status);
+    setText('storeHealthIssue', `Biggest issue: ${health.biggestIssue}`);
+    setHtml(
+      'storeHealthBreakdown',
+      `<div class="kpi-title" style="margin-bottom:8px;">Health Breakdown</div>
+       <div class="hero-subtitle">📈 Revenue: ${health.breakdown.revenue} / 30</div>
+       <div class="hero-subtitle">📦 Inventory: ${health.breakdown.inventory} / 25</div>
+       <div class="hero-subtitle">👥 Customers: ${health.breakdown.customers} / 25</div>
+       <div class="hero-subtitle">🚨 Alerts: ${health.breakdown.alerts} / 20</div>`
+    );
 
     // Inventory KPIs
     const inv = data?.inventory_metrics || {};

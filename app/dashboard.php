@@ -72,6 +72,24 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
     </div>
 
     <div id="sbContent" style="display:none;">
+      <div class="section">
+        <div class="card store-health-card">
+          <div class="store-health-head">
+            <div class="kpi-title">Store Health Score</div>
+            <div class="store-health-status" id="storeHealthStatus">—</div>
+          </div>
+          <div class="store-health-score" id="storeHealthScore">— / 100</div>
+          <div class="hero-subtitle" id="storeHealthIssue">Biggest issue: —</div>
+          <div class="store-health-breakdown" id="storeHealthBreakdown">
+            <div class="kpi-title" style="margin-bottom:8px;">Health Breakdown</div>
+            <div class="hero-subtitle">📈 Revenue: — / 30</div>
+            <div class="hero-subtitle">📦 Inventory: — / 25</div>
+            <div class="hero-subtitle">👥 Customers: — / 25</div>
+            <div class="hero-subtitle">🚨 Alerts: — / 20</div>
+          </div>
+        </div>
+      </div>
+
       <div class="hero">
         <div class="hero-head">
           <div>
