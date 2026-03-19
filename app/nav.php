@@ -8,6 +8,7 @@
     <a id="nav-analytics">Analytics</a>
     <a id="nav-alerts">Alerts</a>
     <a id="nav-customers">Customers</a>
+    <a id="nav-sales-boost">Sales Boost</a>
     <a id="nav-ai-agents">AI Agents</a>
   </div>
 </nav>
@@ -24,12 +25,14 @@
     var analyticsLink = document.getElementById("nav-analytics");
     var alertsLink = document.getElementById("nav-alerts");
     var customersLink = document.getElementById("nav-customers");
+    var salesBoostLink = document.getElementById("nav-sales-boost");
     var agentsLink = document.getElementById("nav-ai-agents");
 
     if (dashboardLink) dashboardLink.href = "dashboard.php" + query;
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
     if (alertsLink) alertsLink.href = "alerts.php" + query;
     if (customersLink) customersLink.href = "customers.php" + query;
+    if (salesBoostLink) salesBoostLink.href = "sales-boost.php" + query;
     if (agentsLink) agentsLink.href = "ai-agents.php" + query;
 
     // Active state
@@ -45,6 +48,9 @@
     }
     if (path.includes("customers") && customersLink) {
       customersLink.classList.add("active");
+    }
+    if (path.includes("sales-boost") && salesBoostLink) {
+      salesBoostLink.classList.add("active");
     }
     if (path.includes("ai-agents") && agentsLink) {
       agentsLink.classList.add("active");
