@@ -188,10 +188,41 @@ try {
 
         <?php if (empty($topProducts) || !$hasAnyRecommendations): ?>
             <div class="card report-empty">
+                <div style="font-size:34px;line-height:1;margin-bottom:8px;">📦</div>
                 <div class="section-title" style="margin-bottom:6px;">No recommendations available yet</div>
-                <div class="sb-muted" style="margin-top:6px;">We need more order data to generate cross-sell suggestions.</div>
-                <div class="hero-subtitle" style="margin-top:12px;color:#6b7280;">
-                    Recommendations appear when customers buy multiple products together.
+
+                <div class="hero-subtitle" style="margin-top:2px;color:#6b7280;">
+                    Data status: Low (not enough order data yet)
+                </div>
+
+                <div class="sb-muted" style="margin-top:10px;">
+                    We need more order data to generate cross-sell suggestions.
+                </div>
+
+                <div class="hero-subtitle" style="margin-top:10px;color:#6b7280;">
+                    To get recommendations faster:
+                </div>
+                <ul class="report-list" style="margin:10px auto 0;max-width:420px;">
+                    <li>Encourage customers to buy multiple products</li>
+                    <li>Create product bundles or combos</li>
+                    <li>Run promotions on related products</li>
+                </ul>
+
+                <div class="hero-subtitle" style="margin-top:14px;color:#6b7280;">
+                    Example:
+                </div>
+                <div class="card" style="margin:10px auto 0;max-width:420px;padding:14px;border:1px solid #e5e7eb;background:#ffffff;box-shadow:none;">
+                    <div style="font-weight:700;color:#111827;margin-bottom:6px;">T-Shirt</div>
+                    <div class="hero-subtitle" style="margin:0 0 6px;color:#6b7280;">Customers also bought:</div>
+                    <ul class="report-list" style="margin:0;padding-left:18px;">
+                        <li>Jeans</li>
+                        <li>Sneakers</li>
+                        <li>Cap</li>
+                    </ul>
+                </div>
+
+                <div class="hero-subtitle" style="margin-top:14px;color:#6b7280;">
+                    Works best when your store has 50+ orders
                 </div>
             </div>
         <?php else: ?>
