@@ -454,6 +454,55 @@ body {
   margin-top: auto;
 }
 
+.agent-key-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4f46e5;
+  background: #eef2ff;
+  border: 1px solid #e0e7ff;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.agent-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+}
+
+.status-positive {
+  color: #166534;
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.status-medium {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.agent-updated {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 /* Report tables + action block */
 .report-list {
   margin: 0;
@@ -463,6 +512,14 @@ body {
 
 .report-list li {
   margin-bottom: 8px;
+}
+
+.report-list-points li {
+  margin-bottom: 10px;
+}
+
+.report-list-actions li {
+  margin-bottom: 10px;
 }
 
 .table-wrap {
@@ -512,7 +569,40 @@ body {
 }
 
 .report-actions {
-  border: 1px solid #e0e7ff;
-  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+  border: 1px solid #bbf7d0;
+  background: linear-gradient(135deg, #ecfdf5, #f8fafc);
+}
+
+.summary-highlight {
+  background: #fffbeb;
+  border-left: 4px solid #f59e0b;
+}
+
+.report-empty {
+  text-align: center;
+  padding: 28px 22px;
+}
+
+.report-meta-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.report-desc p {
+  margin: 0 0 6px;
+}
+
+.report-desc ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+}
+
+.report-desc li {
+  margin-bottom: 4px;
 }
 

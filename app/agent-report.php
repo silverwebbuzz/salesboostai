@@ -25,18 +25,36 @@ function safeHtml(string $html): string {
     return strip_tags($html, '<p><ul><li><strong><em><br>');
 }
 
+function formatTimeAgo(?string $timestamp): string {
+    if (!$timestamp) return 'Not generated yet';
+    $time = strtotime($timestamp);
+    if (!$time) return 'Not generated yet';
+    $diff = time() - $time;
+    if ($diff < 60) return 'just now';
+    if ($diff < 3600) {
+        $m = (int)floor($diff / 60);
+        return $m . ' minute' . ($m === 1 ? '' : 's') . ' ago';
+    }
+    if ($diff < 86400) {
+        $h = (int)floor($diff / 3600);
+        return $h . ' hour' . ($h === 1 ? '' : 's') . ' ago';
+    }
+    $d = (int)floor($diff / 86400);
+    return $d . ' day' . ($d === 1 ? '' : 's') . ' ago';
+}
+
 $agent = null;
 $report = null;
 $errorText = '';
 $reportMeta = [
-    'status' => 'completed',
+    'status' => 'not_generated',
     'agent_version' => null,
+    'created_at' => null,
 ];
 
 try {
     $mysqli = db();
 
-    // Strict agent filter by ID
     $stmtAgent = $mysqli->prepare("SELECT id, name, description, agent_key, model, version, is_premium, output_schema, data_mapping, prompt_template, config_json FROM ai_agents WHERE id = ? LIMIT 1");
     if ($stmtAgent) {
         $stmtAgent->bind_param('i', $agentId);
@@ -46,10 +64,9 @@ try {
         $stmtAgent->close();
     }
 
-    // Strict report filter by shop + agent_id, prefer same agent version and completed status.
     $agentVersion = (int)($agent['version'] ?? 1);
     $stmtReport = $mysqli->prepare(
-        "SELECT report_json, status, agent_version
+        "SELECT report_json, status, agent_version, created_at
          FROM ai_reports
          WHERE shop = ? AND agent_id = ? AND status = 'completed' AND agent_version = ?
          ORDER BY created_at DESC
@@ -67,14 +84,14 @@ try {
                 $report = $decoded;
                 $reportMeta['status'] = (string)($row['status'] ?? 'completed');
                 $reportMeta['agent_version'] = isset($row['agent_version']) ? (int)$row['agent_version'] : null;
+                $reportMeta['created_at'] = (string)($row['created_at'] ?? '');
             }
         }
     }
 
-    // Fallback: latest completed report for same shop + agent_id (any version).
     if (!$report) {
         $stmtReportFallback = $mysqli->prepare(
-            "SELECT report_json, status, agent_version
+            "SELECT report_json, status, agent_version, created_at
              FROM ai_reports
              WHERE shop = ? AND agent_id = ? AND status = 'completed'
              ORDER BY created_at DESC
@@ -92,6 +109,7 @@ try {
                     $report = $decoded;
                     $reportMeta['status'] = (string)($rowF['status'] ?? 'completed');
                     $reportMeta['agent_version'] = isset($rowF['agent_version']) ? (int)$rowF['agent_version'] : null;
+                    $reportMeta['created_at'] = (string)($rowF['created_at'] ?? '');
                 }
             }
         }
@@ -106,28 +124,8 @@ if (!$agent) {
     exit;
 }
 
-if (!$report) {
-    $report = [
-        'summary' => 'Your revenue depends heavily on a few products.',
-        'key_points' => [
-            'Top 2 products generate 70% revenue',
-            'Average order value increased by 12%',
-            'Repeat customers are declining',
-        ],
-        'issues' => [
-            ['title' => 'High product dependency', 'severity' => 'high'],
-        ],
-        'actions' => [
-            'Promote low-selling products',
-            'Create bundle offers',
-            'Run retention campaigns',
-        ],
-    ];
-    $reportMeta['status'] = 'completed';
-    $reportMeta['agent_version'] = (int)($agent['version'] ?? 1);
-}
-
-$summary = (string)($report['summary'] ?? 'No summary available.');
+$hasReport = is_array($report);
+$summary = (string)($report['summary'] ?? '');
 $keyPoints = isset($report['key_points']) && is_array($report['key_points']) ? $report['key_points'] : [];
 $issues = isset($report['issues']) && is_array($report['issues']) ? $report['issues'] : [];
 $actions = isset($report['actions']) && is_array($report['actions']) ? $report['actions'] : [];
@@ -148,18 +146,20 @@ $actions = isset($report['actions']) && is_array($report['actions']) ? $report['
       <div class="hero-head">
         <div>
           <div class="hero-title"><?php echo e((string)$agent['name']); ?> Report</div>
-          <div class="hero-subtitle">
+          <div class="hero-subtitle report-desc">
             <?php
               $desc = (string)($agent['description'] ?? '');
               echo $desc !== '' ? safeHtml($desc) : '';
             ?>
-            · <?php echo e((string)($agent['model'] ?? 'claude')); ?>
-            · v<?php echo (int)($agent['version'] ?? 1); ?>
-            <?php if ((int)($agent['is_premium'] ?? 0) === 1): ?> · Premium<?php endif; ?>
-            <?php if (!empty($reportMeta['agent_version'])): ?> · Report v<?php echo (int)$reportMeta['agent_version']; ?><?php endif; ?>
-            <?php if (($reportMeta['status'] ?? '') !== ''): ?> · <?php echo e((string)$reportMeta['status']); ?><?php endif; ?>
+          </div>
+          <div class="report-meta-row">
+            <span>Last updated: <?php echo e($hasReport ? formatTimeAgo((string)($reportMeta['created_at'] ?? '')) : 'Not generated yet'); ?></span>
+            <span class="status-badge <?php echo e($hasReport ? 'status-positive' : 'status-medium'); ?>">
+              <?php echo e($hasReport ? '🟢 Completed' : '🟡 Not Generated'); ?>
+            </span>
           </div>
         </div>
+        <button class="btn btn-primary" type="button" id="generateAiBtn">Generate AI Report</button>
       </div>
     </div>
 
@@ -171,77 +171,103 @@ $actions = isset($report['actions']) && is_array($report['actions']) ? $report['
       </div>
     <?php endif; ?>
 
-    <div class="section">
-      <div class="card ai-summary">
-        <div class="section-title">Summary</div>
-        <div><?php echo e($summary); ?></div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="card">
-        <div class="section-title">Key Points</div>
-        <?php if (empty($keyPoints)): ?>
-          <div class="sb-muted">No key points found.</div>
-        <?php else: ?>
-          <ul class="report-list">
-            <?php foreach ($keyPoints as $point): ?>
-              <li><?php echo e((string)$point); ?></li>
-            <?php endforeach; ?>
-          </ul>
-        <?php endif; ?>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="card">
-        <div class="section-title">Issues</div>
-        <?php if (empty($issues)): ?>
-          <div class="sb-muted">No issues found.</div>
-        <?php else: ?>
-          <div class="table-wrap">
-            <table class="simple-table">
-              <thead>
-                <tr>
-                  <th>Issue</th>
-                  <th>Severity</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($issues as $issue): ?>
-                  <?php
-                    $title = (string)($issue['title'] ?? 'Issue');
-                    $severity = strtolower((string)($issue['severity'] ?? 'low'));
-                    if (!in_array($severity, ['low', 'medium', 'high'], true)) {
-                        $severity = 'low';
-                    }
-                  ?>
-                  <tr>
-                    <td><?php echo e($title); ?></td>
-                    <td><span class="severity severity-<?php echo e($severity); ?>"><?php echo e(strtoupper($severity)); ?></span></td>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
+    <?php if (!$hasReport): ?>
+      <div class="section">
+        <div class="card report-empty">
+          <div class="section-title">No AI report generated yet</div>
+          <div class="sb-muted">Generate your first AI insight to understand your store performance.</div>
+          <div style="margin-top:14px;">
+            <button class="btn btn-primary" type="button" id="generateAiBtnEmpty">Generate AI Report</button>
           </div>
-        <?php endif; ?>
+        </div>
       </div>
-    </div>
+    <?php else: ?>
+      <div class="section">
+        <div class="card summary-highlight">
+          <div class="section-title">Summary</div>
+          <div>⚠️ <?php echo e($summary); ?></div>
+        </div>
+      </div>
 
-    <div class="section">
-      <div class="card report-actions">
-        <div class="section-title">Recommended Actions</div>
-        <?php if (empty($actions)): ?>
-          <div class="sb-muted">No actions found.</div>
-        <?php else: ?>
-          <ul class="report-list">
-            <?php foreach ($actions as $action): ?>
-              <li><?php echo e((string)$action); ?></li>
-            <?php endforeach; ?>
-          </ul>
-        <?php endif; ?>
+      <div class="section">
+        <div class="card">
+          <div class="section-title">Key Points</div>
+          <?php if (empty($keyPoints)): ?>
+            <div class="sb-muted">No key points found.</div>
+          <?php else: ?>
+            <ul class="report-list report-list-points">
+              <?php foreach ($keyPoints as $point): ?>
+                <li>→ <?php echo e((string)$point); ?></li>
+              <?php endforeach; ?>
+            </ul>
+          <?php endif; ?>
+        </div>
       </div>
-    </div>
+
+      <div class="section">
+        <div class="card">
+          <div class="section-title">Issues</div>
+          <?php if (empty($issues)): ?>
+            <div class="sb-muted">No major issues detected</div>
+          <?php else: ?>
+            <div class="table-wrap">
+              <table class="simple-table">
+                <thead>
+                  <tr>
+                    <th>Issue</th>
+                    <th>Severity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($issues as $issue): ?>
+                    <?php
+                      $title = (string)($issue['title'] ?? 'Issue');
+                      $severity = strtolower((string)($issue['severity'] ?? 'low'));
+                      if (!in_array($severity, ['low', 'medium', 'high'], true)) {
+                          $severity = 'low';
+                      }
+                    ?>
+                    <tr>
+                      <td><?php echo e($title); ?></td>
+                      <td><span class="severity severity-<?php echo e($severity); ?>"><?php echo e(strtoupper($severity)); ?></span></td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="card report-actions">
+          <div class="section-title">Recommended Actions (What you should do next)</div>
+          <?php if (empty($actions)): ?>
+            <div class="sb-muted">No actions found.</div>
+          <?php else: ?>
+            <ul class="report-list report-list-actions">
+              <?php foreach ($actions as $action): ?>
+                <li>✅ <?php echo e((string)$action); ?></li>
+              <?php endforeach; ?>
+            </ul>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
   </main>
+  <script>
+    (function () {
+      function wireGenerateButton(id) {
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          btn.disabled = true;
+          btn.textContent = 'Analyzing your store...';
+        });
+      }
+      wireGenerateButton('generateAiBtn');
+      wireGenerateButton('generateAiBtnEmpty');
+    })();
+  </script>
 </body>
 </html>

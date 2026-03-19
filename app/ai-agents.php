@@ -25,14 +25,49 @@ function safeHtml(string $html): string {
     return strip_tags($html, '<p><ul><li><strong><em><br>');
 }
 
+function formatTimeAgo(?string $timestamp): string {
+    if (!$timestamp) return 'Not generated yet';
+    $time = strtotime($timestamp);
+    if (!$time) return 'Not generated yet';
+    $diff = time() - $time;
+    if ($diff < 60) return 'just now';
+    if ($diff < 3600) {
+        $m = (int)floor($diff / 60);
+        return $m . ' minute' . ($m === 1 ? '' : 's') . ' ago';
+    }
+    if ($diff < 86400) {
+        $h = (int)floor($diff / 3600);
+        return $h . ' hour' . ($h === 1 ? '' : 's') . ' ago';
+    }
+    $d = (int)floor($diff / 86400);
+    return $d . ' day' . ($d === 1 ? '' : 's') . ' ago';
+}
+
 $storeName = (string)($shopRecord['store_name'] ?? '');
 $agents = [];
 $dbError = '';
 
 try {
     $mysqli = db();
-    $res = $mysqli->query("SELECT id, name, description, agent_key, model, version, is_premium, output_schema, data_mapping FROM ai_agents WHERE is_active = 1 ORDER BY id ASC");
-    if ($res) {
+    $sql = "
+        SELECT
+            a.id, a.name, a.description, a.agent_key, a.model, a.version, a.is_premium, a.output_schema, a.data_mapping,
+            r.last_created_at
+        FROM ai_agents a
+        LEFT JOIN (
+            SELECT agent_id, MAX(created_at) AS last_created_at
+            FROM ai_reports
+            WHERE shop = ? AND status = 'completed'
+            GROUP BY agent_id
+        ) r ON r.agent_id = a.id
+        WHERE a.is_active = 1
+        ORDER BY a.id ASC
+    ";
+    $stmt = $mysqli->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param('s', $shop);
+        $stmt->execute();
+        $res = $stmt->get_result();
         while ($row = $res->fetch_assoc()) {
             $agents[] = [
                 'id' => (int)($row['id'] ?? 0),
@@ -44,8 +79,10 @@ try {
                 'is_premium' => (int)($row['is_premium'] ?? 0),
                 'output_schema' => (string)($row['output_schema'] ?? ''),
                 'data_mapping' => (string)($row['data_mapping'] ?? ''),
+                'last_created_at' => (string)($row['last_created_at'] ?? ''),
             ];
         }
+        $stmt->close();
     }
 } catch (Throwable $e) {
     $dbError = 'Unable to load AI agents right now.';
@@ -82,7 +119,8 @@ try {
     <?php endif; ?>
 
     <div class="section">
-      <div class="section-title">Active Agents</div>
+      <div class="section-title">AI Agents</div>
+      <div class="hero-subtitle" style="margin-bottom:12px;">Your AI team for store growth and optimization</div>
       <?php if (empty($agents)): ?>
         <div class="card">
           <div class="sb-muted">No active agents found. Add records to `ai_agents` table.</div>
@@ -90,8 +128,14 @@ try {
       <?php else: ?>
         <div class="agents-grid">
           <?php foreach ($agents as $agent): ?>
+            <?php
+              $hasReport = (string)($agent['last_created_at'] ?? '') !== '';
+              $statusLabel = $hasReport ? '🟢 Active' : '🟡 Not Generated';
+              $statusClass = $hasReport ? 'status-positive' : 'status-medium';
+              $lastUpdated = $hasReport ? ('Last updated: ' . formatTimeAgo((string)$agent['last_created_at'])) : 'Not generated yet';
+            ?>
             <div class="card agent-card">
-              <div class="kpi-title"><?php echo e($agent['agent_key'] !== '' ? $agent['agent_key'] : 'Agent'); ?></div>
+              <div class="agent-key-badge"><?php echo e(strtoupper($agent['agent_key'] !== '' ? $agent['agent_key'] : 'AGENT')); ?></div>
               <div class="agent-title"><?php echo e($agent['name'] !== '' ? $agent['name'] : ('Agent #' . $agent['id'])); ?></div>
               <div class="agent-desc">
                 <?php
@@ -99,18 +143,18 @@ try {
                   echo $desc !== '' ? safeHtml($desc) : e('No description available.');
                 ?>
               </div>
+              <div class="agent-meta-row">
+                <span class="status-badge <?php echo e($statusClass); ?>"><?php echo e($statusLabel); ?></span>
+                <?php if ((int)$agent['is_premium'] === 1): ?>
+                  <span class="sb-pill-badge sb-pill-badge--purple">Premium</span>
+                <?php endif; ?>
+              </div>
+              <div class="agent-updated"><?php echo e($lastUpdated); ?></div>
               <div class="agent-footer">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                  <span class="SbBadge"><?php echo e($agent['model'] !== '' ? $agent['model'] : 'claude'); ?></span>
-                  <span class="SbBadge">v<?php echo (int)$agent['version']; ?></span>
-                  <?php if ((int)$agent['is_premium'] === 1): ?>
-                    <span class="sb-pill-badge sb-pill-badge--purple">Premium</span>
-                  <?php endif; ?>
-                </div>
                 <a
                   class="btn btn-primary"
                   href="<?php echo e(BASE_URL); ?>/agent-report.php?agent_id=<?php echo (int)$agent['id']; ?>&shop=<?php echo urlencode($shop); ?><?php if ($host !== ''): ?>&host=<?php echo urlencode($host); ?><?php endif; ?>"
-                >View Report</a>
+                ><?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?></a>
               </div>
             </div>
           <?php endforeach; ?>
