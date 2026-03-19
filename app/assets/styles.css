@@ -638,3 +638,47 @@ body {
   margin-bottom: 12px;
 }
 
+/* Alerts page */
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .alerts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.alert-card {
+  border: 1px solid #e5e7eb;
+}
+
+.alert-card-critical {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.alert-card-warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.alert-card-insight {
+  border-color: #bbf7d0;
+  background: #ecfdf5;
+}
+
+.alert-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.alert-meta {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
