@@ -6,6 +6,7 @@
   <div class="nav-right">
     <a id="nav-dashboard">Dashboard</a>
     <a id="nav-analytics">Analytics</a>
+    <a id="nav-ai-agents">AI Agents</a>
   </div>
 </nav>
 
@@ -19,9 +20,11 @@
 
     var dashboardLink = document.getElementById("nav-dashboard");
     var analyticsLink = document.getElementById("nav-analytics");
+    var agentsLink = document.getElementById("nav-ai-agents");
 
     if (dashboardLink) dashboardLink.href = "dashboard.php" + query;
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
+    if (agentsLink) agentsLink.href = "ai-agents.php" + query;
 
     // Active state
     var path = window.location.pathname.toLowerCase();
@@ -30,6 +33,12 @@
     }
     if (path.includes("analytics") && analyticsLink) {
       analyticsLink.classList.add("active");
+    }
+    if (path.includes("ai-agents") && agentsLink) {
+      agentsLink.classList.add("active");
+    }
+    if (path.includes("agent-report") && agentsLink) {
+      agentsLink.classList.add("active");
     }
   })();
 </script>

@@ -415,3 +415,98 @@ body {
   border-radius: 2px;
 }
 
+/* AI Agents */
+.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.agent-desc {
+  font-size: 14px;
+  color: #4b5563;
+  min-height: 44px;
+}
+
+.agent-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+}
+
+/* Report tables + action block */
+.report-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #374151;
+}
+
+.report-list li {
+  margin-bottom: 8px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.simple-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.simple-table th,
+.simple-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.simple-table th {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.severity {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.severity-low {
+  color: #166534;
+  background: #ecfdf5;
+}
+
+.severity-medium {
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.severity-high {
+  color: #991b1b;
+  background: #fef2f2;
+}
+
+.report-actions {
+  border: 1px solid #e0e7ff;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+}
+
