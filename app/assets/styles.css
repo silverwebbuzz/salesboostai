@@ -665,9 +665,9 @@ body {
   background: #fffbeb;
 }
 
-.alert-card-insight {
-  border-color: #bbf7d0;
-  background: #ecfdf5;
+.alert-card-info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
 }
 
 .alert-title {

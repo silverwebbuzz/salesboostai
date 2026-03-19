@@ -28,16 +28,27 @@ function salesVelocity(int $sales30): float {
     return $sales30 / 30.0;
 }
 
+function cleanProductName(string $name): string {
+    $v = trim(preg_replace('/\s+/', ' ', str_replace(["\r", "\n", "\t"], ' ', $name)));
+    return $v !== '' ? $v : 'Unnamed product';
+}
+
 $criticalAlerts = [];
 $warningAlerts = [];
-$insightAlerts = [];
+$infoAlerts = [];
 $errorText = '';
+$inventoryAgentId = 0;
 
 try {
     $mysqli = db();
     $shopName = makeShopName($shop);
     $ordersTable = perStoreTableName($shopName, 'order');
     $inventoryTable = perStoreTableName($shopName, 'products_inventory');
+    $agentRes = $mysqli->query("SELECT id FROM ai_agents WHERE agent_key = 'inventory' LIMIT 1");
+    if ($agentRes) {
+        $ar = $agentRes->fetch_assoc();
+        $inventoryAgentId = (int)($ar['id'] ?? 0);
+    }
 
     $tz = (string)($shopRecord['iana_timezone'] ?? 'UTC');
     if ($tz === '') $tz = 'UTC';
@@ -94,9 +105,11 @@ try {
     $invRes = $mysqli->query("SELECT title, sku, inventory_quantity FROM `{$inventoryTable}` WHERE inventory_quantity IS NOT NULL");
     if ($invRes) {
         while ($r = $invRes->fetch_assoc()) {
-            $title = trim((string)($r['title'] ?? ''));
-            if ($title === '') $title = trim((string)($r['sku'] ?? ''));
-            if ($title === '') continue;
+            $title = cleanProductName((string)($r['title'] ?? ''));
+            if ($title === 'Unnamed product') {
+                $title = cleanProductName((string)($r['sku'] ?? ''));
+            }
+            if ($title === 'Unnamed product') continue;
             $inventory[$title] = (int)($r['inventory_quantity'] ?? 0);
         }
     }
@@ -126,8 +139,8 @@ try {
             $lineItems = isset($payload['line_items']) && is_array($payload['line_items']) ? $payload['line_items'] : [];
             foreach ($lineItems as $li) {
                 if (!is_array($li)) continue;
-                $title = trim((string)($li['title'] ?? ''));
-                if ($title === '') continue;
+                $title = cleanProductName((string)($li['title'] ?? ''));
+                if ($title === 'Unnamed product') continue;
                 $qty = (int)($li['quantity'] ?? 0);
                 if (!isset($sales30[$title])) $sales30[$title] = 0;
                 $sales30[$title] += max(0, $qty);
@@ -149,7 +162,8 @@ try {
         if ($invQty < 5) {
             $criticalAlerts[] = [
                 'title' => '🚨 Bestseller running low on stock',
-                'meta' => $title . ' · ' . $invQty . ' left',
+                'meta' => cleanProductName((string)$title) . ' has only ' . $invQty . ' units left. Restock soon to avoid lost sales.',
+                'type' => 'inventory',
             ];
             break; // single concise alert
         }
@@ -169,6 +183,7 @@ try {
         $warningAlerts[] = [
             'title' => '⚠️ ' . count($stopped) . ' products stopped selling',
             'list' => array_map(fn($x) => (string)$x['title'], $topStopped),
+            'type' => 'inventory',
         ];
     }
 
@@ -183,11 +198,12 @@ try {
         usort($lowStock, fn($a, $b) => ((int)$a['qty']) <=> ((int)$b['qty']));
         $warningAlerts[] = [
             'title' => '⚠️ Low stock products',
-            'list' => array_map(fn($x) => (string)$x['title'] . ' (' . (int)$x['qty'] . ' left)', array_slice($lowStock, 0, 5)),
+            'list' => array_map(fn($x) => cleanProductName((string)$x['title']) . ' - only ' . (int)$x['qty'] . ' left', array_slice($lowStock, 0, 5)),
+            'type' => 'inventory',
         ];
     }
 
-    // Insights: dead stock (in stock, no sales in 30d)
+    // Warnings: dead stock (in stock, no sales in 30d)
     $dead = [];
     foreach ($inventory as $title => $qty) {
         if ($qty > 0 && ((int)($sales30[$title] ?? 0) === 0)) {
@@ -195,13 +211,14 @@ try {
         }
     }
     if (!empty($dead)) {
-        $insightAlerts[] = [
-            'title' => '✅ Dead stock detected',
+        $warningAlerts[] = [
+            'title' => '⚠️ Dead stock identified',
             'meta' => count($dead) . ' products have stock but no sales in 30 days',
+            'type' => 'inventory',
         ];
     }
 
-    // Insights: slow products (velocity < 2/day and >0 sales)
+    // Warnings: slow products (velocity < 2/day and >0 sales)
     $slow = [];
     foreach ($sales30 as $title => $qty30) {
         $v = salesVelocity((int)$qty30);
@@ -211,9 +228,10 @@ try {
     }
     if (!empty($slow)) {
         usort($slow, fn($a, $b) => ((float)$a['v']) <=> ((float)$b['v']));
-        $insightAlerts[] = [
-            'title' => '✅ Slow products found',
+        $warningAlerts[] = [
+            'title' => '⚠️ Slow-moving products',
             'meta' => count($slow) . ' products have low sales velocity',
+            'type' => 'inventory',
         ];
     }
 } catch (Throwable $e) {
@@ -249,14 +267,24 @@ try {
       </div>
     <?php endif; ?>
 
+    <?php
+      $inventoryDetailsUrl = $inventoryAgentId > 0
+        ? (BASE_URL . '/agent-report.php?agent_id=' . $inventoryAgentId . '&shop=' . urlencode($shop) . ($host !== '' ? '&host=' . urlencode($host) : ''))
+        : '#';
+    ?>
+
     <?php if (!empty($criticalAlerts)): ?>
       <div class="section">
         <div class="section-title">🔴 Critical Alerts</div>
+        <div class="hero-subtitle" style="margin-bottom:10px;">Serious issues. Immediate action needed.</div>
         <div class="alerts-grid">
           <?php foreach ($criticalAlerts as $alert): ?>
             <div class="card alert-card alert-card-critical">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Alert')); ?></div>
               <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
+              <div style="margin-top:12px;">
+                <a class="btn btn-primary" href="<?php echo e($inventoryDetailsUrl); ?>">View Details</a>
+              </div>
             </div>
           <?php endforeach; ?>
         </div>
@@ -266,10 +294,12 @@ try {
     <?php if (!empty($warningAlerts)): ?>
       <div class="section">
         <div class="section-title">🟡 Warnings</div>
+        <div class="hero-subtitle" style="margin-bottom:10px;">Needs attention. Not urgent.</div>
         <div class="alerts-grid">
           <?php foreach ($warningAlerts as $alert): ?>
             <div class="card alert-card alert-card-warning">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Warning')); ?></div>
+              <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
               <?php if (!empty($alert['list']) && is_array($alert['list'])): ?>
                 <ul class="report-list" style="margin-top:8px;">
                   <?php foreach ($alert['list'] as $item): ?>
@@ -277,30 +307,36 @@ try {
                   <?php endforeach; ?>
                 </ul>
               <?php endif; ?>
+              <div style="margin-top:12px;">
+                <a class="btn btn-primary" href="<?php echo e($inventoryDetailsUrl); ?>">View Details</a>
+              </div>
             </div>
           <?php endforeach; ?>
         </div>
       </div>
     <?php endif; ?>
 
-    <?php if (!empty($insightAlerts)): ?>
+    <?php if (!empty($infoAlerts)): ?>
       <div class="section">
-        <div class="section-title">🟢 Insights</div>
+        <div class="section-title">🔵 Info</div>
         <div class="alerts-grid">
-          <?php foreach ($insightAlerts as $alert): ?>
-            <div class="card alert-card alert-card-insight">
+          <?php foreach ($infoAlerts as $alert): ?>
+            <div class="card alert-card alert-card-info">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Insight')); ?></div>
               <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
+              <div style="margin-top:12px;">
+                <a class="btn btn-primary" href="<?php echo e($inventoryDetailsUrl); ?>">View Details</a>
+              </div>
             </div>
           <?php endforeach; ?>
         </div>
       </div>
     <?php endif; ?>
 
-    <?php if (empty($criticalAlerts) && empty($warningAlerts) && empty($insightAlerts) && $errorText === ''): ?>
+    <?php if (empty($criticalAlerts) && empty($warningAlerts) && empty($infoAlerts) && $errorText === ''): ?>
       <div class="section">
         <div class="card">
-          <div class="sb-muted">No alerts right now. Your store looks stable.</div>
+          <div class="sb-muted">✅ No critical issues detected</div>
         </div>
       </div>
     <?php endif; ?>
