@@ -46,15 +46,36 @@ if (!function_exists('sbm_clampInt')) {
 }
 
 if (!function_exists('sbm_cache_get')) {
-    function sbm_cache_get(string $shop, string $metricKey, int $ttlSec): ?array
+    /**
+     * Cache whether a per-store analytics table exists (per PHP request).
+     * Avoids repeating SHOW TABLES LIKE for every cached metric call.
+     */
+    function sbm_analytics_cache_enabled(string $shop): bool
     {
+        static $enabledByShop = [];
+        if (array_key_exists($shop, $enabledByShop)) return (bool)$enabledByShop[$shop];
         try {
             $mysqli = db();
             $tables = sbm_getShopTables($shop);
             $analyticsTable = $tables['analytics'];
             $safe = $mysqli->real_escape_string($analyticsTable);
             $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
-            if (!$exists || $exists->num_rows === 0) return null;
+            $enabledByShop[$shop] = ($exists && $exists->num_rows > 0);
+            return (bool)$enabledByShop[$shop];
+        } catch (Throwable $e) {
+            $enabledByShop[$shop] = false;
+            return false;
+        }
+    }
+
+    function sbm_cache_get(string $shop, string $metricKey, int $ttlSec): ?array
+    {
+        try {
+            $mysqli = db();
+            if (!sbm_analytics_cache_enabled($shop)) return null;
+            $tables = sbm_getShopTables($shop);
+            $analyticsTable = $tables['analytics'];
+            $safe = $mysqli->real_escape_string($analyticsTable);
 
             $stmt = $mysqli->prepare("SELECT payload_json, fetched_at FROM `{$analyticsTable}` WHERE metric_key = ? LIMIT 1");
             if (!$stmt) return null;
@@ -81,11 +102,10 @@ if (!function_exists('sbm_cache_set')) {
     {
         try {
             $mysqli = db();
+            if (!sbm_analytics_cache_enabled($shop)) return;
             $tables = sbm_getShopTables($shop);
             $analyticsTable = $tables['analytics'];
             $safe = $mysqli->real_escape_string($analyticsTable);
-            $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
-            if (!$exists || $exists->num_rows === 0) return;
 
             $payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
             $stmt = $mysqli->prepare(
