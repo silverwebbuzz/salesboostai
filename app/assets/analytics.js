@@ -32,6 +32,74 @@
     return String(text || '').replace(/(-?\d+(\.\d+)?%?)/g, '<span class="highlight-number">$1</span>');
   }
 
+  function formatInsight(insight) {
+    var map = {
+      high: {
+        label: '⚠️ Action needed',
+        color: '#b91c1c',
+        bg: '#fef2f2',
+        border: '#fecaca'
+      },
+      medium: {
+        label: '💡 Opportunity',
+        color: '#92400e',
+        bg: '#fffbeb',
+        border: '#fde68a'
+      },
+      positive: {
+        label: '📈 Good performance',
+        color: '#166534',
+        bg: '#ecfdf5',
+        border: '#bbf7d0'
+      }
+    };
+    var t = map[insight && insight.type] ? insight.type : 'medium';
+    var cfg = map[t];
+    return (
+      '<div style="display:flex;flex-direction:column;gap:6px;">' +
+        '<span style="display:inline-block;align-self:flex-start;padding:4px 8px;border-radius:999px;border:1px solid ' + cfg.border + ';background:' + cfg.bg + ';color:' + cfg.color + ';font-size:12px;font-weight:600;">' + cfg.label + '</span>' +
+        '<span style="font-size:14px;color:#1f2937;">' + highlightNumbers((insight && insight.message) || '') + '</span>' +
+      '</div>'
+    );
+  }
+
+  function generateInsight(data) {
+    var revenueChange = Number(data && data.revenue_change != null ? data.revenue_change : NaN);
+    var topShare = Number(data && data.top_product_share != null ? data.top_product_share : NaN);
+    var aov = Number(data && data.aov != null ? data.aov : NaN);
+    var returningRate = Number(
+      data && data.customers && data.customers.returning_rate != null
+        ? data.customers.returning_rate
+        : NaN
+    );
+
+    if (!isNaN(revenueChange) && revenueChange === 0) {
+      return { type: 'high', message: 'Sales are not growing. Try running a promotion this week.' };
+    }
+    if (!isNaN(revenueChange) && revenueChange > 10) {
+      return { type: 'positive', message: 'Sales are increasing. Keep promoting your top products.' };
+    }
+    if (!isNaN(topShare) && topShare > 0.4) {
+      return { type: 'high', message: 'Most sales come from one product. Promote other items.' };
+    }
+    if (!isNaN(aov) && aov < 50) {
+      return { type: 'medium', message: 'Customers buy small orders. Add bundles or upsells.' };
+    }
+    if (!isNaN(returningRate) && returningRate < 0.3) {
+      return { type: 'high', message: 'Customers are not returning. Try follow-up campaigns.' };
+    }
+    return { type: 'positive', message: 'Sales look steady. Keep promoting your best products.' };
+  }
+
+  function getTopProductShare(topProducts) {
+    var items = topProducts || [];
+    if (!items.length) return 0;
+    var total = items.reduce(function (acc, p) { return acc + Number(p.revenue || 0); }, 0);
+    var top = Number(items[0] && items[0].revenue ? items[0].revenue : 0);
+    if (total <= 0) return 0;
+    return top / total;
+  }
+
   var charts = {
     revenue: null,
     products: null,
@@ -62,7 +130,9 @@
     var data = await fetchJson(apiUrl('revenue.php', { shop: shop, range: range || 7 }));
 
     setText('revenueTotal', money(data.total));
-    setHTML('revenueInsight', highlightNumbers('Revenue increased by ' + (data.change || 0) + '% compared to last period.'));
+    setHTML('revenueInsight', formatInsight(generateInsight({
+      revenue_change: Number(data.change || 0)
+    })));
 
     var ctx = document.getElementById('analyticsRevenueChart');
     if (ctx && window.Chart) {
@@ -137,9 +207,10 @@
     setHTML('productsTopList', top || '<div class="SbListRow"><div class="sb-list-left">No data</div><div class="sb-list-right">—</div></div>');
     setHTML('productsWorstList', worst || '<div class="SbListRow"><div class="sb-list-left">No data</div><div class="sb-list-right">—</div></div>');
 
-    var topCount = (data.top || []).length;
-    var insight = topCount > 0 ? (topCount + ' products generate 80% of revenue') : 'Not enough data to estimate revenue concentration.';
-    setHTML('productsInsight', highlightNumbers(insight));
+    var insight = generateInsight({
+      top_product_share: getTopProductShare(data.top || [])
+    });
+    setHTML('productsInsight', formatInsight(insight));
   }
 
   async function loadCustomers() {
@@ -182,7 +253,13 @@
     }).join('');
     setHTML('customersTopList', top || '<div class="SbListRow"><div class="sb-list-left">No data</div><div class="sb-list-right">—</div></div>');
 
-    setHTML('customersInsight', highlightNumbers('Top 5 customers contribute 60% revenue'));
+    var newCount = Number(data.new || 0);
+    var returningCount = Number(data.returning || 0);
+    var total = newCount + returningCount;
+    var returningRate = total > 0 ? (returningCount / total) : 0;
+    setHTML('customersInsight', formatInsight(generateInsight({
+      customers: { returning_rate: returningRate }
+    })));
   }
 
   async function loadAOV() {
@@ -192,7 +269,9 @@
     var data = await fetchJson(apiUrl('aov.php', { shop: shop }));
 
     setText('aovValue', money(data.value));
-    setHTML('aovInsight', highlightNumbers('Your AOV is low compared to industry average'));
+    setHTML('aovInsight', formatInsight(generateInsight({
+      aov: Number(data.value || 0)
+    })));
 
     var ctx = document.getElementById('analyticsAovChart');
     if (ctx && window.Chart) {

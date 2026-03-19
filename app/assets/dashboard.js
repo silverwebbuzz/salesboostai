@@ -48,6 +48,107 @@ function show(id, on) {
   el.style.display = on ? '' : 'none';
 }
 
+function formatInsight(insight) {
+  const map = {
+    high: {
+      label: '⚠️ Action needed',
+      color: '#b91c1c',
+      bg: '#fef2f2',
+      border: '#fecaca'
+    },
+    medium: {
+      label: '💡 Opportunity',
+      color: '#92400e',
+      bg: '#fffbeb',
+      border: '#fde68a'
+    },
+    positive: {
+      label: '📈 Good performance',
+      color: '#166534',
+      bg: '#ecfdf5',
+      border: '#bbf7d0'
+    }
+  };
+  const type = map[insight?.type] ? insight.type : 'medium';
+  const cfg = map[type];
+  return `
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="display:inline-block;align-self:flex-start;padding:4px 8px;border-radius:999px;border:1px solid ${cfg.border};background:${cfg.bg};color:${cfg.color};font-size:12px;font-weight:600;">
+        ${cfg.label}
+      </span>
+      <span style="font-size:14px;color:#1f2937;">${highlightNumbers(insight?.message || '')}</span>
+    </div>
+  `;
+}
+
+function generateInsight(data) {
+  const revenueChange = Number(data?.revenue_change ?? NaN);
+  const topShare = Number(data?.top_product_share ?? NaN);
+  const aov = Number(data?.aov ?? NaN);
+  const returningRate = Number(data?.customers?.returning_rate ?? NaN);
+
+  if (!Number.isNaN(revenueChange) && revenueChange === 0) {
+    return { type: 'high', message: 'Sales are not growing. Try running a promotion this week.' };
+  }
+  if (!Number.isNaN(revenueChange) && revenueChange > 10) {
+    return { type: 'positive', message: 'Sales are increasing. Keep promoting your top products.' };
+  }
+  if (!Number.isNaN(topShare) && topShare > 0.4) {
+    return { type: 'high', message: 'Most sales come from one product. Promote other items.' };
+  }
+  if (!Number.isNaN(aov) && aov < 50) {
+    return { type: 'medium', message: 'Customers buy small orders. Add bundles or upsells.' };
+  }
+  if (!Number.isNaN(returningRate) && returningRate < 0.3) {
+    return { type: 'high', message: 'Customers are not returning. Try follow-up campaigns.' };
+  }
+  return { type: 'positive', message: 'Sales look steady. Keep promoting your best products.' };
+}
+
+function getTopProductShare(topProducts) {
+  const items = topProducts || [];
+  if (!items.length) return 0;
+  const total = items.reduce((acc, p) => acc + Number(p?.revenue_estimate ?? p?.revenue ?? 0), 0);
+  const top = Number(items[0]?.revenue_estimate ?? items[0]?.revenue ?? 0);
+  if (total <= 0) return 0;
+  return top / total;
+}
+
+function getDashboardSummary(data) {
+  const charts = data?.charts || {};
+  const rev = charts?.revenue || [];
+  const last7 = rev.slice(-7).reduce((a, b) => a + Number(b || 0), 0);
+  const prev7 = rev.slice(-14, -7).reduce((a, b) => a + Number(b || 0), 0);
+  const revChange = prev7 > 0 ? ((last7 - prev7) / prev7) * 100 : 0;
+  return generateInsight({ revenue_change: Math.round(revChange) });
+}
+
+function getDashboardKeyInsights(data) {
+  const out = [];
+  const topProducts = data?.insights?.top_products || [];
+  const customers = data?.insights?.high_value_customers || [];
+  const lowStock = data?.insights?.low_stock || [];
+  const aov = Number(data?.kpi?.aov || 0);
+  const totalCustomers = Number(data?.kpi?.customers || 0);
+  const returningRate = totalCustomers > 0 ? customers.length / totalCustomers : 0;
+
+  out.push(generateInsight({ top_product_share: getTopProductShare(topProducts) }));
+  out.push(generateInsight({ customers: { returning_rate: returningRate } }));
+  out.push(generateInsight({ aov }));
+
+  if (lowStock.length > 0) {
+    out.push({ type: 'medium', message: 'Some winning items may run out. Restock soon.' });
+  }
+
+  const uniqueMap = new Map();
+  out.filter(Boolean).forEach((item) => {
+    const key = `${item.type}:${item.message}`;
+    if (!uniqueMap.has(key)) uniqueMap.set(key, item);
+  });
+  const unique = Array.from(uniqueMap.values());
+  return unique.slice(0, 4);
+}
+
 function renderList(containerId, items, renderRow) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -271,7 +372,7 @@ async function loadDashboard() {
     setText('sbHvCustomersStat', fmtNumber((data?.insights?.high_value_customers || []).length || 0));
 
     // AI summary
-    setHtml('aiSummaryText', highlightNumbers(data?.summary_text || 'Insights will appear here once enough data is available.'));
+    setHtml('aiSummaryText', formatInsight(getDashboardSummary(data)));
 
     // Inventory KPIs
     const inv = data?.inventory_metrics || {};
@@ -342,15 +443,15 @@ async function loadDashboard() {
     const kiEl = document.getElementById('keyInsightsList');
     if (kiEl) {
       kiEl.innerHTML = '';
-      const list = data?.key_insights || [];
+      const list = getDashboardKeyInsights(data);
       if (!list.length) {
-        kiEl.innerHTML = `<div class="sb-muted">No insights yet.</div>`;
+        kiEl.innerHTML = `<div class="sb-muted">No insights yet. Try running one campaign this week.</div>`;
       } else {
         const ul = document.createElement('ul');
         ul.className = 'sb-keyinsights-list';
         list.forEach((t) => {
           const li = document.createElement('li');
-          li.textContent = t;
+          li.innerHTML = formatInsight(t);
           ul.appendChild(li);
         });
         kiEl.appendChild(ul);
