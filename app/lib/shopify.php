@@ -734,12 +734,21 @@ function registerWebhooks(string $shop, string $token): void
         ['topic' => 'customers/update', 'address' => $base . '/webhooks/handler'],
         ['topic' => 'customers/delete', 'address' => $base . '/webhooks/handler'],
 
-        // Mandatory GDPR + uninstall endpoints.
+        // App lifecycle webhook via Admin API.
         ['topic' => 'app/uninstalled', 'address' => $base . '/webhooks/app_uninstalled'],
-        ['topic' => 'customers/data_request', 'address' => $base . '/webhooks/customers_data_request'],
-        ['topic' => 'customers/redact', 'address' => $base . '/webhooks/customers_redact'],
-        ['topic' => 'shop/redact', 'address' => $base . '/webhooks/shop_redact'],
     ];
+
+    // NOTE:
+    // Mandatory compliance webhooks are configured at app level (Partner Dashboard or app config),
+    // not reliably through Admin REST webhook creation.
+    debugLog('[webhooks] compliance topics must be configured in Partner Dashboard/app config', [
+        'shop' => $shop,
+        'topics' => [
+            'customers/data_request' => $base . '/webhooks/customers_data_request',
+            'customers/redact' => $base . '/webhooks/customers_redact',
+            'shop/redact' => $base . '/webhooks/shop_redact',
+        ],
+    ]);
 
     foreach ($webhooks as $hook) {
         $payload = json_encode([
