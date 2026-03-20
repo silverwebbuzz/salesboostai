@@ -13,8 +13,49 @@
   </div>
 </nav>
 
+<script src="https://unpkg.com/@shopify/app-bridge@3"></script>
 <script>
   (function () {
+    if (!window.__sbAppBridgeInit) {
+      window.__sbAppBridgeInit = true;
+
+      var AppBridge = window['app-bridge'];
+      var params0 = new URLSearchParams(window.location.search);
+      var host0 = params0.get('host');
+      var app = null;
+
+      if (AppBridge && typeof AppBridge.createApp === 'function' && host0) {
+        app = AppBridge.createApp({
+          apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
+          host: host0,
+          forceRedirect: true
+        });
+      }
+
+      window.getToken = async function getToken() {
+        if (!app) return '';
+        try {
+          // Compatibility: App Bridge utility location differs by build/version.
+          if (AppBridge && typeof AppBridge.getSessionToken === 'function') {
+            return await AppBridge.getSessionToken(app);
+          }
+          if (window['app-bridge-utils'] && typeof window['app-bridge-utils'].getSessionToken === 'function') {
+            return await window['app-bridge-utils'].getSessionToken(app);
+          }
+        } catch (e) {}
+        return '';
+      };
+
+      window.authFetch = async function authFetch(url, options) {
+        var opts = options || {};
+        var token = await window.getToken();
+        var headers = Object.assign({}, opts.headers || {});
+        if (token) headers.Authorization = 'Bearer ' + token;
+        opts.headers = headers;
+        return fetch(url, opts);
+      };
+    }
+
     var params = new URLSearchParams(window.location.search);
     var shop = params.get("shop");
     var host = params.get("host");

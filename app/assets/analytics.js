@@ -118,7 +118,8 @@
   }
 
   async function fetchJson(url) {
-    var res = await fetch(url, { credentials: 'same-origin' });
+    var doFetch = window.authFetch || fetch;
+    var res = await doFetch(url, { credentials: 'same-origin' });
     if (!res.ok) throw new Error('Request failed: ' + res.status);
     return await res.json();
   }

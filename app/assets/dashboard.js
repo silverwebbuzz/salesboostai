@@ -443,7 +443,8 @@ async function loadDashboard() {
   show('sbError', false);
 
   try {
-    const res = await fetch(`/app/api/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`, {
+    const doFetch = window.authFetch || fetch;
+    const res = await doFetch(`/app/api/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`, {
       headers: { 'Accept': 'application/json' }
     });
     const data = await res.json();

@@ -6,6 +6,7 @@
  * { "value": 310.22, "trend": [...], "labels": [...] }
  */
 require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 header('Content-Type: application/json');
 
@@ -15,6 +16,8 @@ if ($shop === null) {
     echo json_encode(['ok' => false, 'error' => 'Invalid shop.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+requireSessionTokenAuth($shop);
 
 $store = getShopByDomain($shop);
 if (!$store || (($store['status'] ?? '') === 'uninstalled')) {
