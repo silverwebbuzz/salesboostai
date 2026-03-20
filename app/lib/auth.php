@@ -108,6 +108,7 @@ if (!function_exists('requireSessionTokenAuth')) {
     {
         $token = getBearerTokenFromHeaders();
         if (!is_string($token) || $token === '') {
+            error_log('Missing Authorization header');
             http_response_code(401);
             echo json_encode(['ok' => false, 'error' => 'Unauthorized'], JSON_UNESCAPED_UNICODE);
             exit;
@@ -115,6 +116,7 @@ if (!function_exists('requireSessionTokenAuth')) {
 
         $payload = verifySessionToken($token);
         if (!is_array($payload)) {
+            error_log('Invalid session token');
             http_response_code(401);
             echo json_encode(['ok' => false, 'error' => 'Invalid token'], JSON_UNESCAPED_UNICODE);
             exit;

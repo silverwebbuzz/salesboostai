@@ -49,7 +49,15 @@
 
       window.authFetch = async function authFetch(url, options) {
         var opts = options || {};
-        var token = await window.getToken();
+        var token = null;
+        try {
+          token = await window.getToken();
+        } catch (e) {
+          console.error("Token fetch failed", e);
+        }
+        if (!token) {
+          console.warn("No session token available");
+        }
         var headers = Object.assign({}, opts.headers || {});
         if (token) headers.Authorization = 'Bearer ' + token;
         opts.headers = headers;
@@ -99,6 +107,16 @@
     }
     if (path.includes("agent-report") && agentsLink) {
       agentsLink.classList.add("active");
+    }
+  })();
+</script>
+<script>
+  (async () => {
+    if (window.getToken) {
+      try {
+        const t = await window.getToken();
+        if (t) console.log("Session token OK");
+      } catch (e) {}
     }
   })();
 </script>
