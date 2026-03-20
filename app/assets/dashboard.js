@@ -48,6 +48,29 @@ function show(id, on) {
   el.style.display = on ? '' : 'none';
 }
 
+function renderSyncNotice(sync) {
+  const state = sync?.state || 'ready';
+  const pending = Number(sync?.pending || 0);
+  const inProgress = Number(sync?.in_progress || 0);
+  const error = Number(sync?.error || 0);
+
+  if (state === 'ready') {
+    show('sbSyncNotice', false);
+    return;
+  }
+
+  if (state === 'error') {
+    setText('sbSyncTitle', 'Store sync needs attention');
+    setText('sbSyncText', `Some sync tasks failed (${error}). Data may be incomplete. Please retry sync job and refresh.`);
+    show('sbSyncNotice', true);
+    return;
+  }
+
+  setText('sbSyncTitle', 'Store sync in progress');
+  setText('sbSyncText', `We are importing your products/orders in background (${pending} pending, ${inProgress} in progress). Dashboard will improve as sync completes.`);
+  show('sbSyncNotice', true);
+}
+
 function formatInsight(insight) {
   const map = {
     high: {
@@ -449,6 +472,8 @@ async function loadDashboard() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || 'Failed to load dashboard.');
+
+    renderSyncNotice(data?.sync_status || null);
 
     // KPIs
     setText('kpiRevenue', fmtCurrency(data?.kpi?.revenue || 0));

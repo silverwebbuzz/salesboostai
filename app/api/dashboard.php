@@ -33,6 +33,43 @@ $customersTable = perStoreTableName($shopName, 'customer');
 $inventoryTable = perStoreTableName($shopName, 'products_inventory');
 $analyticsTable = perStoreTableName($shopName, 'analytics');
 
+// Sync status (for first-install UX guidance)
+$syncStatus = [
+    'state' => 'ready', // ready | syncing | error
+    'pending' => 0,
+    'in_progress' => 0,
+    'error' => 0,
+];
+try {
+    $stmtSync = $mysqli->prepare(
+        "SELECT
+            SUM(status='pending') AS pending_count,
+            SUM(status='in_progress') AS in_progress_count,
+            SUM(status='error') AS error_count
+         FROM store_sync_state
+         WHERE shop = ?"
+    );
+    if ($stmtSync) {
+        $stmtSync->bind_param('s', $shop);
+        $stmtSync->execute();
+        $resSync = $stmtSync->get_result();
+        $rowSync = $resSync ? ($resSync->fetch_assoc() ?: null) : null;
+        $stmtSync->close();
+        if ($rowSync) {
+            $syncStatus['pending'] = (int)($rowSync['pending_count'] ?? 0);
+            $syncStatus['in_progress'] = (int)($rowSync['in_progress_count'] ?? 0);
+            $syncStatus['error'] = (int)($rowSync['error_count'] ?? 0);
+            if ($syncStatus['error'] > 0) {
+                $syncStatus['state'] = 'error';
+            } elseif (($syncStatus['pending'] + $syncStatus['in_progress']) > 0) {
+                $syncStatus['state'] = 'syncing';
+            }
+        }
+    }
+} catch (Throwable $e) {
+    // Non-blocking: keep dashboard available.
+}
+
 // ---- 5 min cache in per-store analytics table (metric_key = dashboard_cache) ----
 $cacheTtl = 300;
 try {
@@ -411,6 +448,7 @@ $out = [
         'restock_needed_value' => round($restockNeededValue, 2),
     ],
     'key_insights' => $keyInsights,
+    'sync_status' => $syncStatus,
 ];
 
 // Save cache (best effort)

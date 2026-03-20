@@ -49,7 +49,13 @@ try {
     registerWebhooks($shop, $accessToken);
 
     $tables = ensurePerStoreTables($shop);
-    fetchAndStoreInitialData($shop, $accessToken, $tables);
+    // Keep install callback fast: do not block first embedded render on heavy sync.
+    // We rely on queued backfill + webhooks for data population.
+    try {
+        setAppMetric($tables['analytics'], 'install_initialized_at', date('c'), null);
+    } catch (Throwable $e) {
+        // non-blocking
+    }
 
     // Queue full historical sync (runs in background via cron/job).
     enqueueFullSync($shop);

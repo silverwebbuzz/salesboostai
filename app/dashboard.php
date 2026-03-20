@@ -30,6 +30,13 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
       <div id="sbErrorText">Failed to load.</div>
     </div>
 
+    <div id="sbSyncNotice" style="display:none;">
+      <div class="card" style="border:1px solid #dbeafe;background:#eff6ff;margin-bottom:14px;">
+        <div><strong id="sbSyncTitle">Store sync in progress</strong></div>
+        <div id="sbSyncText" style="margin-top:6px;">Your store data is being prepared. Please refresh in a moment.</div>
+      </div>
+    </div>
+
     <div id="sbSkeleton">
       <div class="hero">
         <div class="hero-head">
