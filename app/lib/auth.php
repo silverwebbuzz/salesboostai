@@ -59,8 +59,14 @@ if (!function_exists('verifySessionToken')) {
             return false;
         }
 
-        $aud = (string)($payload['aud'] ?? '');
-        if ($aud !== SHOPIFY_API_KEY) {
+        $audClaim = $payload['aud'] ?? '';
+        $audOk = false;
+        if (is_string($audClaim)) {
+            $audOk = ($audClaim === SHOPIFY_API_KEY);
+        } elseif (is_array($audClaim)) {
+            $audOk = in_array(SHOPIFY_API_KEY, $audClaim, true);
+        }
+        if (!$audOk) {
             return false;
         }
 
@@ -117,7 +123,7 @@ if (!function_exists('requireSessionTokenAuth')) {
         if ($expectedShop !== null && $expectedShop !== '') {
             $dest = (string)($payload['dest'] ?? '');
             $shopDomain = parse_url($dest, PHP_URL_HOST);
-            if (!is_string($shopDomain) || strtolower($shopDomain) !== strtolower($expectedShop)) {
+            if (is_string($shopDomain) && $shopDomain !== '' && strtolower($shopDomain) !== strtolower($expectedShop)) {
                 http_response_code(401);
                 echo json_encode(['ok' => false, 'error' => 'Token shop mismatch'], JSON_UNESCAPED_UNICODE);
                 exit;
