@@ -31,6 +31,10 @@
 
     # 2b) Webhook receiver
     RewriteRule ^webhooks/handler$ webhooks/handler.php [L,QSA]
+    RewriteRule ^webhooks/app_uninstalled$ webhooks/app_uninstalled.php [L,QSA]
+    RewriteRule ^webhooks/customers_data_request$ webhooks/customers_data_request.php [L,QSA]
+    RewriteRule ^webhooks/customers_redact$ webhooks/customers_redact.php [L,QSA]
+    RewriteRule ^webhooks/shop_redact$ webhooks/shop_redact.php [L,QSA]
     RewriteRule ^jobs/process_webhooks$ jobs/process_webhooks.php [L,QSA]
     RewriteRule ^billing/subscribe$ billing/subscribe.php [L,QSA]
     RewriteRule ^billing/confirm$ billing/confirm.php [L,QSA]

@@ -45,8 +45,8 @@ try {
     // Default subscription row on first install.
     ensureFreeSubscription($shop);
 
-    // Register webhooks to keep data updated after backfill.
-    registerSalesboostWebhooks($shop, $accessToken);
+    // Register app + GDPR webhooks (Admin API 2026-01).
+    registerWebhooks($shop, $accessToken);
 
     $tables = ensurePerStoreTables($shop);
     fetchAndStoreInitialData($shop, $accessToken, $tables);

@@ -708,63 +708,72 @@ function verifyWebhookHmac(string $rawBody, string $hmacHeader): bool
  */
 function registerSalesboostWebhooks(string $shop, string $accessToken): void
 {
-    $address = rtrim(SHOPIFY_APP_URL, '/') . '/webhooks/handler';
+    registerWebhooks($shop, $accessToken);
+}
 
-    $topics = [
-        // Orders
-        'orders/create',
-        'orders/paid',
-        'orders/cancelled',
+/**
+ * Register required Shopify webhooks via Admin API 2026-01.
+ */
+function registerWebhooks(string $shop, string $token): void
+{
+    $base = rtrim(SHOPIFY_APP_URL, '/');
+    $apiVersion = '2026-01';
+    $endpoint = "https://{$shop}/admin/api/{$apiVersion}/webhooks.json";
 
-        // Products
-        'products/create',
-        'products/update',
-        'products/delete',
+    $webhooks = [
+        // Existing sync webhook endpoint.
+        ['topic' => 'orders/create', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'orders/paid', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'orders/cancelled', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'products/create', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'products/update', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'products/delete', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'inventory_levels/update', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'customers/create', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'customers/update', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'customers/delete', 'address' => $base . '/webhooks/handler'],
 
-        // Inventory
-        'inventory_levels/update',
-
-        // Customers
-        'customers/create',
-        'customers/update',
-        'customers/delete',
-
-        // Critical lifecycle
-        'app/uninstalled',
+        // Mandatory GDPR + uninstall endpoints.
+        ['topic' => 'app/uninstalled', 'address' => $base . '/webhooks/app_uninstalled'],
+        ['topic' => 'customers/data_request', 'address' => $base . '/webhooks/customers_data_request'],
+        ['topic' => 'customers/redact', 'address' => $base . '/webhooks/customers_redact'],
+        ['topic' => 'shop/redact', 'address' => $base . '/webhooks/shop_redact'],
     ];
 
-    // Get existing webhooks so we don't create duplicates.
-    $existing = shopifyRequest($shop, $accessToken, 'GET', '/webhooks.json', ['limit' => 250]);
-    $existingHooks = (isset($existing['webhooks']) && is_array($existing['webhooks'])) ? $existing['webhooks'] : [];
-
-    $existingSet = [];
-    foreach ($existingHooks as $wh) {
-        $t = isset($wh['topic']) ? (string)$wh['topic'] : '';
-        $a = isset($wh['address']) ? (string)$wh['address'] : '';
-        if ($t !== '' && $a !== '') {
-            $existingSet[$t . '|' . $a] = true;
-        }
-    }
-
-    foreach ($topics as $topic) {
-        $key = $topic . '|' . $address;
-        if (isset($existingSet[$key])) {
-            continue;
-        }
-
-        $resp = shopifyRequestWithMeta($shop, $accessToken, 'POST', '/webhooks.json', null, [
+    foreach ($webhooks as $hook) {
+        $payload = json_encode([
             'webhook' => [
-                'topic' => $topic,
-                'address' => $address,
+                'topic' => $hook['topic'],
+                'address' => $hook['address'],
                 'format' => 'json',
             ],
+        ], JSON_UNESCAPED_UNICODE);
+
+        $ch = curl_init($endpoint);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'X-Shopify-Access-Token: ' . $token,
         ]);
 
-        if ($resp['http_code'] < 200 || $resp['http_code'] >= 300) {
-            debugLog('[webhooks] create failed', [
+        $resp = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $error = curl_error($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // 201 = created, 422 = already exists (safe idempotency).
+        if ($errno !== 0 || ($httpCode !== 201 && $httpCode !== 422)) {
+            debugLog('[webhooks] register failed', [
                 'shop' => $shop,
-                'topic' => $topic,
-                'http_code' => $resp['http_code'],
+                'topic' => $hook['topic'],
+                'address' => $hook['address'],
+                'http_code' => $httpCode,
+                'curl_errno' => $errno,
+                'curl_error' => $error,
+                'response' => is_string($resp) ? $resp : null,
             ]);
         }
     }
