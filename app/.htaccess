@@ -2,6 +2,10 @@
     RewriteEngine On
     RewriteBase /app/
 
+    # Preserve Authorization header for PHP/FastCGI environments.
+    RewriteCond %{HTTP:Authorization} ^(.+)$
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%1]
+
     # Prevent directory listing
     Options -Indexes
 
@@ -42,6 +46,10 @@
     # 3) Generic clean-url -> .php mapping inside /app
     RewriteCond %{REQUEST_FILENAME}.php -f
     RewriteRule ^(.+)$ $1.php [L,QSA]
+</IfModule>
+
+<IfModule mod_setenvif.c>
+    SetEnvIfNoCase Authorization "^(.*)$" HTTP_AUTHORIZATION=$1
 </IfModule>
 
 <IfModule mod_headers.c>

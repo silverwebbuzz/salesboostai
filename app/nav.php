@@ -50,10 +50,15 @@
       window.authFetch = async function authFetch(url, options) {
         var opts = options || {};
         var token = null;
-        try {
-          token = await window.getToken();
-        } catch (e) {
-          console.error("Token fetch failed", e);
+        for (var i = 0; i < 3 && !token; i++) {
+          try {
+            token = await window.getToken();
+          } catch (e) {
+            if (i === 2) console.error("Token fetch failed", e);
+          }
+          if (!token && i < 2) {
+            await new Promise(function (resolve) { setTimeout(resolve, 150); });
+          }
         }
         if (!token) {
           console.warn("No session token available");
