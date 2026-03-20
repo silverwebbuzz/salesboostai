@@ -716,7 +716,8 @@ function registerSalesboostWebhooks(string $shop, string $accessToken): void
  */
 function registerWebhooks(string $shop, string $token): void
 {
-    $base = rtrim(SHOPIFY_APP_URL, '/');
+    // Use BASE_URL for webhook addresses to match app routing (/app/...) consistently.
+    $base = rtrim(defined('BASE_URL') ? BASE_URL : SHOPIFY_APP_URL, '/');
     $apiVersion = '2026-01';
     $endpoint = "https://{$shop}/admin/api/{$apiVersion}/webhooks.json";
 
