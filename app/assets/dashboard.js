@@ -148,7 +148,7 @@ async function runSyncNow() {
 
     renderSyncGate(data.sync_status || null);
     if ((data?.sync_status?.state || 'ready') === 'ready') {
-      setText('sbSyncGateHint', 'Sync completed. Click refresh to load dashboard.');
+      setText('sbSyncGateHint', 'Sync completed. Click “Display dashboard” to load your data.');
       if (refreshBtn) show('btnRefreshDashboard', true);
     } else {
       setText('sbSyncGateHint', 'Sync is still running. You can click Sync Now again.');

@@ -74,7 +74,7 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
           <div class="hero-subtitle" id="sbSyncGateMeta" style="margin-top:8px;"></div>
           <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <button class="btn btn-primary" type="button" id="btnRunSync">Sync Now</button>
-            <button class="btn btn-primary" type="button" id="btnRefreshDashboard" style="display:none;">Refresh Dashboard</button>
+            <button class="btn btn-primary" type="button" id="btnRefreshDashboard" style="display:none;">Display dashboard</button>
             <span class="hero-subtitle" id="sbSyncGateHint" style="margin:0;"></span>
           </div>
         </div>

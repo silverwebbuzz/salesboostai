@@ -39,25 +39,33 @@ if (!is_string($accessToken) || $accessToken === '') {
 }
 
 try {
+    /*
+     * OAuth install: set up all database structures and store metadata.
+     * Intentionally NOT called here: fetchAndStoreInitialData() (no bulk orders/customers/products/inventory/analytics counts).
+     * Merchants import that data via Dashboard → Sync Now (or cron calling runOneSyncStep).
+     */
+    ensureGlobalAppSchema();
+
+    // Shop profile from Shopify (single GET shop.json — not order/customer/product lists).
     $shopDetails = fetchShopDetails($shop, $accessToken);
     upsertStore($shop, $accessToken, $host, $shopDetails);
 
     // Default subscription row on first install.
     ensureFreeSubscription($shop);
 
-    // Register app + GDPR webhooks (Admin API 2026-01).
+    // Register operational webhooks (orders, products, customers, uninstall, etc.).
     registerWebhooks($shop, $accessToken);
 
+    // Per-store empty tables: order, customer, products_inventory, analytics (structure only).
     $tables = ensurePerStoreTables($shop);
-    // Keep install callback fast: do not block first embedded render on heavy sync.
-    // We rely on queued backfill + webhooks for data population.
+
     try {
-        setAppMetric($tables['analytics'], 'install_initialized_at', date('c'), null);
+        upsertAnalyticsMetric(db(), $tables['analytics'], 'install_initialized_at', date('c'), null);
     } catch (Throwable $e) {
         // non-blocking
     }
 
-    // Queue full historical sync (runs in background via cron/job).
+    // Queue sync tasks (rows in store_sync_state). Actual API fetch happens in sync runner / cron.
     enqueueFullSync($shop);
 } catch (Throwable $e) {
     error_log('[shopify_callback] ' . $e->getMessage());
