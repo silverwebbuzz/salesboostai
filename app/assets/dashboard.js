@@ -59,6 +59,13 @@ function renderSyncNotice(sync) {
     return;
   }
 
+  if (state === 'needs_sync') {
+    setText('sbSyncTitle', 'Import your store data');
+    setText('sbSyncText', 'We have not synced products and orders yet. Use Sync Now on the dashboard, then refresh.');
+    show('sbSyncNotice', true);
+    return;
+  }
+
   if (state === 'error') {
     setText('sbSyncTitle', 'Store sync needs attention');
     setText('sbSyncText', `Some sync tasks failed (${error}). Data may be incomplete. Please retry sync job and refresh.`);
@@ -73,7 +80,7 @@ function renderSyncNotice(sync) {
 
 function shouldGateDashboard(sync) {
   const state = sync?.state || 'ready';
-  return state === 'syncing' || state === 'error';
+  return state === 'needs_sync' || state === 'syncing' || state === 'error';
 }
 
 function renderSyncGate(sync) {
@@ -91,6 +98,17 @@ function renderSyncGate(sync) {
   show('sbSyncGate', true);
   show('sbDashboardBody', false);
   show('btnRefreshDashboard', false);
+
+  if (state === 'needs_sync') {
+    setText('sbSyncGateTitle', 'Welcome — sync your store first');
+    setText(
+      'sbSyncGateText',
+      'Your dashboard stays empty until we import products and orders. This avoids showing misleading numbers from an empty database.'
+    );
+    setText('sbSyncGateMeta', 'No sync tasks found yet, or import has not started.');
+    setText('sbSyncGateHint', 'Click "Sync Now" to run import steps, then refresh.');
+    return;
+  }
 
   if (state === 'error') {
     setText('sbSyncGateTitle', 'Sync needs attention');

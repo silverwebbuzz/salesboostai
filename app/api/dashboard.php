@@ -10,6 +10,56 @@ require_once __DIR__ . '/../lib/auth.php';
 
 header('Content-Type: application/json');
 
+/** Labels for last N days in store timezone (used for charts + lightweight shell response). */
+function lastNDaysLabels(int $days, string $tz = 'UTC'): array {
+    $out = [];
+    $dt = new DateTime('now', new DateTimeZone($tz));
+    $dt->setTime(0, 0, 0);
+    for ($i = $days - 1; $i >= 0; $i--) {
+        $d = clone $dt;
+        $d->modify("-{$i} days");
+        $out[] = $d->format('Y-m-d');
+    }
+    return $out;
+}
+
+/**
+ * Minimal dashboard JSON when sync is not finished — avoids heavy per-store queries and stale cache.
+ *
+ * @param array{state:string,pending:int,in_progress:int,error:int} $syncStatus
+ */
+function dashboardShellPayload(string $tz, array $syncStatus): array {
+    $labels = lastNDaysLabels(30, $tz);
+    $n = count($labels);
+    return [
+        'kpi' => [
+            'revenue' => 0.0,
+            'orders' => 0,
+            'aov' => 0.0,
+            'customers' => 0,
+        ],
+        'charts' => [
+            'labels' => $labels,
+            'revenue' => array_fill(0, $n, 0.0),
+            'orders' => array_fill(0, $n, 0),
+        ],
+        'insights' => [
+            'top_products' => [],
+            'low_stock' => [],
+            'high_value_customers' => [],
+        ],
+        'summary_text' => '',
+        'critical_issues' => [],
+        'inventory_metrics' => [
+            'cash_in_inventory' => 0.0,
+            'dead_stock_value' => 0.0,
+            'restock_needed_value' => 0.0,
+        ],
+        'key_insights' => [],
+        'sync_status' => $syncStatus,
+    ];
+}
+
 $shop = sanitizeShopDomain($_GET['shop'] ?? null);
 if ($shop === null) {
     http_response_code(400);
@@ -35,12 +85,23 @@ $analyticsTable = perStoreTableName($shopName, 'analytics');
 
 // Sync status (for first-install UX guidance)
 $syncStatus = [
-    'state' => 'ready', // ready | syncing | error
+    'state' => 'ready', // ready | needs_sync | syncing | error
     'pending' => 0,
     'in_progress' => 0,
     'error' => 0,
 ];
 try {
+    $stmtCnt = $mysqli->prepare('SELECT COUNT(*) AS c FROM store_sync_state WHERE shop = ?');
+    $syncRowCount = 0;
+    if ($stmtCnt) {
+        $stmtCnt->bind_param('s', $shop);
+        $stmtCnt->execute();
+        $rc = $stmtCnt->get_result();
+        $rw = $rc ? ($rc->fetch_assoc() ?: null) : null;
+        $stmtCnt->close();
+        $syncRowCount = (int)($rw['c'] ?? 0);
+    }
+
     $stmtSync = $mysqli->prepare(
         "SELECT
             SUM(status='pending') AS pending_count,
@@ -66,11 +127,28 @@ try {
             }
         }
     }
+
+    // No sync rows yet (e.g. enqueue failed) — do not treat as "ready" with empty DB.
+    if ($syncRowCount === 0) {
+        $syncStatus['state'] = 'needs_sync';
+    }
 } catch (Throwable $e) {
     // Non-blocking: keep dashboard available.
 }
 
+$tz = (string)($store['iana_timezone'] ?? '');
+if ($tz === '') {
+    $tz = 'UTC';
+}
+
+// First open / sync not complete: skip cache + skip heavy queries — UI shows sync gate only.
+if (($syncStatus['state'] ?? 'ready') !== 'ready') {
+    echo json_encode(dashboardShellPayload($tz, $syncStatus), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // ---- 5 min cache in per-store analytics table (metric_key = dashboard_cache) ----
+// Only when sync is ready (avoids serving stale full payload while sync was still running).
 $cacheTtl = 300;
 try {
     $safe = $mysqli->real_escape_string($analyticsTable);
@@ -87,6 +165,7 @@ try {
                 if ($age >= 0 && $age <= $cacheTtl) {
                     $cached = json_decode((string)$row['payload_json'], true);
                     if (is_array($cached)) {
+                        $cached['sync_status'] = $syncStatus;
                         echo json_encode($cached, JSON_UNESCAPED_UNICODE);
                         exit;
                     }
@@ -96,24 +175,6 @@ try {
     }
 } catch (Throwable $e) {
     // ignore cache errors
-}
-
-// Utility: labels for last N days
-function lastNDaysLabels(int $days, string $tz = 'UTC'): array {
-    $out = [];
-    $dt = new DateTime('now', new DateTimeZone($tz));
-    $dt->setTime(0,0,0);
-    for ($i = $days - 1; $i >= 0; $i--) {
-        $d = clone $dt;
-        $d->modify("-{$i} days");
-        $out[] = $d->format('Y-m-d');
-    }
-    return $out;
-}
-
-$tz = (string)($store['iana_timezone'] ?? '');
-if ($tz === '') {
-    $tz = 'UTC';
 }
 
 $labels = lastNDaysLabels(30, $tz);

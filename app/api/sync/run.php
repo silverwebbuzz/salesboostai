@@ -45,6 +45,18 @@ try {
 
     $mysqli = db();
     $status = ['state' => 'ready', 'pending' => 0, 'in_progress' => 0, 'error' => 0];
+
+    $stmtCnt = $mysqli->prepare('SELECT COUNT(*) AS c FROM store_sync_state WHERE shop = ?');
+    $syncRowCount = 0;
+    if ($stmtCnt) {
+        $stmtCnt->bind_param('s', $shop);
+        $stmtCnt->execute();
+        $rc = $stmtCnt->get_result();
+        $rw = $rc ? ($rc->fetch_assoc() ?: null) : null;
+        $stmtCnt->close();
+        $syncRowCount = (int)($rw['c'] ?? 0);
+    }
+
     $stmt = $mysqli->prepare(
         "SELECT
             SUM(status='pending') AS pending_count,
@@ -63,9 +75,15 @@ try {
             $status['pending'] = (int)($row['pending_count'] ?? 0);
             $status['in_progress'] = (int)($row['in_progress_count'] ?? 0);
             $status['error'] = (int)($row['error_count'] ?? 0);
-            if ($status['error'] > 0) $status['state'] = 'error';
-            elseif (($status['pending'] + $status['in_progress']) > 0) $status['state'] = 'syncing';
+            if ($status['error'] > 0) {
+                $status['state'] = 'error';
+            } elseif (($status['pending'] + $status['in_progress']) > 0) {
+                $status['state'] = 'syncing';
+            }
         }
+    }
+    if ($syncRowCount === 0) {
+        $status['state'] = 'needs_sync';
     }
 
     echo json_encode([
