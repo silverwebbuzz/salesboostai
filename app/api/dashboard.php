@@ -57,6 +57,11 @@ function dashboardShellPayload(string $tz, array $syncStatus): array {
         ],
         'key_insights' => [],
         'sync_status' => $syncStatus,
+        'meta' => [
+            'computed_at' => gmdate('c'),
+            'source' => 'shell',
+            'note' => 'Sync not finished; full KPIs are not computed yet.',
+        ],
     ];
 }
 
@@ -148,12 +153,13 @@ if (($syncStatus['state'] ?? 'ready') !== 'ready') {
 }
 
 // ---- 5 min cache in per-store analytics table (metric_key = dashboard_cache) ----
-// Only when sync is ready (avoids serving stale full payload while sync was still running).
+// Only when sync is ready. Also validate dashboard_cache_sig vs live row counts so post-sync data is never hidden behind stale zeros.
 $cacheTtl = 300;
+$bypassCache = !empty($_GET['nocache']) || !empty($_GET['refresh']);
 try {
     $safe = $mysqli->real_escape_string($analyticsTable);
     $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
-    if ($exists && $exists->num_rows > 0) {
+    if (!$bypassCache && $exists && $exists->num_rows > 0) {
         $stmt = $mysqli->prepare("SELECT payload_json, fetched_at FROM `{$analyticsTable}` WHERE metric_key='dashboard_cache' LIMIT 1");
         if ($stmt) {
             $stmt->execute();
@@ -165,9 +171,30 @@ try {
                 if ($age >= 0 && $age <= $cacheTtl) {
                     $cached = json_decode((string)$row['payload_json'], true);
                     if (is_array($cached)) {
-                        $cached['sync_status'] = $syncStatus;
-                        echo json_encode($cached, JSON_UNESCAPED_UNICODE);
-                        exit;
+                        $liveFp = dashboardCacheLiveFingerprint($shop);
+                        $stmtSig = $mysqli->prepare("SELECT metric_value FROM `{$analyticsTable}` WHERE metric_key='dashboard_cache_sig' LIMIT 1");
+                        $storedSig = '';
+                        if ($stmtSig) {
+                            $stmtSig->execute();
+                            $rs = $stmtSig->get_result();
+                            $rw = $rs ? ($rs->fetch_assoc() ?: null) : null;
+                            $stmtSig->close();
+                            $storedSig = (string)($rw['metric_value'] ?? '');
+                        }
+                        $sigOk = $liveFp !== null && $storedSig !== '' && hash_equals($storedSig, $liveFp);
+                        if ($sigOk) {
+                            $cached['sync_status'] = $syncStatus;
+                            $cachedAt = strtotime((string)$row['fetched_at']);
+                            $cached['meta'] = [
+                                'computed_at' => $cachedAt ? gmdate('c', $cachedAt) : gmdate('c'),
+                                'source' => 'cache',
+                                'cache_age_seconds' => max(0, $age),
+                                'data_fingerprint' => $liveFp,
+                            ];
+                            echo json_encode($cached, JSON_UNESCAPED_UNICODE);
+                            exit;
+                        }
+                        // Stale cache (e.g. sync imported rows after cache was saved) — fall through and recompute fully.
                     }
                 }
             }
@@ -484,6 +511,13 @@ if (!empty($topProducts)) {
 }
 $summaryText = implode(' ', $summaryParts);
 
+// Row-count fingerprint (must match dashboard_cache_sig when serving cached JSON after sync/webhooks).
+$inventoryRowCount = 0;
+if ($res = $mysqli->query("SELECT COUNT(*) AS c FROM `{$inventoryTable}`")) {
+    $inventoryRowCount = (int)($res->fetch_assoc()['c'] ?? 0);
+}
+$dataFingerprint = $totalOrders . ':' . $totalCustomers . ':' . $inventoryRowCount;
+
 $out = [
     'kpi' => [
         'revenue' => round($totalRevenue, 2),
@@ -510,9 +544,14 @@ $out = [
     ],
     'key_insights' => $keyInsights,
     'sync_status' => $syncStatus,
+    'meta' => [
+        'computed_at' => gmdate('c'),
+        'source' => 'live',
+        'data_fingerprint' => $dataFingerprint,
+    ],
 ];
 
-// Save cache (best effort)
+// Save cache + fingerprint (best effort) — only after full aggregation above.
 try {
     $safe = $mysqli->real_escape_string($analyticsTable);
     $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
@@ -525,6 +564,14 @@ try {
             $stmt->bind_param('s', $payloadJson);
             $stmt->execute();
             $stmt->close();
+        }
+        $stmtSig = $mysqli->prepare("INSERT INTO `{$analyticsTable}` (metric_key, metric_value, payload_json)
+            VALUES ('dashboard_cache_sig', ?, NULL)
+            ON DUPLICATE KEY UPDATE metric_value = VALUES(metric_value), fetched_at = NOW()");
+        if ($stmtSig) {
+            $stmtSig->bind_param('s', $dataFingerprint);
+            $stmtSig->execute();
+            $stmtSig->close();
         }
     }
 } catch (Throwable $e) {

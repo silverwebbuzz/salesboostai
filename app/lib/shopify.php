@@ -703,6 +703,79 @@ function enqueueFullSync(string $shop): void
 }
 
 /**
+ * Remove stored dashboard JSON cache so the next /api/dashboard request recomputes from DB.
+ * Call after sync (or any bulk write) so KPIs/charts are not stuck on pre-sync zeros.
+ */
+function invalidateDashboardCache(string $shop): void
+{
+    static $cleared = [];
+    if (isset($cleared[$shop])) {
+        return;
+    }
+    $cleared[$shop] = true;
+
+    try {
+        $mysqli = db();
+        $shopName = makeShopName($shop);
+        $analyticsTable = perStoreTableName($shopName, 'analytics');
+        if (!preg_match('/^[a-z0-9_]{1,64}$/', $analyticsTable)) {
+            return;
+        }
+        $safe = $mysqli->real_escape_string($analyticsTable);
+        $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+        if (!$exists || $exists->num_rows < 1) {
+            return;
+        }
+        $mysqli->query("DELETE FROM `{$safe}` WHERE metric_key IN ('dashboard_cache', 'dashboard_cache_sig')");
+    } catch (Throwable $e) {
+        // non-blocking
+    }
+}
+
+/**
+ * Cheap fingerprint of local row counts — must match dashboard_cache_sig when serving cached JSON.
+ *
+ * @return string|null "orders:customers:inventory_rows"
+ */
+function dashboardCacheLiveFingerprint(string $shop): ?string
+{
+    try {
+        $mysqli = db();
+        $shopName = makeShopName($shop);
+        $ordersTable = perStoreTableName($shopName, 'order');
+        $customersTable = perStoreTableName($shopName, 'customer');
+        $inventoryTable = perStoreTableName($shopName, 'products_inventory');
+        foreach ([$ordersTable, $customersTable, $inventoryTable] as $t) {
+            if (!preg_match('/^[a-z0-9_]{1,64}$/', $t)) {
+                return null;
+            }
+        }
+        $o = 0;
+        $c = 0;
+        $p = 0;
+        $resO = $mysqli->query("SELECT COUNT(*) AS c FROM `{$ordersTable}`");
+        if (!$resO) {
+            return null;
+        }
+        $o = (int)($resO->fetch_assoc()['c'] ?? 0);
+        $resC = $mysqli->query("SELECT COUNT(*) AS c FROM `{$customersTable}`");
+        if (!$resC) {
+            return null;
+        }
+        $c = (int)($resC->fetch_assoc()['c'] ?? 0);
+        $resP = $mysqli->query("SELECT COUNT(*) AS c FROM `{$inventoryTable}`");
+        if (!$resP) {
+            return null;
+        }
+        $p = (int)($resP->fetch_assoc()['c'] ?? 0);
+
+        return "{$o}:{$c}:{$p}";
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+/**
  * Shopify request that returns decoded JSON + headers + status.
  *
  * @return array{data:?array,http_code:int,headers:array<string,string|string[]>}
@@ -1402,6 +1475,9 @@ function runOneSyncStep(?string $shopFilter = null): array
                 $u->close();
             }
         }
+        // Drop cached dashboard so the next load runs full KPI/chart queries (avoids stale all-zero cache).
+        invalidateDashboardCache($shop);
+
         return ['shop' => $shop, 'resource' => $resource, 'done' => $out['done'], 'fetched' => $out['fetched']];
     } catch (Throwable $e) {
         $u = $mysqli->prepare("UPDATE store_sync_state SET status='error', last_error=? WHERE shop=? AND resource=?");

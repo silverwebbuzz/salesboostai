@@ -549,9 +549,10 @@ function renderCriticalIssues(issues) {
   });
 }
 
-async function loadDashboard() {
+async function loadDashboard(opts = {}) {
   const shop = getQueryParam('shop');
   const host = getQueryParam('host');
+  const nocache = opts.nocache ? '&nocache=1' : '';
 
   show('sbSkeleton', true);
   show('sbContent', false);
@@ -559,9 +560,12 @@ async function loadDashboard() {
 
   try {
     const doFetch = window.authFetch || fetch;
-    const res = await doFetch(`/app/api/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`, {
-      headers: { 'Accept': 'application/json' }
-    });
+    const res = await doFetch(
+      `/app/api/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}${nocache}`,
+      {
+        headers: { Accept: 'application/json' }
+      }
+    );
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || 'Failed to load dashboard.');
 
@@ -571,7 +575,7 @@ async function loadDashboard() {
       const btnSync = document.getElementById('btnRunSync');
       const btnRefresh = document.getElementById('btnRefreshDashboard');
       if (btnSync) btnSync.onclick = runSyncNow;
-      if (btnRefresh) btnRefresh.onclick = () => loadDashboard();
+      if (btnRefresh) btnRefresh.onclick = () => loadDashboard({ nocache: true });
       show('sbSkeleton', false);
       show('sbContent', true);
       return;
