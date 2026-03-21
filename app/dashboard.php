@@ -65,6 +65,22 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
     </div>
 
     <div id="sbContent" style="display:none;">
+      <div class="section" id="sbSyncGate" style="display:none;">
+        <div class="card" style="border:1px solid #dbeafe;background:#eff6ff;">
+          <div class="section-title" id="sbSyncGateTitle">Sync your store data</div>
+          <div class="hero-subtitle" id="sbSyncGateText">
+            Sync your store data before using your agents. We need your products and orders to generate insights.
+          </div>
+          <div class="hero-subtitle" id="sbSyncGateMeta" style="margin-top:8px;"></div>
+          <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" type="button" id="btnRunSync">Sync Now</button>
+            <button class="btn btn-primary" type="button" id="btnRefreshDashboard" style="display:none;">Refresh Dashboard</button>
+            <span class="hero-subtitle" id="sbSyncGateHint" style="margin:0;"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="sbDashboardBody">
       <div class="section">
         <div class="card store-health-card">
           <div class="store-health-head">
@@ -201,6 +217,7 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
           <div class="kpi-title">Key insights</div>
           <div id="keyInsightsList"></div>
         </div>
+      </div>
       </div>
     </div>
   </main>

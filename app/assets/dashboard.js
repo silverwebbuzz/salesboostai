@@ -71,6 +71,80 @@ function renderSyncNotice(sync) {
   show('sbSyncNotice', true);
 }
 
+function shouldGateDashboard(sync) {
+  const state = sync?.state || 'ready';
+  return state === 'syncing' || state === 'error';
+}
+
+function renderSyncGate(sync) {
+  const state = sync?.state || 'ready';
+  const pending = Number(sync?.pending || 0);
+  const inProgress = Number(sync?.in_progress || 0);
+  const error = Number(sync?.error || 0);
+
+  if (state === 'ready') {
+    show('sbSyncGate', false);
+    show('sbDashboardBody', true);
+    return;
+  }
+
+  show('sbSyncGate', true);
+  show('sbDashboardBody', false);
+  show('btnRefreshDashboard', false);
+
+  if (state === 'error') {
+    setText('sbSyncGateTitle', 'Sync needs attention');
+    setText('sbSyncGateText', 'Some sync tasks failed. Please run sync again.');
+    setText('sbSyncGateMeta', `Error tasks: ${error}`);
+    setText('sbSyncGateHint', 'You can retry safely. Existing data remains intact.');
+    return;
+  }
+
+  setText('sbSyncGateTitle', 'Sync your store data');
+  setText('sbSyncGateText', 'Sync your store data before using your agents. We need your products and orders to generate insights.');
+  setText('sbSyncGateMeta', `Pending: ${pending} · In progress: ${inProgress}`);
+  setText('sbSyncGateHint', 'Click "Sync Now" to run immediate background steps.');
+}
+
+async function runSyncNow() {
+  const shop = getQueryParam('shop');
+  const host = getQueryParam('host');
+  const btn = document.getElementById('btnRunSync');
+  const refreshBtn = document.getElementById('btnRefreshDashboard');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+  }
+  setText('sbSyncGateHint', 'Running sync steps, please wait...');
+
+  try {
+    const doFetch = window.authFetch || fetch;
+    const res = await doFetch(`/app/api/sync/run?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}&steps=12`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' }
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      throw new Error(data?.error || 'Sync run failed');
+    }
+
+    renderSyncGate(data.sync_status || null);
+    if ((data?.sync_status?.state || 'ready') === 'ready') {
+      setText('sbSyncGateHint', 'Sync completed. Click refresh to load dashboard.');
+      if (refreshBtn) show('btnRefreshDashboard', true);
+    } else {
+      setText('sbSyncGateHint', 'Sync is still running. You can click Sync Now again.');
+    }
+  } catch (e) {
+    setText('sbSyncGateHint', (e && e.message) ? e.message : 'Sync failed. Please try again.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Sync Now';
+    }
+  }
+}
+
 function formatInsight(insight) {
   const map = {
     high: {
@@ -474,6 +548,16 @@ async function loadDashboard() {
     if (!res.ok) throw new Error(data?.error || 'Failed to load dashboard.');
 
     renderSyncNotice(data?.sync_status || null);
+    renderSyncGate(data?.sync_status || null);
+    if (shouldGateDashboard(data?.sync_status || null)) {
+      const btnSync = document.getElementById('btnRunSync');
+      const btnRefresh = document.getElementById('btnRefreshDashboard');
+      if (btnSync) btnSync.onclick = runSyncNow;
+      if (btnRefresh) btnRefresh.onclick = () => loadDashboard();
+      show('sbSkeleton', false);
+      show('sbContent', true);
+      return;
+    }
 
     // KPIs
     setText('kpiRevenue', fmtCurrency(data?.kpi?.revenue || 0));
