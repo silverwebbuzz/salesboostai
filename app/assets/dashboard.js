@@ -629,6 +629,22 @@ function renderInventoryInsights(inv) {
   }
 }
 
+function renderInventoryForecast(rows) {
+  const list = document.getElementById('inventoryForecastList');
+  if (!list) return;
+  const items = rows || [];
+  if (!items.length) {
+    list.innerHTML = '<div class="sb-muted">No stockout forecast yet.</div>';
+    return;
+  }
+  list.innerHTML = items.map((r) => `
+    <div class="SbListRow">
+      <div class="sb-list-left">${escapeHtml(r?.title || 'Product')}</div>
+      <div class="sb-list-right">${Number(r?.days_to_stockout || 0).toFixed(1)}d</div>
+    </div>
+  `).join('');
+}
+
 function renderCriticalIssues(issues) {
   const grid = document.getElementById('criticalIssuesGrid');
   if (!grid) return;
@@ -674,6 +690,110 @@ function renderCriticalIssues(issues) {
     `;
     grid.appendChild(card);
   });
+}
+
+function renderActionCenter(items) {
+  const list = document.getElementById('actionCenterList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!items || !items.length) {
+    list.innerHTML = `
+      <div class="critical-empty-state">
+        <div class="critical-empty-icon">✓</div>
+        <div class="critical-empty-title">No priority actions right now</div>
+        <div class="critical-empty-text">We will add impact-scored tasks as new opportunities are detected.</div>
+      </div>
+    `;
+    return;
+  }
+
+  items.slice(0, 8).forEach((item) => {
+    const sev = String(item?.severity || 'medium').toLowerCase();
+    const sevClass =
+      sev === 'high' ? 'critical-item--high' :
+      sev === 'low' ? 'critical-item--low' :
+      'critical-item--medium';
+    const impact = Number(item?.impact_score || 0).toFixed(0);
+    const confidence = Number(item?.confidence_score || 0);
+    let why = '';
+    try {
+      const parsed = typeof item?.why === 'string' ? JSON.parse(item.why || '{}') : item?.why;
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.reason) why = String(parsed.reason);
+        else if (parsed.meta) why = String(parsed.meta);
+      }
+    } catch (_) {}
+
+    const row = document.createElement('div');
+    row.className = `critical-item ${sevClass}`;
+    row.innerHTML = `
+      <div class="critical-item-main">
+        <div class="critical-item-left">
+          <span class="critical-priority ${sev === 'high' ? 'critical-priority--high' : (sev === 'low' ? 'critical-priority--low' : 'critical-priority--medium')}">${sev.toUpperCase()}</span>
+          <div class="critical-item-text">
+            <div class="critical-item-title">${escapeHtml(item?.title || 'Action')}</div>
+            <div class="critical-item-desc">${escapeHtml(item?.description || '')}</div>
+            <div class="critical-item-desc">Impact ${impact}/100 · Confidence ${Math.round(confidence * 100)}%</div>
+            ${why ? `<div class="critical-item-desc">Why: ${escapeHtml(why)}</div>` : ''}
+          </div>
+        </div>
+        <div class="critical-item-right">
+          <a class="critical-action-btn" href="${escapeHtml(item?.cta_url || '#')}">${escapeHtml(item?.cta_label || 'View details')}</a>
+          <button class="critical-action-btn action-state-btn" type="button" data-action-key="${escapeHtml(item?.key || '')}" data-action-state="acted">Mark acted</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  document.querySelectorAll('.action-state-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const key = btn.getAttribute('data-action-key') || '';
+      const state = btn.getAttribute('data-action-state') || 'viewed';
+      const shop = getQueryParam('shop');
+      if (!key || !shop) return;
+      try {
+        const doFetch = window.authFetch || fetch;
+        await doFetch(`/app/api/actions/update.php?shop=${encodeURIComponent(shop)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ action_key: key, status: state })
+        });
+        btn.disabled = true;
+        btn.textContent = 'Updated';
+      } catch (_) {
+        // non-blocking
+      }
+    });
+  });
+}
+
+function renderGoals(goals) {
+  const list = document.getElementById('goalsList');
+  if (!list) return;
+  const items = goals?.items || [];
+  if (!items.length) {
+    list.innerHTML = '<div class="sb-muted">No goals configured yet.</div>';
+    return;
+  }
+  list.innerHTML = items.map((g) => {
+    const pct = Number(g?.progress_pct || 0);
+    const tone = g?.off_track ? 'critical-priority--high' : 'critical-priority--low';
+    return `
+      <div class="critical-item critical-item--medium">
+        <div class="critical-item-main">
+          <div class="critical-item-left">
+            <span class="critical-priority ${tone}">${pct.toFixed(0)}%</span>
+            <div class="critical-item-text">
+              <div class="critical-item-title">${escapeHtml(g?.label || 'Goal')}</div>
+              <div class="critical-item-desc">Actual ${fmtNumber(g?.actual || 0)} / Target ${fmtNumber(g?.target || 0)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function loadDashboard(opts = {}) {
@@ -726,6 +846,7 @@ async function loadDashboard(opts = {}) {
     // Inventory KPIs
     const inv = data?.inventory_metrics || {};
     renderInventoryInsights(inv);
+    renderInventoryForecast(data?.inventory_forecast || []);
 
     // Charts
     fullCharts = data?.charts || {};
@@ -804,6 +925,8 @@ async function loadDashboard(opts = {}) {
     });
 
     // Critical issues (premium cards + empty state)
+    renderGoals(data?.goals || {});
+    renderActionCenter(data?.action_center || []);
     renderCriticalIssues(data?.critical_issues || []);
 
     show('sbSkeleton', false);

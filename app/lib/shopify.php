@@ -272,9 +272,24 @@ function ensurePerStoreTables(string $shop): array
     $customerTable = perStoreTableName($shopName, 'customer');
     $productsInventoryTable = perStoreTableName($shopName, 'products_inventory');
     $analyticsTable = perStoreTableName($shopName, 'analytics');
+    $actionItemsTable = perStoreTableName($shopName, 'action_items');
+    $cohortsTable = perStoreTableName($shopName, 'cohorts');
+    $funnelTable = perStoreTableName($shopName, 'funnel');
+    $attributionTable = perStoreTableName($shopName, 'attribution');
+    $forecastsTable = perStoreTableName($shopName, 'forecasts');
 
     // Validate identifiers (defense-in-depth). Only allow alnum + underscore.
-    foreach ([$orderTable, $customerTable, $productsInventoryTable, $analyticsTable] as $t) {
+    foreach ([
+        $orderTable,
+        $customerTable,
+        $productsInventoryTable,
+        $analyticsTable,
+        $actionItemsTable,
+        $cohortsTable,
+        $funnelTable,
+        $attributionTable,
+        $forecastsTable,
+    ] as $t) {
         if (!preg_match('/^[a-z0-9_]{1,64}$/', $t)) {
             throw new Exception('Unsafe table name generated.');
         }
@@ -327,6 +342,79 @@ function ensurePerStoreTables(string $shop): array
             PRIMARY KEY (`id`),
             UNIQUE KEY `uniq_metric_key` (`metric_key`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS `{$actionItemsTable}` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `action_key` VARCHAR(128) NOT NULL,
+            `title` VARCHAR(255) NOT NULL,
+            `description` TEXT NULL,
+            `severity` VARCHAR(32) NOT NULL DEFAULT 'medium',
+            `impact_score` DECIMAL(8,2) NOT NULL DEFAULT 0,
+            `confidence_score` DECIMAL(5,2) NOT NULL DEFAULT 0,
+            `status` VARCHAR(32) NOT NULL DEFAULT 'new',
+            `owner_section` VARCHAR(64) NULL,
+            `cta_label` VARCHAR(64) NULL,
+            `cta_url` VARCHAR(512) NULL,
+            `source_json` LONGTEXT NULL,
+            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_action_key` (`action_key`),
+            KEY `idx_action_status` (`status`),
+            KEY `idx_action_impact` (`impact_score`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS `{$cohortsTable}` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `cohort_key` VARCHAR(32) NOT NULL,
+            `period_index` INT NOT NULL DEFAULT 0,
+            `base_customers` INT NOT NULL DEFAULT 0,
+            `retained_customers` INT NOT NULL DEFAULT 0,
+            `retention_rate` DECIMAL(6,2) NOT NULL DEFAULT 0,
+            `orders_count` INT NOT NULL DEFAULT 0,
+            `revenue_total` DECIMAL(14,2) NOT NULL DEFAULT 0,
+            `computed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_cohort_period` (`cohort_key`, `period_index`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS `{$funnelTable}` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `window_key` VARCHAR(32) NOT NULL,
+            `step_name` VARCHAR(64) NOT NULL,
+            `step_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            `step_count` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            `conversion_rate` DECIMAL(6,2) NOT NULL DEFAULT 0,
+            `computed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_funnel_window_step` (`window_key`, `step_name`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS `{$attributionTable}` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `window_key` VARCHAR(32) NOT NULL,
+            `source_name` VARCHAR(128) NOT NULL,
+            `orders_count` INT NOT NULL DEFAULT 0,
+            `revenue_total` DECIMAL(14,2) NOT NULL DEFAULT 0,
+            `aov` DECIMAL(12,2) NOT NULL DEFAULT 0,
+            `computed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_attribution_window_source` (`window_key`, `source_name`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS `{$forecastsTable}` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `forecast_key` VARCHAR(128) NOT NULL,
+            `entity_type` VARCHAR(32) NOT NULL,
+            `entity_id` VARCHAR(64) NOT NULL,
+            `window_days` INT NOT NULL DEFAULT 30,
+            `metric_name` VARCHAR(64) NOT NULL,
+            `metric_value` DECIMAL(14,2) NOT NULL DEFAULT 0,
+            `payload_json` LONGTEXT NULL,
+            `computed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_forecast` (`forecast_key`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
     ];
 
     foreach ($queries as $sql) {
@@ -341,6 +429,11 @@ function ensurePerStoreTables(string $shop): array
         'customer' => $customerTable,
         'products_inventory' => $productsInventoryTable,
         'analytics' => $analyticsTable,
+        'action_items' => $actionItemsTable,
+        'cohorts' => $cohortsTable,
+        'funnel' => $funnelTable,
+        'attribution' => $attributionTable,
+        'forecasts' => $forecastsTable,
     ];
 }
 

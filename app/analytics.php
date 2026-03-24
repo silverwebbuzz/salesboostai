@@ -12,12 +12,21 @@ $features = is_array($entitlements['features'] ?? null) ? $entitlements['feature
 $lockProducts = !((bool)($features['analytics_products'] ?? false));
 $lockCustomers = !((bool)($features['analytics_customers'] ?? false));
 $lockAov = !((bool)($features['analytics_aov'] ?? false));
+$lockFunnel = !((bool)($features['analytics_funnel'] ?? false));
+$lockAttribution = !((bool)($features['analytics_attribution'] ?? false));
+$lockRetention = !((bool)($features['analytics_retention'] ?? false));
 $productsReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_products') : 'starter';
 $customersReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_customers') : 'starter';
 $aovReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_aov') : 'starter';
+$funnelReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_funnel') : 'starter';
+$attributionReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_attribution') : 'growth';
+$retentionReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_retention') : 'starter';
 $productsUpgradeUrl = sbm_upgrade_url($shop, $host, $productsReqPlan);
 $customersUpgradeUrl = sbm_upgrade_url($shop, $host, $customersReqPlan);
 $aovUpgradeUrl = sbm_upgrade_url($shop, $host, $aovReqPlan);
+$funnelUpgradeUrl = sbm_upgrade_url($shop, $host, $funnelReqPlan);
+$attributionUpgradeUrl = sbm_upgrade_url($shop, $host, $attributionReqPlan);
+$retentionUpgradeUrl = sbm_upgrade_url($shop, $host, $retentionReqPlan);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -79,6 +88,30 @@ $aovUpgradeUrl = sbm_upgrade_url($shop, $host, $aovReqPlan);
       </div>
       <div class="section">
         <div class="card ai-insight" id="revenueInsight">—</div>
+      </div>
+      <div class="section grid-50-50">
+        <div class="card feature-lock-card">
+          <div class="<?php echo $lockFunnel ? 'feature-lock-blur' : ''; ?>">
+            <div class="kpi-title">Conversion Funnel</div>
+            <div id="revenueFunnelList"></div>
+          </div>
+          <?php if ($lockFunnel): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock('Conversion Funnel', 'Unlock drop-off diagnostics from sessions to purchases.', $funnelReqPlan, $funnelUpgradeUrl); ?>
+            </div>
+          <?php endif; ?>
+        </div>
+        <div class="card feature-lock-card">
+          <div class="<?php echo $lockAttribution ? 'feature-lock-blur' : ''; ?>">
+            <div class="kpi-title">Attribution Sources</div>
+            <div id="revenueAttributionList"></div>
+          </div>
+          <?php if ($lockAttribution): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock('Attribution Sources', 'Unlock channel/source-level revenue contribution analysis.', $attributionReqPlan, $attributionUpgradeUrl); ?>
+            </div>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
 
@@ -144,6 +177,19 @@ $aovUpgradeUrl = sbm_upgrade_url($shop, $host, $aovReqPlan);
       </div>
       <div class="section">
         <div class="card ai-insight" id="customersInsight">—</div>
+      </div>
+      <div class="section">
+        <div class="card feature-lock-card">
+          <div class="<?php echo $lockRetention ? 'feature-lock-blur' : ''; ?>">
+            <div class="kpi-title">Retention Cohorts</div>
+            <div id="customersRetentionList"></div>
+          </div>
+          <?php if ($lockRetention): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock('Retention Cohorts', 'Unlock monthly customer cohorts and repeat purchase trajectories.', $retentionReqPlan, $retentionUpgradeUrl); ?>
+            </div>
+          <?php endif; ?>
+        </div>
       </div>
       </div>
       <?php if ($lockCustomers): ?>

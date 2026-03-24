@@ -12,12 +12,18 @@ $features = is_array($entitlements['features'] ?? null) ? $entitlements['feature
 $lockInventory = !((bool)($features['dashboard_inventory'] ?? false));
 $lockCritical = !((bool)($features['dashboard_critical_full'] ?? false));
 $lockTopLists = !((bool)($features['dashboard_top_lists_full'] ?? false));
+$lockActionCenter = !((bool)($features['dashboard_action_center'] ?? false));
+$lockGoals = !((bool)($features['goals_tracking'] ?? false));
 $inventoryRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('dashboard_inventory') : 'starter';
 $criticalRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('dashboard_critical_full') : 'starter';
 $topListsRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('dashboard_top_lists_full') : 'starter';
+$actionCenterRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('dashboard_action_center') : 'starter';
+$goalsRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('goals_tracking') : 'starter';
 $inventoryUpgradeUrl = sbm_upgrade_url($shop, $host, $inventoryRequiredPlan);
 $criticalUpgradeUrl = sbm_upgrade_url($shop, $host, $criticalRequiredPlan);
 $topListsUpgradeUrl = sbm_upgrade_url($shop, $host, $topListsRequiredPlan);
+$actionCenterUpgradeUrl = sbm_upgrade_url($shop, $host, $actionCenterRequiredPlan);
+$goalsUpgradeUrl = sbm_upgrade_url($shop, $host, $goalsRequiredPlan);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -202,6 +208,30 @@ $topListsUpgradeUrl = sbm_upgrade_url($shop, $host, $topListsRequiredPlan);
       </div>
 
       <div class="section">
+        <div class="card feature-lock-card" data-lock-goals="<?php echo $lockGoals ? '1' : '0'; ?>">
+          <div class="<?php echo $lockGoals ? 'feature-lock-blur' : ''; ?>">
+            <div class="critical-insights-head">
+              <div class="critical-insights-title-wrap">
+                <span class="critical-insights-icon" aria-hidden="true">🎯</span>
+                <div class="critical-insights-title">GOALS TRACKING</div>
+              </div>
+            </div>
+            <div id="goalsList"></div>
+          </div>
+          <?php if ($lockGoals): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock(
+                  'Goals Tracking',
+                  'Set KPI targets and get proactive off-track warnings.',
+                  $goalsRequiredPlan,
+                  $goalsUpgradeUrl
+              ); ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="card inventory-insights-card feature-lock-card" data-lock-inventory="<?php echo $lockInventory ? '1' : '0'; ?>">
           <div class="<?php echo $lockInventory ? 'feature-lock-blur' : ''; ?>">
           <div class="inventory-insights-head">
@@ -234,6 +264,7 @@ $topListsUpgradeUrl = sbm_upgrade_url($shop, $host, $topListsRequiredPlan);
               <div class="inventory-metric-help">Items below preferred stock threshold</div>
             </div>
           </div>
+          <div class="top-list-rows" id="inventoryForecastList" style="margin-top:14px;"></div>
           </div>
           <?php if ($lockInventory): ?>
             <div class="feature-lock-overlay">
@@ -268,6 +299,30 @@ $topListsUpgradeUrl = sbm_upgrade_url($shop, $host, $topListsRequiredPlan);
             </div>
           </div>
           <div><canvas id="ordersChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="card action-center-card feature-lock-card" data-lock-actions="<?php echo $lockActionCenter ? '1' : '0'; ?>">
+          <div class="<?php echo $lockActionCenter ? 'feature-lock-blur' : ''; ?>">
+            <div class="critical-insights-head">
+              <div class="critical-insights-title-wrap">
+                <span class="critical-insights-icon" aria-hidden="true">🎯</span>
+                <div class="critical-insights-title">ACTION CENTER</div>
+              </div>
+            </div>
+            <div id="actionCenterList"></div>
+          </div>
+          <?php if ($lockActionCenter): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock(
+                  'Action Center',
+                  'Unlock prioritized impact scoring and guided next-best actions for your store.',
+                  $actionCenterRequiredPlan,
+                  $actionCenterUpgradeUrl
+              ); ?>
+            </div>
+          <?php endif; ?>
         </div>
       </div>
 

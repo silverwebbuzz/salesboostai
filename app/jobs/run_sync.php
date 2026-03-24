@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../lib/metrics.php';
 
 // Allow CLI always. Browser allowed only with ?key= that matches CRON_KEY.
 $isCli = (PHP_SAPI === 'cli');
@@ -33,6 +34,14 @@ if (!is_string($shop) || $shop === '') {
 
 try {
     $result = runOneSyncStep($shop);
+    $resultShop = is_array($result) ? (string)($result['shop'] ?? '') : '';
+    if ($resultShop !== '' && function_exists('sbm_refresh_foundation_analytics')) {
+        try {
+            sbm_refresh_foundation_analytics($resultShop);
+        } catch (Throwable $e) {
+            // non-blocking; keep sync response successful
+        }
+    }
     header('Content-Type: application/json');
     echo json_encode(['ok' => true, 'result' => $result], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

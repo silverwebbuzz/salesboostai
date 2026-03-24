@@ -51,11 +51,14 @@ function dashboardShellPayload(string $tz, array $syncStatus): array {
         ],
         'summary_text' => '',
         'critical_issues' => [],
+        'action_center' => [],
         'inventory_metrics' => [
             'cash_in_inventory' => 0.0,
             'dead_stock_value' => 0.0,
             'restock_needed_value' => 0.0,
         ],
+        'inventory_forecast' => [],
+        'goals' => [],
         'key_insights' => [],
         'sync_status' => $syncStatus,
         'locks' => [],
@@ -102,9 +105,13 @@ $locks = [
     'inventory_insights' => !((bool)($featureFlags['dashboard_inventory'] ?? false)),
     'critical_insights' => !((bool)($featureFlags['dashboard_critical_full'] ?? false)),
     'top_lists' => !((bool)($featureFlags['dashboard_top_lists_full'] ?? false)),
+    'action_center' => !((bool)($featureFlags['dashboard_action_center'] ?? false)),
+    'inventory_forecast' => !((bool)($featureFlags['inventory_forecasting'] ?? false)),
+    'goals' => !((bool)($featureFlags['goals_tracking'] ?? false)),
 ];
 $topProductsLimit = max(1, (int)($planLimits['top_products_count'] ?? 5));
 $criticalLimit = max(1, (int)($planLimits['critical_insights_count'] ?? 4));
+$actionItemsLimit = max(1, (int)($planLimits['action_items_count'] ?? 5));
 
 // Sync status (for first-install UX guidance)
 $syncStatus = [
@@ -543,12 +550,135 @@ if (!empty($topProducts)) {
 }
 $summaryText = implode(' ', $summaryParts);
 
+// Action center list (derived from per-store action_items table when available)
+$actionCenter = [];
+try {
+    $actionTable = perStoreTableName($shopName, 'action_items');
+    $safeAction = $mysqli->real_escape_string($actionTable);
+    $existsAction = $mysqli->query("SHOW TABLES LIKE '{$safeAction}'");
+    if ($existsAction && $existsAction->num_rows > 0) {
+        $stmtActions = $mysqli->prepare(
+            "SELECT action_key, title, description, severity, impact_score, confidence_score, status, owner_section, cta_label, cta_url, source_json
+             FROM `{$actionTable}`
+             WHERE status IN ('new', 'viewed', 'acted')
+             ORDER BY impact_score DESC, updated_at DESC
+             LIMIT ?"
+        );
+        if ($stmtActions) {
+            $stmtActions->bind_param('i', $actionItemsLimit);
+            $stmtActions->execute();
+            $ra = $stmtActions->get_result();
+            while ($r = $ra->fetch_assoc()) {
+                $actionCenter[] = [
+                    'key' => (string)($r['action_key'] ?? ''),
+                    'title' => (string)($r['title'] ?? ''),
+                    'description' => (string)($r['description'] ?? ''),
+                    'severity' => (string)($r['severity'] ?? 'medium'),
+                    'impact_score' => round((float)($r['impact_score'] ?? 0), 2),
+                    'confidence_score' => round((float)($r['confidence_score'] ?? 0), 2),
+                    'status' => (string)($r['status'] ?? 'new'),
+                    'owner_section' => (string)($r['owner_section'] ?? ''),
+                    'cta_label' => (string)($r['cta_label'] ?? 'View details'),
+                    'cta_url' => (string)($r['cta_url'] ?? '#'),
+                    'why' => (string)($r['source_json'] ?? ''),
+                ];
+            }
+            $stmtActions->close();
+        }
+    }
+} catch (Throwable $e) {
+    $actionCenter = [];
+}
+
 // Row-count fingerprint (must match dashboard_cache_sig when serving cached JSON after sync/webhooks).
 $inventoryRowCount = 0;
 if ($res = $mysqli->query("SELECT COUNT(*) AS c FROM `{$inventoryTable}`")) {
     $inventoryRowCount = (int)($res->fetch_assoc()['c'] ?? 0);
 }
 $dataFingerprint = $totalOrders . ':' . $totalCustomers . ':' . $inventoryRowCount;
+
+// Inventory forecast rows (days to stockout)
+$inventoryForecast = [];
+try {
+    $forecastTable = perStoreTableName($shopName, 'forecasts');
+    $safeFc = $mysqli->real_escape_string($forecastTable);
+    $existsFc = $mysqli->query("SHOW TABLES LIKE '{$safeFc}'");
+    if ($existsFc && $existsFc->num_rows > 0) {
+        $stmtFc = $mysqli->prepare(
+            "SELECT entity_id, metric_value, payload_json
+             FROM `{$forecastTable}`
+             WHERE entity_type='inventory' AND metric_name='days_to_stockout'
+             ORDER BY metric_value ASC
+             LIMIT 5"
+        );
+        if ($stmtFc) {
+            $stmtFc->execute();
+            $resFc = $stmtFc->get_result();
+            while ($row = $resFc->fetch_assoc()) {
+                $payload = json_decode((string)($row['payload_json'] ?? ''), true);
+                $inventoryForecast[] = [
+                    'title' => (string)($row['entity_id'] ?? ''),
+                    'days_to_stockout' => round((float)($row['metric_value'] ?? 0), 1),
+                    'inventory' => (int)($payload['inventory'] ?? 0),
+                    'daily_velocity' => round((float)($payload['daily_velocity'] ?? 0), 2),
+                ];
+            }
+            $stmtFc->close();
+        }
+    }
+} catch (Throwable $e) {
+    $inventoryForecast = [];
+}
+if ($locks['inventory_forecast']) {
+    $inventoryForecast = array_slice($inventoryForecast, 0, 1);
+}
+
+// Goals tracking (saved in analytics metric_key=dashboard_goals)
+$goals = [
+    'items' => [],
+    'off_track_count' => 0,
+];
+try {
+    $stmtGoals = $mysqli->prepare("SELECT payload_json FROM `{$analyticsTable}` WHERE metric_key='dashboard_goals' LIMIT 1");
+    $goalItems = [];
+    if ($stmtGoals) {
+        $stmtGoals->execute();
+        $resG = $stmtGoals->get_result();
+        $rowG = $resG ? ($resG->fetch_assoc() ?: null) : null;
+        $stmtGoals->close();
+        $decoded = json_decode((string)($rowG['payload_json'] ?? ''), true);
+        if (is_array($decoded['items'] ?? null)) {
+            $goalItems = $decoded['items'];
+        }
+    }
+    if (empty($goalItems)) {
+        $goalItems = [
+            ['key' => 'revenue_30d', 'label' => 'Revenue (30d)', 'target' => 5000, 'actual' => round($totalRevenue, 2)],
+            ['key' => 'aov', 'label' => 'AOV', 'target' => 120, 'actual' => round($aov, 2)],
+            ['key' => 'repeat_rate', 'label' => 'Repeat rate', 'target' => 30, 'actual' => $totalCustomers > 0 ? round((count($highValueCustomers) / max(1, $totalCustomers)) * 100, 2) : 0],
+        ];
+    }
+    foreach ($goalItems as $g) {
+        $target = (float)($g['target'] ?? 0);
+        $actual = (float)($g['actual'] ?? 0);
+        $progress = $target > 0 ? min(100, round(($actual / $target) * 100, 1)) : 0;
+        $offTrack = $progress < 75;
+        if ($offTrack) $goals['off_track_count']++;
+        $goals['items'][] = [
+            'key' => (string)($g['key'] ?? ''),
+            'label' => (string)($g['label'] ?? 'Goal'),
+            'target' => $target,
+            'actual' => $actual,
+            'progress_pct' => $progress,
+            'off_track' => $offTrack,
+        ];
+    }
+} catch (Throwable $e) {
+    // keep defaults
+}
+if ($locks['goals']) {
+    $goals['items'] = array_slice($goals['items'], 0, 1);
+}
 
 $out = [
     'kpi' => [
@@ -569,11 +699,14 @@ $out = [
     ],
     'summary_text' => $summaryText,
     'critical_issues' => $criticalIssues,
+    'action_center' => $actionCenter,
     'inventory_metrics' => [
         'cash_in_inventory' => $locks['inventory_insights'] ? 0.0 : round($cashInInventory, 2),
         'dead_stock_value' => $locks['inventory_insights'] ? 0.0 : round($deadStockValue, 2),
         'restock_needed_value' => $locks['inventory_insights'] ? 0.0 : round($restockNeededValue, 2),
     ],
+    'inventory_forecast' => $inventoryForecast,
+    'goals' => $goals,
     'key_insights' => $keyInsights,
     'sync_status' => $syncStatus,
     'locks' => $locks,

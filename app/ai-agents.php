@@ -38,6 +38,10 @@ $planKey = (string)($entitlements['plan_key'] ?? 'free');
 $limits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
 $aiLimit = (int)($limits['ai_insights_per_week'] ?? 1);
 $aiUsage = sbm_usage_state($shop, 'ai_insights', $aiLimit);
+$scheduleLimit = (int)($limits['report_schedules'] ?? 0);
+$scheduleUsage = sbm_usage_state($shop, 'report_schedules', $scheduleLimit);
+$features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$reportsScheduledEnabled = (bool)($features['reports_scheduled'] ?? false);
 
 function nextPlanForUpgrade(string $planKey): string {
     $k = strtolower(trim($planKey));
@@ -129,6 +133,25 @@ try {
         <?php else: ?>
           <strong><?php echo e((string)$aiUsage['used']); ?></strong> / <strong><?php echo e((string)$aiUsage['limit']); ?></strong>
         <?php endif; ?>
+      </div>
+      <div class="hero-subtitle" style="margin-bottom:12px;">
+        Scheduled digests:
+        <?php if ($scheduleUsage['unlimited']): ?>
+          <strong><?php echo e((string)$scheduleUsage['used']); ?></strong> active (unlimited)
+        <?php else: ?>
+          <strong><?php echo e((string)$scheduleUsage['used']); ?></strong> / <strong><?php echo e((string)$scheduleUsage['limit']); ?></strong>
+        <?php endif; ?>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="kpi-title">Weekly Digest Scheduling</div>
+        <div class="hero-subtitle" style="margin-top:6px;">Set up automatic AI summary delivery for your team inbox.</div>
+        <div style="margin-top:10px;">
+          <?php if ($reportsScheduledEnabled): ?>
+            <button type="button" class="btn btn-primary" disabled>Schedule digest (coming soon)</button>
+          <?php else: ?>
+            <a class="btn btn-primary" href="<?php echo e($upgradeUrl); ?>">Upgrade to <?php echo e(sbm_plan_label($nextPlan)); ?></a>
+          <?php endif; ?>
+        </div>
       </div>
       <?php if (empty($agents)): ?>
         <div class="card">

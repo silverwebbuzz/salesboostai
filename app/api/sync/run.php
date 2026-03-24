@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/metrics.php';
 
 header('Content-Type: application/json');
 
@@ -40,6 +41,15 @@ try {
         $results[] = $out;
         if (($out['shop'] ?? '') === '') {
             break; // no pending work
+        }
+    }
+
+    // Keep derived analytics in sync for dashboard-triggered runs (same behavior as cron runner).
+    if (function_exists('sbm_refresh_foundation_analytics')) {
+        try {
+            sbm_refresh_foundation_analytics($shop);
+        } catch (Throwable $e) {
+            // non-blocking
         }
     }
 

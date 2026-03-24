@@ -28,6 +28,15 @@
     if (el) el.innerHTML = html;
   }
 
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function highlightNumbers(text) {
     return String(text || '').replace(/(-?\d+(\.\d+)?%?)/g, '<span class="highlight-number">$1</span>');
   }
@@ -134,6 +143,24 @@
     setHTML('revenueInsight', formatInsight(generateInsight({
       revenue_change: Number(data.change || 0)
     })));
+
+    var funnelHtml = (data.funnel && data.funnel.steps || []).map(function (s) {
+      return '<div class="SbListRow"><div class="sb-list-left">' +
+        esc(s.name || 'Step') +
+        '</div><div class="sb-list-right">' +
+        Number(s.count || 0) + ' (' + Number(s.conversion_rate || 0).toFixed(1) + '%)' +
+        '</div></div>';
+    }).join('');
+    setHTML('revenueFunnelList', funnelHtml || '<div class="SbListRow"><div class="sb-list-left">No funnel data</div><div class="sb-list-right">—</div></div>');
+
+    var attrHtml = (data.attribution && data.attribution.sources || []).map(function (s) {
+      return '<div class="SbListRow"><div class="sb-list-left">' +
+        esc(s.source || 'unknown') +
+        '</div><div class="sb-list-right">' +
+        money(s.revenue || 0) +
+        '</div></div>';
+    }).join('');
+    setHTML('revenueAttributionList', attrHtml || '<div class="SbListRow"><div class="sb-list-left">No source data</div><div class="sb-list-right">—</div></div>');
 
     var ctx = document.getElementById('analyticsRevenueChart');
     if (ctx && window.Chart) {
@@ -261,6 +288,18 @@
     setHTML('customersInsight', formatInsight(generateInsight({
       customers: { returning_rate: returningRate }
     })));
+
+    var cohorts = (data.retention && data.retention.cohorts) || [];
+    var retentionHtml = cohorts.map(function (c) {
+      return '<div class="SbListRow"><div class="sb-list-left">' +
+        esc(c.cohort_key || 'Cohort') +
+        '</div><div class="sb-list-right">' +
+        Number(c.retention_rate || 0).toFixed(1) + '%</div></div>';
+    }).join('');
+    if (!retentionHtml) {
+      retentionHtml = '<div class="SbListRow"><div class="sb-list-left">Retention preview</div><div class="sb-list-right">' + Number((data.retention && data.retention.repeat_rate) || 0).toFixed(1) + '%</div></div>';
+    }
+    setHTML('customersRetentionList', retentionHtml);
   }
 
   async function loadAOV() {

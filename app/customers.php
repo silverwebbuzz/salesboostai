@@ -32,6 +32,7 @@ $vipCustomers = 0;
 $atRiskCustomers = 0;
 $inactiveCustomers = 0;
 $ordersScanned = 0;
+$retentionRows = [];
 
 $avgLtv = 0.0;
 $vipLtv = 0.0;
@@ -50,6 +51,32 @@ try {
     $ordersScanned = (int)($metrics['ordersScanned'] ?? 0);
 } catch (Throwable $e) {
     // Keep page renderable even if DB errors happen.
+}
+
+try {
+    $tables = sbm_getShopTables($shop);
+    $cohortsTable = $tables['cohorts'] ?? perStoreTableName(makeShopName($shop), 'cohorts');
+    $mysqli = db();
+    $safe = $mysqli->real_escape_string($cohortsTable);
+    $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+    if ($exists && $exists->num_rows > 0) {
+        $resC = $mysqli->query(
+            "SELECT cohort_key, retention_rate
+             FROM `{$cohortsTable}`
+             ORDER BY cohort_key DESC
+             LIMIT 6"
+        );
+        if ($resC) {
+            while ($r = $resC->fetch_assoc()) {
+                $retentionRows[] = [
+                    'cohort_key' => (string)($r['cohort_key'] ?? ''),
+                    'retention_rate' => (float)($r['retention_rate'] ?? 0),
+                ];
+            }
+        }
+    }
+} catch (Throwable $e) {
+    $retentionRows = [];
 }
 
 $repeatRate = $totalCustomers > 0 ? ($repeatCustomers / max(1, $totalCustomers)) : 0.0;
@@ -169,6 +196,34 @@ $customersLtvUpgradeUrl = sbm_upgrade_url($shop, $host, $customersLtvRequiredPla
           ); ?>
         </div>
       <?php endif; ?>
+    </div>
+
+    <div class="section">
+      <div class="card feature-lock-card">
+        <div class="<?php echo $lockCustomersLtv ? 'feature-lock-blur' : ''; ?>">
+          <div class="section-title" style="margin-bottom:8px;">Retention Cohorts</div>
+          <?php if (empty($retentionRows)): ?>
+            <div class="sb-muted">No cohort retention data yet.</div>
+          <?php else: ?>
+            <?php foreach ($retentionRows as $rr): ?>
+              <div class="SbListRow">
+                <div class="sb-list-left"><?php echo e($rr['cohort_key']); ?></div>
+                <div class="sb-list-right"><?php echo e(number_format((float)$rr['retention_rate'], 1)); ?>%</div>
+              </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
+        <?php if ($lockCustomersLtv): ?>
+          <div class="feature-lock-overlay">
+            <?php renderLockedFeatureBlock(
+                'Retention Cohorts',
+                'Unlock cohort-level retention visibility to improve repeat purchase rates.',
+                $customersLtvRequiredPlan,
+                $customersLtvUpgradeUrl
+            ); ?>
+          </div>
+        <?php endif; ?>
+      </div>
     </div>
   </main>
 

@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/entitlements.php';
 
 header('Content-Type: application/json');
 
@@ -25,6 +26,13 @@ if (!$store || (($store['status'] ?? '') === 'uninstalled')) {
     echo json_encode(['ok' => false, 'error' => 'Store not installed.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
+$entitlements = function_exists('getPlanEntitlements') ? getPlanEntitlements($shop) : ['features' => [], 'limits' => []];
+$features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$limits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
+$funnelEnabled = (bool)($features['analytics_funnel'] ?? false);
+$attributionEnabled = (bool)($features['analytics_attribution'] ?? false);
+$funnelDepth = max(1, (int)($limits['funnel_breakdown_depth'] ?? 2));
+$sourceLimit = max(1, (int)($limits['attribution_sources'] ?? 4));
 
 $range = (int)($_GET['range'] ?? 7);
 if ($range !== 7 && $range !== 30) {
@@ -102,10 +110,98 @@ if ($prevTotal > 0.0) {
     $change = (int)round((($total - $prevTotal) / $prevTotal) * 100);
 }
 
+// Funnel (derived table preferred, fallback approximation from orders volume)
+$funnel = [
+    'enabled' => $funnelEnabled,
+    'steps' => [],
+];
+try {
+    $funnelTable = perStoreTableName($shopName, 'funnel');
+    $safe = $mysqli->real_escape_string($funnelTable);
+    $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+    if ($exists && $exists->num_rows > 0) {
+        $stmtF = $mysqli->prepare(
+            "SELECT step_name, step_order, step_count, conversion_rate
+             FROM `{$funnelTable}` WHERE window_key='last_30d'
+             ORDER BY step_order ASC
+             LIMIT ?"
+        );
+        if ($stmtF) {
+            $stmtF->bind_param('i', $funnelDepth);
+            $stmtF->execute();
+            $resF = $stmtF->get_result();
+            while ($row = $resF->fetch_assoc()) {
+                $funnel['steps'][] = [
+                    'name' => (string)($row['step_name'] ?? ''),
+                    'count' => (int)($row['step_count'] ?? 0),
+                    'conversion_rate' => (float)($row['conversion_rate'] ?? 0),
+                ];
+            }
+            $stmtF->close();
+        }
+    }
+} catch (Throwable $e) {
+    // fallback below
+}
+if (empty($funnel['steps'])) {
+    $sessions = max((int)round(array_sum($series)) * 20, 1);
+    $purchases = max((int)round(array_sum($series) / max(1, ($total / max(1, array_sum($series))))), 0);
+    $funnel['steps'] = [
+        ['name' => 'Sessions', 'count' => $sessions, 'conversion_rate' => 100.0],
+        ['name' => 'Purchase', 'count' => $purchases, 'conversion_rate' => round(($purchases / max(1, $sessions)) * 100, 2)],
+    ];
+}
+if (!$funnelEnabled) {
+    $funnel['steps'] = array_slice($funnel['steps'], 0, 2);
+}
+
+// Attribution by source
+$attribution = [
+    'enabled' => $attributionEnabled,
+    'sources' => [],
+];
+try {
+    $attributionTable = perStoreTableName($shopName, 'attribution');
+    $safeA = $mysqli->real_escape_string($attributionTable);
+    $existsA = $mysqli->query("SHOW TABLES LIKE '{$safeA}'");
+    if ($existsA && $existsA->num_rows > 0) {
+        $stmtA = $mysqli->prepare(
+            "SELECT source_name, orders_count, revenue_total, aov
+             FROM `{$attributionTable}` WHERE window_key='last_30d'
+             ORDER BY revenue_total DESC
+             LIMIT ?"
+        );
+        if ($stmtA) {
+            $stmtA->bind_param('i', $sourceLimit);
+            $stmtA->execute();
+            $resA = $stmtA->get_result();
+            while ($row = $resA->fetch_assoc()) {
+                $attribution['sources'][] = [
+                    'source' => (string)($row['source_name'] ?? 'unknown'),
+                    'orders' => (int)($row['orders_count'] ?? 0),
+                    'revenue' => round((float)($row['revenue_total'] ?? 0), 2),
+                    'aov' => round((float)($row['aov'] ?? 0), 2),
+                ];
+            }
+            $stmtA->close();
+        }
+    }
+} catch (Throwable $e) {
+    // fallback below
+}
+if (empty($attribution['sources'])) {
+    $attribution['sources'][] = ['source' => 'unknown', 'orders' => 0, 'revenue' => 0.0, 'aov' => 0.0];
+}
+if (!$attributionEnabled) {
+    $attribution['sources'] = array_slice($attribution['sources'], 0, 2);
+}
+
 echo json_encode([
     'total' => round($total, 2),
     'trend' => array_map(fn($v) => round((float)$v, 2), $series),
     'change' => $change,
     'labels' => $labels,
+    'funnel' => $funnel,
+    'attribution' => $attribution,
 ], JSON_UNESCAPED_UNICODE);
 

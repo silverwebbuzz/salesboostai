@@ -37,6 +37,10 @@ if (!canAccessFeature($entitlements, 'analytics_customers')) {
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
+$planLimits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
+$features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$cohortMonthsLimit = max(1, (int)($planLimits['cohort_months'] ?? 3));
+$retentionEnabled = (bool)($features['analytics_retention'] ?? false);
 
 $mysqli = db();
 $shopName = makeShopName($shop);
@@ -124,9 +128,55 @@ $top = array_map(function ($x) {
     ];
 }, $top);
 
+// Retention cohorts (derived table preferred, fallback estimate)
+$retention = [
+    'enabled' => $retentionEnabled,
+    'months_limit' => $cohortMonthsLimit,
+    'cohorts' => [],
+    'repeat_rate' => ($newCustomers + $returningCustomers) > 0
+        ? round(($returningCustomers / max(1, ($newCustomers + $returningCustomers))) * 100, 2)
+        : 0.0,
+];
+try {
+    $cohortsTable = perStoreTableName($shopName, 'cohorts');
+    $safe = $mysqli->real_escape_string($cohortsTable);
+    $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+    if ($exists && $exists->num_rows > 0) {
+        $stmtC = $mysqli->prepare(
+            "SELECT cohort_key, period_index, base_customers, retained_customers, retention_rate
+             FROM `{$cohortsTable}`
+             ORDER BY cohort_key DESC, period_index ASC
+             LIMIT ?"
+        );
+        if ($stmtC) {
+            $stmtC->bind_param('i', $cohortMonthsLimit);
+            $stmtC->execute();
+            $resC = $stmtC->get_result();
+            while ($row = $resC->fetch_assoc()) {
+                $retention['cohorts'][] = [
+                    'cohort_key' => (string)($row['cohort_key'] ?? ''),
+                    'period_index' => (int)($row['period_index'] ?? 0),
+                    'base_customers' => (int)($row['base_customers'] ?? 0),
+                    'retained_customers' => (int)($row['retained_customers'] ?? 0),
+                    'retention_rate' => (float)($row['retention_rate'] ?? 0),
+                ];
+            }
+            $stmtC->close();
+        }
+    }
+} catch (Throwable $e) {
+    // fallback to empty cohorts
+}
+
+if (!$retentionEnabled) {
+    // Free/locked tiers only get top-line retention preview.
+    $retention['cohorts'] = array_slice($retention['cohorts'], 0, 1);
+}
+
 echo json_encode([
     'new' => $newCustomers,
     'returning' => $returningCustomers,
     'top' => $top,
+    'retention' => $retention,
 ], JSON_UNESCAPED_UNICODE);
 

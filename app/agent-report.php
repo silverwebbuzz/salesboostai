@@ -52,6 +52,10 @@ $reportMeta = [
 $limits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
 $aiLimit = (int)($limits['ai_insights_per_week'] ?? 1);
 $aiUsage = sbm_usage_state($shop, 'ai_insights', $aiLimit);
+$scheduleLimit = (int)($limits['report_schedules'] ?? 0);
+$scheduleUsage = sbm_usage_state($shop, 'report_schedules', $scheduleLimit);
+$features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$reportsScheduledEnabled = (bool)($features['reports_scheduled'] ?? false);
 
 try {
     $mysqli = db();
@@ -220,9 +224,28 @@ if ($isInventoryAgent) {
                 <?php echo e((string)$aiUsage['used']); ?>/<?php echo e((string)$aiUsage['limit']); ?>
               <?php endif; ?>
             </span>
+            <span>
+              Schedules:
+              <?php if ($scheduleUsage['unlimited']): ?>
+                <?php echo e((string)$scheduleUsage['used']); ?> (unlimited)
+              <?php else: ?>
+                <?php echo e((string)$scheduleUsage['used']); ?>/<?php echo e((string)$scheduleUsage['limit']); ?>
+              <?php endif; ?>
+            </span>
           </div>
         </div>
         <button class="btn btn-primary" type="button" id="generateAiBtn">Generate AI Report</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="card">
+        <div class="kpi-title">Saved Report & Digest</div>
+        <div class="hero-subtitle" style="margin-top:6px;">Export this report and schedule recurring digests (feature rollout ready).</div>
+        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" type="button" <?php echo $hasReport ? '' : 'disabled'; ?>>Export snapshot (coming soon)</button>
+          <button class="btn btn-primary" type="button" <?php echo $reportsScheduledEnabled ? '' : 'disabled'; ?>>Schedule weekly digest (coming soon)</button>
+        </div>
       </div>
     </div>
 
