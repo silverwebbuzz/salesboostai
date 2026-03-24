@@ -158,102 +158,14 @@ function perStoreTableName(string $shopName, string $suffix): string
 }
 
 /**
- * Ensure global app tables exist (shared across all shops).
- * Safe to call on every request; runs CREATE IF NOT EXISTS once per PHP request.
+ * Global schema guard.
  *
- * Tables: stores, store_sync_state, store_subscription
+ * Fixed/shared tables are managed manually in DB (phpMyAdmin),
+ * so this function is intentionally a no-op.
  */
 function ensureGlobalAppSchema(): void
 {
-    static $done = false;
-    if ($done) {
-        return;
-    }
-    $done = true;
-
-    $mysqli = db();
-
-    $sqlStores = <<<'SQL'
-CREATE TABLE IF NOT EXISTS `stores` (
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `shop` VARCHAR(255) NOT NULL,
-    `domain` VARCHAR(255) NULL,
-    `access_token` TEXT NULL,
-    `host` VARCHAR(512) NULL,
-    `shopify_id` VARCHAR(64) NULL,
-    `store_name` VARCHAR(255) NULL,
-    `shop_owner` VARCHAR(255) NULL,
-    `logo_url` VARCHAR(512) NULL,
-    `email` VARCHAR(255) NULL,
-    `phone` VARCHAR(64) NULL,
-    `plan_display_name` VARCHAR(255) NULL,
-    `plan_name` VARCHAR(255) NULL,
-    `country` VARCHAR(128) NULL,
-    `currency` VARCHAR(16) NULL,
-    `timezone` VARCHAR(128) NULL,
-    `iana_timezone` VARCHAR(128) NULL,
-    `country_code` VARCHAR(8) NULL,
-    `country_name` VARCHAR(128) NULL,
-    `address1` VARCHAR(255) NULL,
-    `address2` VARCHAR(255) NULL,
-    `city` VARCHAR(128) NULL,
-    `zip` VARCHAR(32) NULL,
-    `province` VARCHAR(128) NULL,
-    `province_code` VARCHAR(32) NULL,
-    `primary_locale` VARCHAR(32) NULL,
-    `money_format` VARCHAR(64) NULL,
-    `money_with_currency_format` VARCHAR(128) NULL,
-    `money_in_emails_format` VARCHAR(64) NULL,
-    `money_with_currency_in_emails_format` VARCHAR(128) NULL,
-    `tax_id` VARCHAR(64) NULL,
-    `gstin` VARCHAR(64) NULL,
-    `tax_settings` TEXT NULL,
-    `restapi_json` LONGTEXT NULL,
-    `created_at` DATETIME NULL,
-    `updated_at` DATETIME NULL,
-    `app_install_date` DATETIME NULL,
-    `status` VARCHAR(32) NOT NULL DEFAULT 'installed',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uniq_stores_shop` (`shop`),
-    KEY `idx_stores_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-SQL;
-
-    $sqlSyncState = <<<'SQL'
-CREATE TABLE IF NOT EXISTS `store_sync_state` (
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `shop` VARCHAR(255) NOT NULL,
-    `resource` VARCHAR(64) NOT NULL,
-    `next_page_info` TEXT NULL,
-    `status` VARCHAR(32) NOT NULL DEFAULT 'pending',
-    `last_error` TEXT NULL,
-    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uniq_store_sync_shop_resource` (`shop`, `resource`),
-    KEY `idx_store_sync_shop_status` (`shop`, `status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-SQL;
-
-    $sqlSubscription = <<<'SQL'
-CREATE TABLE IF NOT EXISTS `store_subscription` (
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `shop` VARCHAR(255) NOT NULL,
-    `plan_key` VARCHAR(64) NOT NULL DEFAULT 'free',
-    `status` VARCHAR(64) NOT NULL,
-    `shopify_charge_id` VARCHAR(128) NULL,
-    `current_period_ends_at` DATETIME NULL,
-    `cancelled_at` DATETIME NULL,
-    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uniq_store_subscription_shop` (`shop`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-SQL;
-
-    foreach ([$sqlStores, $sqlSyncState, $sqlSubscription] as $sql) {
-        if (!$mysqli->query($sql)) {
-            throw new Exception('ensureGlobalAppSchema failed: ' . $mysqli->error);
-        }
-    }
+    return;
 }
 
 /**
