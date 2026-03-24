@@ -262,19 +262,25 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
       </div>
 
       <div class="section grid-50-50">
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-            <div class="kpi-title">Top products</div>
-            <a class="btn btn-primary" href="#" id="btnViewAllProducts2">View all products</a>
+        <div class="card top-list-card">
+          <div class="top-list-head">
+            <div class="top-list-title-wrap">
+              <div class="top-list-title">Top Products</div>
+              <div class="top-list-subtitle">Best performing items</div>
+            </div>
           </div>
-          <div id="topProductsList"></div>
+          <div class="top-list-rows" id="topProductsList"></div>
+          <a class="top-list-link" href="#" id="btnViewAllProducts2">View all products →</a>
         </div>
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-            <div class="kpi-title">Customers</div>
-            <a class="btn btn-primary" href="#" id="btnViewCustomers">View customers</a>
+        <div class="card top-list-card">
+          <div class="top-list-head">
+            <div class="top-list-title-wrap">
+              <div class="top-list-title">Top Customers</div>
+              <div class="top-list-subtitle">Highest value buyers</div>
+            </div>
           </div>
-          <div id="highValueCustomersList"></div>
+          <div class="top-list-rows" id="highValueCustomersList"></div>
+          <a class="top-list-link" href="#" id="btnViewCustomers">View all customers →</a>
         </div>
       </div>
 

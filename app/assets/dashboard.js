@@ -318,18 +318,12 @@ function renderList(containerId, items, renderRow) {
   el.append(...items.map((it, idx) => renderRow(it, idx)));
 }
 
-function makeRow(left, right) {
-  const row = document.createElement('div');
-  row.className = 'SbListRow';
-  const l = document.createElement('div');
-  l.className = 'sb-list-left';
-  l.textContent = left;
-  const r = document.createElement('div');
-  r.className = 'sb-list-right';
-  r.innerHTML = right;
-  row.appendChild(l);
-  row.appendChild(r);
-  return row;
+function initialsFrom(text) {
+  const parts = String(text || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'NA';
+  const first = (parts[0][0] || '').toUpperCase();
+  const second = parts.length > 1 ? (parts[1][0] || '').toUpperCase() : '';
+  return (first + second) || 'NA';
 }
 
 let revenueChart = null;
@@ -759,15 +753,31 @@ async function loadDashboard(opts = {}) {
     setTrend('trendAov', null);
 
     // Insights
-    renderList('topProductsList', data?.insights?.top_products || [], (p, idx) => {
-      const badges = [];
-      if (idx === 0) badges.push(`<span class="sb-pill-badge sb-pill-badge--purple">Top Seller</span>`);
-      const right = `
-        <div class="sb-badges">
-          ${badges.join(' ')}
-          <span class="SbBadge">${fmtNumber(p.quantity || 0)} sold</span>
-        </div>`;
-      return makeRow(p.title || '—', right);
+    renderList('topProductsList', (data?.insights?.top_products || []).slice(0, 5), (p, idx) => {
+      const title = escapeHtml(p?.title || '—');
+      const qty = Number(p?.quantity || 0);
+      const revenue = Number(p?.revenue_estimate || 0);
+      const unitPrice = qty > 0 ? revenue / qty : 0;
+      const trend = idx === 0 ? '<span class="top-row-trend top-row-trend--up">↑ +12%</span>' : '';
+      const topBadge = idx === 0 ? '<span class="top-row-tag">Top performer</span>' : '';
+
+      const row = document.createElement('div');
+      row.className = `top-list-row ${idx === 0 ? 'top-list-row--top' : ''}`;
+      row.innerHTML = `
+        <div class="top-row-main">
+          <div class="top-row-avatar top-row-avatar--product">${initialsFrom(p?.title || 'P')}</div>
+          <div class="top-row-text">
+            <div class="top-row-title">${title}</div>
+            <div class="top-row-sub">Product item ${topBadge}</div>
+          </div>
+        </div>
+        <div class="top-row-metrics">
+          <div class="top-row-price">${fmtCurrency(unitPrice)}</div>
+          <div class="top-row-qty">${fmtNumber(qty)} sold</div>
+          ${trend}
+        </div>
+      `;
+      return row;
     });
     renderList('lowStockList', data?.insights?.low_stock || [], (p) => {
       const right = `
@@ -777,16 +787,28 @@ async function loadDashboard(opts = {}) {
         </div>`;
       return makeRow(p.title || p.sku || '—', right);
     });
-    renderList('highValueCustomersList', data?.insights?.high_value_customers || [], (c, idx) => {
+    renderList('highValueCustomersList', (data?.insights?.high_value_customers || []).slice(0, 5), (c, idx) => {
       const label = c.label || c.email || `Customer ${c.customer_id || ''}`.trim() || '—';
-      const badges = [];
-      if (idx === 0) badges.push(`<span class="sb-pill-badge sb-pill-badge--green">High Value</span>`);
-      const right = `
-        <div class="sb-badges">
-          ${badges.join(' ')}
-          <span class="SbBadge">${fmtCurrency(c.total_spent || 0)}</span>
-        </div>`;
-      return makeRow(label, right);
+      const email = c.email || '';
+      const orderCount = Number(c.order_count || 0);
+      const vipTag = idx === 0 ? '<span class="top-row-tag top-row-tag--vip">VIP</span>' : '';
+
+      const row = document.createElement('div');
+      row.className = `top-list-row ${idx === 0 ? 'top-list-row--top' : ''}`;
+      row.innerHTML = `
+        <div class="top-row-main">
+          <div class="top-row-avatar top-row-avatar--customer">${initialsFrom(label)}</div>
+          <div class="top-row-text">
+            <div class="top-row-title">${escapeHtml(label)}</div>
+            <div class="top-row-sub">${escapeHtml(email)} ${vipTag}</div>
+          </div>
+        </div>
+        <div class="top-row-metrics">
+          <div class="top-row-orders">${fmtNumber(orderCount)} orders</div>
+          <div class="top-row-spent">${fmtCurrency(c.total_spent || 0)}</div>
+        </div>
+      `;
+      return row;
     });
 
     // Critical issues (premium cards + empty state)

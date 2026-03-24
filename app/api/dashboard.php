@@ -362,10 +362,10 @@ if ($recentOrders) {
     $recentOrders->close();
 }
 
-// Top 3 products
+// Top products (top 5)
 $topProducts = array_values($topProductsAgg);
 usort($topProducts, fn($a, $b) => ($b['quantity'] <=> $a['quantity']));
-$topProductsTop3 = array_slice($topProducts, 0, 3);
+$topProductsTop5 = array_slice($topProducts, 0, 5);
 
 // High-value customers top 5
 $highValueCustomers = array_values($customersAgg);
@@ -531,7 +531,7 @@ $out = [
         'orders' => array_map('intval', $ordSeries),
     ],
     'insights' => [
-        'top_products' => $topProductsTop3,
+        'top_products' => $topProductsTop5,
         'low_stock' => $lowStock,
         'high_value_customers' => $highValueCustomers,
     ],
