@@ -11,6 +11,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
+ensureGlobalAppSchema();
 
 // Shopify sends JSON body.
 $body = file_get_contents('php://input');
@@ -54,6 +55,27 @@ if ($stmt) {
     $stmt->bind_param('ssss', $shopStr, $topicStr, $webhookIdStr, $payloadJson);
     $stmt->execute();
     $stmt->close();
+}
+
+// Apply immediately so store tables stay fresh even if cron is delayed.
+// Cron processor remains as backup/retry path.
+try {
+    applyWebhookToStoreTables($shopStr, $topicStr, $payloadJson);
+} catch (Throwable $e) {
+    // Keep webhook 200 to avoid Shopify retries storm; persist error for async retry visibility.
+    $err = $e->getMessage();
+    $u = $mysqli->prepare(
+        "UPDATE webhook_events
+         SET last_error = ?
+         WHERE shop = ? AND topic = ?
+         ORDER BY received_at DESC
+         LIMIT 1"
+    );
+    if ($u) {
+        $u->bind_param('sss', $err, $shopStr, $topicStr);
+        $u->execute();
+        $u->close();
+    }
 }
 
 // Minimal immediate side-effect: app/uninstalled => mark store uninstalled

@@ -901,6 +901,7 @@ function registerWebhooks(string $shop, string $token): void
     $webhooks = [
         // Existing sync webhook endpoint.
         ['topic' => 'orders/create', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'orders/updated', 'address' => $base . '/webhooks/handler'],
         ['topic' => 'orders/paid', 'address' => $base . '/webhooks/handler'],
         ['topic' => 'orders/cancelled', 'address' => $base . '/webhooks/handler'],
         ['topic' => 'products/create', 'address' => $base . '/webhooks/handler'],
