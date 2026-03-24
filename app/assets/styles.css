@@ -96,11 +96,12 @@ body {
 }
 
 .card.kpi .kpi-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: #6b7280;
+  margin: 0;
 }
 
 .kpi-value {
@@ -115,6 +116,7 @@ body {
 .kpi-head {
   display: flex;
   align-items: center;
+  gap: 10px;
   margin-bottom: 10px;
 }
 

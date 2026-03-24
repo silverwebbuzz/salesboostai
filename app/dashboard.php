@@ -155,47 +155,36 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
       </div>
 
       <div class="hero">
-        <div class="hero-head">
-          <div>
-            <div class="hero-title">SalesBoost AI Dashboard</div>
-            <div class="hero-subtitle">
-              <?php echo e($storeName !== '' ? $storeName : $shop); ?>
-              <?php if ($owner !== ''): ?> · Owner: <?php echo e($owner); ?><?php endif; ?>
-            </div>
-          </div>
-          <a class="btn btn-primary" href="#" id="btnFixInventory">Fix inventory</a>
-        </div>
-
         <div class="kpi-grid">
           <div class="card kpi kpi--revenue">
             <div class="kpi-head">
               <span class="kpi-icon-wrap" aria-hidden="true">💵</span>
+              <div class="kpi-title">Revenue (30 days)</div>
             </div>
-            <div class="kpi-title">Revenue (30 days)</div>
             <div class="kpi-value" id="kpiRevenue">0</div>
             <div id="trendRevenue"></div>
           </div>
           <div class="card kpi kpi--orders">
             <div class="kpi-head">
               <span class="kpi-icon-wrap" aria-hidden="true">🛒</span>
+              <div class="kpi-title">Orders</div>
             </div>
-            <div class="kpi-title">Orders</div>
             <div class="kpi-value" id="kpiOrders">0</div>
             <div id="trendOrders"></div>
           </div>
           <div class="card kpi kpi--customers">
             <div class="kpi-head">
               <span class="kpi-icon-wrap" aria-hidden="true">👥</span>
+              <div class="kpi-title">Customers</div>
             </div>
-            <div class="kpi-title">Customers</div>
             <div class="kpi-value" id="kpiCustomers">0</div>
             <div id="trendCustomers"></div>
           </div>
           <div class="card kpi kpi--aov">
             <div class="kpi-head">
               <span class="kpi-icon-wrap" aria-hidden="true">🎯</span>
+              <div class="kpi-title">AOV</div>
             </div>
-            <div class="kpi-title">AOV</div>
             <div class="kpi-value" id="kpiAov">0</div>
             <div id="trendAov"></div>
           </div>
