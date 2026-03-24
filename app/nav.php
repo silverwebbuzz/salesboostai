@@ -1,15 +1,26 @@
-<nav class="top-nav">
-  <div class="nav-left">
-    <span class="logo">SalesBoost AI</span>
+<nav class="top-nav" aria-label="Primary">
+  <div class="top-nav__left">
+    <div class="top-nav__logo-wrap" aria-hidden="true">
+      <span class="top-nav__logo-mark">SWB</span>
+    </div>
+    <div class="top-nav__brand">
+      <div class="top-nav__title">SWB SalesBoost AI</div>
+      <div class="top-nav__subtitle">Silverwebbuzz App</div>
+    </div>
   </div>
 
-  <div class="nav-right">
-    <a id="nav-dashboard">Dashboard</a>
-    <a id="nav-analytics">Analytics</a>
-    <a id="nav-alerts">Alerts</a>
-    <a id="nav-customers">Customers</a>
-    <a id="nav-sales-boost">Sales Boost</a>
-    <a id="nav-ai-agents">AI Agents</a>
+  <div class="top-nav__center" aria-label="Main navigation tabs">
+    <ul class="top-nav__menu">
+      <li><a id="nav-dashboard" class="top-nav__link">Dashboard</a></li>
+      <li><a id="nav-analytics" class="top-nav__link">Analytics</a></li>
+      <li><a id="nav-alerts" class="top-nav__link">Alerts</a></li>
+      <li><a id="nav-customers" class="top-nav__link">Customers</a></li>
+      <li><a id="nav-sales-boost" class="top-nav__link">Sales Boost</a></li>
+    </ul>
+  </div>
+
+  <div class="top-nav__right">
+    <a id="nav-ai-agents" class="top-nav__cta">✨ AI Agents</a>
   </div>
 </nav>
 
