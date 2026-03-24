@@ -13,7 +13,10 @@ require_once __DIR__ . '/../config.php';
 sendEmbeddedAppHeaders();
 
 $params = $_GET;
-if (!verifyHmac($params)) {
+$hmac = $_GET['hmac'] ?? null;
+// Allow in-app upgrade links that do not include HMAC.
+// If HMAC is present, it must validate.
+if (is_string($hmac) && $hmac !== '' && !verifyHmac($params)) {
     http_response_code(400);
     echo 'Invalid HMAC';
     exit;
@@ -24,6 +27,7 @@ $plan = $_GET['plan'] ?? 'free';
 if (!is_string($plan) || $plan === '') {
     $plan = 'free';
 }
+$plan = normalizePlanKey($plan);
 
 if ($shop === null) {
     http_response_code(400);
@@ -57,7 +61,8 @@ if (!isset($plans[$plan])) {
 if ($plan === 'free') {
     // If you want to downgrade to free, you typically cancel the active charge (optional).
     setSubscriptionPlan($shop, 'free', 'free', null, null);
-    header('Location: ' . SHOPIFY_APP_URL);
+    $redirectUrl = "https://{$shop}/admin/apps/" . SHOPIFY_APP_HANDLE;
+    header('Location: ' . $redirectUrl);
     exit;
 }
 

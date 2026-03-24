@@ -2,12 +2,22 @@
 require_once __DIR__ . '/config.php';
 
 require_once __DIR__ . '/lib/embedded_bootstrap.php';
-[$shop, $host, $shopRecord] = sbm_bootstrap_embedded();
+require_once __DIR__ . '/lib/ui.php';
+[$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
 $storeName = (string)($shopRecord['store_name'] ?? '');
-$owner = (string)($shopRecord['shop_owner'] ?? '');
+$features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$lockInventory = !((bool)($features['dashboard_inventory'] ?? false));
+$lockCritical = !((bool)($features['dashboard_critical_full'] ?? false));
+$lockTopLists = !((bool)($features['dashboard_top_lists_full'] ?? false));
+$inventoryRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('dashboard_inventory') : 'starter';
+$criticalRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('dashboard_critical_full') : 'starter';
+$topListsRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('dashboard_top_lists_full') : 'starter';
+$inventoryUpgradeUrl = sbm_upgrade_url($shop, $host, $inventoryRequiredPlan);
+$criticalUpgradeUrl = sbm_upgrade_url($shop, $host, $criticalRequiredPlan);
+$topListsUpgradeUrl = sbm_upgrade_url($shop, $host, $topListsRequiredPlan);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -192,7 +202,8 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
       </div>
 
       <div class="section">
-        <div class="card inventory-insights-card">
+        <div class="card inventory-insights-card feature-lock-card" data-lock-inventory="<?php echo $lockInventory ? '1' : '0'; ?>">
+          <div class="<?php echo $lockInventory ? 'feature-lock-blur' : ''; ?>">
           <div class="inventory-insights-head">
             <div class="inventory-insights-title-wrap">
               <span class="inventory-insights-icon" aria-hidden="true">📦</span>
@@ -223,6 +234,17 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
               <div class="inventory-metric-help">Items below preferred stock threshold</div>
             </div>
           </div>
+          </div>
+          <?php if ($lockInventory): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock(
+                  'Inventory Insights',
+                  'Unlock full inventory value, dead stock alerts, and restock intelligence.',
+                  $inventoryRequiredPlan,
+                  $inventoryUpgradeUrl
+              ); ?>
+            </div>
+          <?php endif; ?>
         </div>
       </div>
 
@@ -250,7 +272,8 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
       </div>
 
       <div class="section">
-        <div class="card critical-insights-card">
+        <div class="card critical-insights-card feature-lock-card" data-lock-critical="<?php echo $lockCritical ? '1' : '0'; ?>">
+          <div class="<?php echo $lockCritical ? 'feature-lock-blur' : ''; ?>">
           <div class="critical-insights-head">
             <div class="critical-insights-title-wrap">
               <span class="critical-insights-icon" aria-hidden="true">⚠</span>
@@ -258,11 +281,23 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
             </div>
           </div>
           <div id="criticalIssuesGrid"></div>
+          </div>
+          <?php if ($lockCritical): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock(
+                  'Critical Insights',
+                  'Get full prioritized issue detection with deeper severity and action guidance.',
+                  $criticalRequiredPlan,
+                  $criticalUpgradeUrl
+              ); ?>
+            </div>
+          <?php endif; ?>
         </div>
       </div>
 
       <div class="section grid-50-50">
-        <div class="card top-list-card">
+        <div class="card top-list-card feature-lock-card" data-lock-toplists="<?php echo $lockTopLists ? '1' : '0'; ?>">
+          <div class="<?php echo $lockTopLists ? 'feature-lock-blur' : ''; ?>">
           <div class="top-list-head">
             <div class="top-list-title-wrap">
               <div class="top-list-title">Top Products</div>
@@ -271,8 +306,20 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
           </div>
           <div class="top-list-rows" id="topProductsList"></div>
           <a class="top-list-link" href="#" id="btnViewAllProducts2">View all products →</a>
+          </div>
+          <?php if ($lockTopLists): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock(
+                  'Top Products',
+                  'See your best performing products with deeper ranking and performance trends.',
+                  $topListsRequiredPlan,
+                  $topListsUpgradeUrl
+              ); ?>
+            </div>
+          <?php endif; ?>
         </div>
-        <div class="card top-list-card">
+        <div class="card top-list-card feature-lock-card" data-lock-toplists="<?php echo $lockTopLists ? '1' : '0'; ?>">
+          <div class="<?php echo $lockTopLists ? 'feature-lock-blur' : ''; ?>">
           <div class="top-list-head">
             <div class="top-list-title-wrap">
               <div class="top-list-title">Top Customers</div>
@@ -281,6 +328,17 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
           </div>
           <div class="top-list-rows" id="highValueCustomersList"></div>
           <a class="top-list-link" href="#" id="btnViewCustomers">View all customers →</a>
+          </div>
+          <?php if ($lockTopLists): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock(
+                  'Top Customers',
+                  'Unlock high-value customer ranking, spend patterns, and loyalty signals.',
+                  $topListsRequiredPlan,
+                  $topListsUpgradeUrl
+              ); ?>
+            </div>
+          <?php endif; ?>
         </div>
       </div>
 

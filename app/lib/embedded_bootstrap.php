@@ -8,9 +8,11 @@
 function sbm_bootstrap_embedded(array $options = []): array
 {
     $shopInvalidMessage = (string)($options['shopInvalidMessage'] ?? 'Missing or invalid shop parameter.');
+    $includeEntitlements = (bool)($options['includeEntitlements'] ?? false);
 
     // Standard embedded header so Shopify App Bridge works in all surfaces.
     sendEmbeddedAppHeaders();
+    require_once __DIR__ . '/entitlements.php';
 
     $shop = sanitizeShopDomain($_GET['shop'] ?? null);
     $host = $_GET['host'] ?? '';
@@ -33,6 +35,17 @@ function sbm_bootstrap_embedded(array $options = []): array
         exit;
     }
 
-    return [$shop, $host, $shopRecord];
+    if (!$includeEntitlements) {
+        return [$shop, $host, $shopRecord];
+    }
+
+    $entitlements = function_exists('getPlanEntitlements') ? getPlanEntitlements($shop) : [
+        'plan_key' => 'free',
+        'plan_label' => 'Free',
+        'features' => [],
+        'limits' => [],
+    ];
+
+    return [$shop, $host, $shopRecord, $entitlements];
 }
 

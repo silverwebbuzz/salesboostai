@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/metrics.php';
+require_once __DIR__ . '/lib/usage.php';
 $agentId = isset($_GET['agent_id']) ? (int)$_GET['agent_id'] : 0;
 $demoMode = (isset($_GET['demo']) && (string)$_GET['demo'] === '1');
 
@@ -11,7 +12,10 @@ if ($agentId <= 0) {
 }
 
 require_once __DIR__ . '/lib/embedded_bootstrap.php';
-[$shop, $host, $shopRecord] = sbm_bootstrap_embedded(['shopInvalidMessage' => 'Missing or invalid shop/agent_id parameter.']);
+[$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded([
+    'shopInvalidMessage' => 'Missing or invalid shop/agent_id parameter.',
+    'includeEntitlements' => true,
+]);
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
@@ -45,6 +49,9 @@ $reportMeta = [
     'agent_version' => null,
     'created_at' => null,
 ];
+$limits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
+$aiLimit = (int)($limits['ai_insights_per_week'] ?? 1);
+$aiUsage = sbm_usage_state($shop, 'ai_insights', $aiLimit);
 
 try {
     $mysqli = db();
@@ -136,10 +143,24 @@ $dummyReport = [
 ];
 
 if (!$report && $demoMode) {
-    $report = $dummyReport;
-    $reportMeta['status'] = 'completed';
-    $reportMeta['agent_version'] = (int)($agent['version'] ?? 1);
-    $reportMeta['created_at'] = date('Y-m-d H:i:s');
+    if ($aiUsage['reached']) {
+        $errorText = 'Weekly AI insights limit reached for your plan. Please upgrade to generate more reports.';
+    } else {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+        $wk = (string)$aiUsage['week_key'];
+        $usageMarkKey = $shop . ':' . (string)$agentId . ':' . $wk;
+        if (!isset($_SESSION['sbm_ai_usage_mark'][$usageMarkKey])) {
+            sbm_increment_weekly_usage($shop, 'ai_insights', 1, $wk);
+            $_SESSION['sbm_ai_usage_mark'][$usageMarkKey] = 1;
+            $aiUsage = sbm_usage_state($shop, 'ai_insights', $aiLimit);
+        }
+        $report = $dummyReport;
+        $reportMeta['status'] = 'completed';
+        $reportMeta['agent_version'] = (int)($agent['version'] ?? 1);
+        $reportMeta['created_at'] = date('Y-m-d H:i:s');
+    }
 }
 
 $hasReport = is_array($report);
@@ -190,6 +211,14 @@ if ($isInventoryAgent) {
             <span>Last updated: <?php echo e($hasReport ? formatTimeAgo((string)($reportMeta['created_at'] ?? '')) : 'Not generated yet'); ?></span>
             <span class="status-badge <?php echo e($hasReport ? 'status-positive' : 'status-medium'); ?>">
               <?php echo e($hasReport ? '🟢 Completed' : '🟡 Not Generated'); ?>
+            </span>
+            <span>
+              AI usage:
+              <?php if ($aiUsage['unlimited']): ?>
+                <?php echo e((string)$aiUsage['used']); ?> (unlimited)
+              <?php else: ?>
+                <?php echo e((string)$aiUsage['used']); ?>/<?php echo e((string)$aiUsage['limit']); ?>
+              <?php endif; ?>
             </span>
           </div>
         </div>

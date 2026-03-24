@@ -3,7 +3,8 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/metrics.php';
 
 require_once __DIR__ . '/lib/embedded_bootstrap.php';
-[$shop, $host, $shopRecord] = sbm_bootstrap_embedded();
+require_once __DIR__ . '/lib/ui.php';
+[$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
@@ -54,6 +55,10 @@ try {
 $repeatRate = $totalCustomers > 0 ? ($repeatCustomers / max(1, $totalCustomers)) : 0.0;
 $inactiveRate = $totalCustomers > 0 ? ($inactiveCustomers / max(1, $totalCustomers)) : 0.0;
 $showLimitedDataNote = ($ordersScanned < 100 || $totalCustomers < 20);
+$features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$lockCustomersLtv = !((bool)($features['customers_ltv'] ?? false));
+$customersLtvRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('customers_ltv') : 'starter';
+$customersLtvUpgradeUrl = sbm_upgrade_url($shop, $host, $customersLtvRequiredPlan);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -133,7 +138,8 @@ $showLimitedDataNote = ($ordersScanned < 100 || $totalCustomers < 20);
       <?php endif; ?>
     </div>
 
-    <div class="section grid-50-50">
+    <div class="section grid-50-50 feature-lock-card">
+      <div class="<?php echo $lockCustomersLtv ? 'feature-lock-blur' : ''; ?>">
       <div class="card">
         <div class="section-title" style="margin-bottom:8px;">LTV</div>
         <div class="kpi-title">Average LTV (all customers)</div>
@@ -152,6 +158,17 @@ $showLimitedDataNote = ($ordersScanned < 100 || $totalCustomers < 20);
           <div class="hero-subtitle" style="margin-top:4px;">→ Consider email or discount campaigns</div>
         <?php endif; ?>
       </div>
+      </div>
+      <?php if ($lockCustomersLtv): ?>
+        <div class="feature-lock-overlay">
+          <?php renderLockedFeatureBlock(
+              'LTV & Churn Insights',
+              'Unlock full customer lifetime value and churn analytics to improve retention.',
+              $customersLtvRequiredPlan,
+              $customersLtvUpgradeUrl
+          ); ?>
+        </div>
+      <?php endif; ?>
     </div>
   </main>
 

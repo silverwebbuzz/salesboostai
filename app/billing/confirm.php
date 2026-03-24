@@ -55,7 +55,7 @@ if ($status === 'accepted') {
 
     // Use whatever plan_key we stored as pending.
     $sub = getSubscriptionByShop($shop);
-    $planKey = is_array($sub) ? (string)($sub['plan_key'] ?? 'free') : 'free';
+    $planKey = is_array($sub) ? normalizePlanKey((string)($sub['plan_key'] ?? 'free')) : 'free';
 
     setSubscriptionPlan($shop, $planKey, 'active', (string)$chargeId, $currentPeriodEndsAt);
 } elseif ($status === 'active') {
@@ -63,7 +63,7 @@ if ($status === 'accepted') {
     $billingOn = isset($charge['billing_on']) ? (string)$charge['billing_on'] : null;
     $currentPeriodEndsAt = $billingOn ? date('Y-m-d H:i:s', strtotime($billingOn)) : null;
     $sub = getSubscriptionByShop($shop);
-    $planKey = is_array($sub) ? (string)($sub['plan_key'] ?? 'free') : 'free';
+    $planKey = is_array($sub) ? normalizePlanKey((string)($sub['plan_key'] ?? 'free')) : 'free';
     setSubscriptionPlan($shop, $planKey, 'active', (string)$chargeId, $currentPeriodEndsAt);
 } else {
     // declined / cancelled / expired

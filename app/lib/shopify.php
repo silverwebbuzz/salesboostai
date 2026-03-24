@@ -1175,7 +1175,46 @@ function getSubscriptionByShop(string $shop): ?array
     $res = $stmt->get_result();
     $row = $res ? ($res->fetch_assoc() ?: null) : null;
     $stmt->close();
+    if (is_array($row)) {
+        $row['plan_key'] = normalizePlanKey((string)($row['plan_key'] ?? 'free'));
+    }
     return $row;
+}
+
+/**
+ * Canonical plan key for this app.
+ *
+ * Allowed values only:
+ * - free
+ * - starter
+ * - growth
+ * - premium
+ */
+function normalizePlanKey(string $planKey): string
+{
+    $key = strtolower(trim($planKey));
+    return in_array($key, ['free', 'starter', 'growth', 'premium'], true) ? $key : 'free';
+}
+
+/**
+ * Read current plan key for a shop (safe fallback to free).
+ */
+function getCurrentPlanKey(string $shop): string
+{
+    $sub = getSubscriptionByShop($shop);
+    if (!is_array($sub)) {
+        return 'free';
+    }
+    return normalizePlanKey((string)($sub['plan_key'] ?? 'free'));
+}
+
+/**
+ * Subscription status considered paid/active for feature unlock logic.
+ */
+function isSubscriptionActive(array $sub): bool
+{
+    $status = strtolower(trim((string)($sub['status'] ?? '')));
+    return $status === 'active' || $status === 'free';
 }
 
 /**
@@ -1188,6 +1227,7 @@ function setSubscriptionPlan(
     ?string $shopifyChargeId,
     ?string $currentPeriodEndsAt
 ): void {
+    $planKey = normalizePlanKey($planKey);
     $mysqli = db();
     $stmt = $mysqli->prepare(
         "INSERT INTO store_subscription (shop, plan_key, status, shopify_charge_id, current_period_ends_at, cancelled_at)

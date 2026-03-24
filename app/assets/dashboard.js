@@ -779,14 +779,6 @@ async function loadDashboard(opts = {}) {
       `;
       return row;
     });
-    renderList('lowStockList', data?.insights?.low_stock || [], (p) => {
-      const right = `
-        <div class="sb-badges">
-          <span class="sb-pill-badge sb-pill-badge--orange">Low Stock</span>
-          <span class="SbBadge">${fmtNumber(p.inventory_quantity ?? 0)} left</span>
-        </div>`;
-      return makeRow(p.title || p.sku || '—', right);
-    });
     renderList('highValueCustomersList', (data?.insights?.high_value_customers || []).slice(0, 5), (c, idx) => {
       const label = c.label || c.email || `Customer ${c.customer_id || ''}`.trim() || '—';
       const email = c.email || '';

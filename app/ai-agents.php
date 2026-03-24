@@ -1,8 +1,10 @@
 <?php
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/lib/usage.php';
+require_once __DIR__ . '/lib/ui.php';
 
 require_once __DIR__ . '/lib/embedded_bootstrap.php';
-[$shop, $host, $shopRecord] = sbm_bootstrap_embedded();
+[$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
@@ -32,6 +34,19 @@ function formatTimeAgo(?string $timestamp): string {
 $storeName = (string)($shopRecord['store_name'] ?? '');
 $agents = [];
 $dbError = '';
+$planKey = (string)($entitlements['plan_key'] ?? 'free');
+$limits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
+$aiLimit = (int)($limits['ai_insights_per_week'] ?? 1);
+$aiUsage = sbm_usage_state($shop, 'ai_insights', $aiLimit);
+
+function nextPlanForUpgrade(string $planKey): string {
+    $k = strtolower(trim($planKey));
+    if ($k === 'free') return 'starter';
+    if ($k === 'starter') return 'growth';
+    return 'premium';
+}
+$nextPlan = nextPlanForUpgrade($planKey);
+$upgradeUrl = sbm_upgrade_url($shop, $host, $nextPlan);
 
 try {
     $mysqli = db();
@@ -107,6 +122,14 @@ try {
     <div class="section">
       <div class="section-title">AI Agents</div>
       <div class="hero-subtitle" style="margin-bottom:12px;">Your AI team for store growth and optimization</div>
+      <div class="hero-subtitle" style="margin-bottom:12px;">
+        AI insights usage this week:
+        <?php if ($aiUsage['unlimited']): ?>
+          <strong><?php echo e((string)$aiUsage['used']); ?></strong> used (unlimited)
+        <?php else: ?>
+          <strong><?php echo e((string)$aiUsage['used']); ?></strong> / <strong><?php echo e((string)$aiUsage['limit']); ?></strong>
+        <?php endif; ?>
+      </div>
       <?php if (empty($agents)): ?>
         <div class="card">
           <div class="sb-muted">No active agents found. Add records to `ai_agents` table.</div>
@@ -137,10 +160,14 @@ try {
               </div>
               <div class="agent-updated"><?php echo e($lastUpdated); ?></div>
               <div class="agent-footer">
-                <a
-                  class="btn btn-primary"
-                  href="<?php echo e(BASE_URL); ?>/agent-report.php?agent_id=<?php echo (int)$agent['id']; ?>&shop=<?php echo urlencode($shop); ?><?php if ($host !== ''): ?>&host=<?php echo urlencode($host); ?><?php endif; ?><?php if (!$hasReport): ?>&demo=1<?php endif; ?>"
-                ><?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?></a>
+                <?php if (!$hasReport && $aiUsage['reached']): ?>
+                  <a class="btn btn-primary" href="<?php echo e($upgradeUrl); ?>">Upgrade to <?php echo e(sbm_plan_label($nextPlan)); ?></a>
+                <?php else: ?>
+                  <a
+                    class="btn btn-primary"
+                    href="<?php echo e(BASE_URL); ?>/agent-report.php?agent_id=<?php echo (int)$agent['id']; ?>&shop=<?php echo urlencode($shop); ?><?php if ($host !== ''): ?>&host=<?php echo urlencode($host); ?><?php endif; ?><?php if (!$hasReport): ?>&demo=1<?php endif; ?>"
+                  ><?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?></a>
+                <?php endif; ?>
               </div>
             </div>
           <?php endforeach; ?>

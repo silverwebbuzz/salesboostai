@@ -2,11 +2,22 @@
 require_once __DIR__ . '/config.php';
 
 require_once __DIR__ . '/lib/embedded_bootstrap.php';
-[$shop, $host, $shopRecord] = sbm_bootstrap_embedded();
+require_once __DIR__ . '/lib/ui.php';
+[$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
 $storeName = (string)($shopRecord['store_name'] ?? '');
+$features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$lockProducts = !((bool)($features['analytics_products'] ?? false));
+$lockCustomers = !((bool)($features['analytics_customers'] ?? false));
+$lockAov = !((bool)($features['analytics_aov'] ?? false));
+$productsReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_products') : 'starter';
+$customersReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_customers') : 'starter';
+$aovReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_aov') : 'starter';
+$productsUpgradeUrl = sbm_upgrade_url($shop, $host, $productsReqPlan);
+$customersUpgradeUrl = sbm_upgrade_url($shop, $host, $customersReqPlan);
+$aovUpgradeUrl = sbm_upgrade_url($shop, $host, $aovReqPlan);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -42,9 +53,9 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
     <div class="section">
       <div class="tabs" id="analyticsTabs">
         <button class="tab active" type="button" data-tab="revenue">Revenue</button>
-        <button class="tab" type="button" data-tab="products">Products</button>
-        <button class="tab" type="button" data-tab="customers">Customers</button>
-        <button class="tab" type="button" data-tab="aov">AOV</button>
+        <button class="tab <?php echo $lockProducts ? 'tab-locked' : ''; ?>" type="button" data-tab="products" data-locked="<?php echo $lockProducts ? '1' : '0'; ?>">Products<?php if ($lockProducts): ?> 🔒<?php endif; ?></button>
+        <button class="tab <?php echo $lockCustomers ? 'tab-locked' : ''; ?>" type="button" data-tab="customers" data-locked="<?php echo $lockCustomers ? '1' : '0'; ?>">Customers<?php if ($lockCustomers): ?> 🔒<?php endif; ?></button>
+        <button class="tab <?php echo $lockAov ? 'tab-locked' : ''; ?>" type="button" data-tab="aov" data-locked="<?php echo $lockAov ? '1' : '0'; ?>">AOV<?php if ($lockAov): ?> 🔒<?php endif; ?></button>
       </div>
     </div>
 
@@ -72,6 +83,8 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
     </div>
 
     <div id="tab-products" class="tab-panel">
+      <div class="feature-lock-card analytics-lock-wrap">
+      <div class="<?php echo $lockProducts ? 'feature-lock-blur' : ''; ?>">
       <div class="section">
         <div class="card chart-card">
           <div class="kpi-title">Product Revenue (Top 5)</div>
@@ -93,9 +106,23 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
       <div class="section">
         <div class="card ai-insight" id="productsInsight">—</div>
       </div>
+      </div>
+      <?php if ($lockProducts): ?>
+        <div class="feature-lock-overlay">
+          <?php renderLockedFeatureBlock(
+              'Products Analytics',
+              'Unlock top/worst product performance breakdown and product-level insight cards.',
+              $productsReqPlan,
+              $productsUpgradeUrl
+          ); ?>
+        </div>
+      <?php endif; ?>
+      </div>
     </div>
 
     <div id="tab-customers" class="tab-panel">
+      <div class="feature-lock-card analytics-lock-wrap">
+      <div class="<?php echo $lockCustomers ? 'feature-lock-blur' : ''; ?>">
       <div class="section">
         <div class="card chart-card">
           <div class="kpi-title">New vs Returning</div>
@@ -118,9 +145,23 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
       <div class="section">
         <div class="card ai-insight" id="customersInsight">—</div>
       </div>
+      </div>
+      <?php if ($lockCustomers): ?>
+        <div class="feature-lock-overlay">
+          <?php renderLockedFeatureBlock(
+              'Customers Analytics',
+              'Unlock customer cohorts, top buyer performance, and retention-focused insights.',
+              $customersReqPlan,
+              $customersUpgradeUrl
+          ); ?>
+        </div>
+      <?php endif; ?>
+      </div>
     </div>
 
     <div id="tab-aov" class="tab-panel">
+      <div class="feature-lock-card analytics-lock-wrap">
+      <div class="<?php echo $lockAov ? 'feature-lock-blur' : ''; ?>">
       <div class="section">
         <div class="card chart-card">
           <div>
@@ -134,6 +175,18 @@ $storeName = (string)($shopRecord['store_name'] ?? '');
       </div>
       <div class="section">
         <div class="card ai-insight" id="aovInsight">—</div>
+      </div>
+      </div>
+      <?php if ($lockAov): ?>
+        <div class="feature-lock-overlay">
+          <?php renderLockedFeatureBlock(
+              'AOV Analytics',
+              'Unlock average order value trend analysis and optimization-focused recommendations.',
+              $aovReqPlan,
+              $aovUpgradeUrl
+          ); ?>
+        </div>
+      <?php endif; ?>
       </div>
     </div>
   </main>

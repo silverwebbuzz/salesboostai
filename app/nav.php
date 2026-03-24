@@ -1,3 +1,18 @@
+<?php
+$rawShopForPlan = $_GET['shop'] ?? null;
+$shopForPlan = sanitizeShopDomain($rawShopForPlan);
+$hostForPlan = isset($_GET['host']) && is_string($_GET['host']) ? $_GET['host'] : '';
+$planKey = $shopForPlan ? getCurrentPlanKey($shopForPlan) : 'free';
+$planLabel = function_exists('sbm_plan_label') ? sbm_plan_label($planKey) : ucfirst($planKey);
+$nextPlan = 'starter';
+if ($planKey === 'starter') $nextPlan = 'growth';
+if ($planKey === 'growth') $nextPlan = 'premium';
+$nextPlanLabel = function_exists('sbm_plan_label') ? sbm_plan_label($nextPlan) : ucfirst($nextPlan);
+$upgradeUrl = function_exists('sbm_upgrade_url')
+  ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, $nextPlan)
+  : (BASE_URL . '/billing/subscribe?plan=' . urlencode($nextPlan) . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : ''));
+?>
+
 <nav class="top-nav" aria-label="Primary">
   <div class="top-nav__center" aria-label="Main navigation tabs">
     <ul class="top-nav__menu">
@@ -10,6 +25,10 @@
   </div>
 
   <div class="top-nav__right">
+    <span class="top-nav__plan-badge">Plan: <?php echo htmlspecialchars($planLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+    <?php if ($planKey !== 'premium'): ?>
+      <a id="nav-upgrade-plan" class="top-nav__upgrade" href="<?php echo htmlspecialchars($upgradeUrl, ENT_QUOTES, 'UTF-8'); ?>">Upgrade to <?php echo htmlspecialchars($nextPlanLabel, ENT_QUOTES, 'UTF-8'); ?></a>
+    <?php endif; ?>
     <a id="nav-ai-agents" class="top-nav__cta">✨ AI Agents</a>
   </div>
 </nav>
@@ -83,6 +102,7 @@
     var customersLink = document.getElementById("nav-customers");
     var salesBoostLink = document.getElementById("nav-sales-boost");
     var agentsLink = document.getElementById("nav-ai-agents");
+    var upgradeLink = document.getElementById("nav-upgrade-plan");
 
     if (dashboardLink) dashboardLink.href = "dashboard.php" + query;
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
@@ -90,6 +110,7 @@
     if (customersLink) customersLink.href = "customers.php" + query;
     if (salesBoostLink) salesBoostLink.href = "sales-boost.php" + query;
     if (agentsLink) agentsLink.href = "ai-agents.php" + query;
+    if (upgradeLink && !upgradeLink.getAttribute('href')) upgradeLink.href = "billing/subscribe.php" + query + "&plan=starter";
 
     // Active state
     var path = window.location.pathname.toLowerCase();

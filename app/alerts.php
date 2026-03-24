@@ -3,7 +3,8 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/metrics.php';
 
 require_once __DIR__ . '/lib/embedded_bootstrap.php';
-[$shop, $host, $shopRecord] = sbm_bootstrap_embedded();
+require_once __DIR__ . '/lib/ui.php';
+[$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
@@ -14,6 +15,10 @@ $errorText = '';
 $inventoryAgentId = 0;
 $revenueAgentId = 0;
 $productAgentId = 0;
+$features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$lockInventoryAlerts = !((bool)($features['alerts_inventory'] ?? false));
+$inventoryAlertsRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('alerts_inventory') : 'growth';
+$inventoryAlertsUpgradeUrl = sbm_upgrade_url($shop, $host, $inventoryAlertsRequiredPlan);
 
 try {
     $alerts = sbm_getAlertsData($shop, $shopRecord, 180);
@@ -81,12 +86,25 @@ try {
               if ($key === 'inventory') $detailsUrl = $inventoryDetailsUrl;
               if ($key === 'product') $detailsUrl = $productDetailsUrl;
             ?>
-            <div class="card alert-card alert-card-critical">
+            <?php $isInventoryLocked = $lockInventoryAlerts && $key === 'inventory'; ?>
+            <div class="card alert-card alert-card-critical <?php echo $isInventoryLocked ? 'feature-lock-card' : ''; ?>">
+              <div class="<?php echo $isInventoryLocked ? 'feature-lock-blur' : ''; ?>">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Alert')); ?></div>
               <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
               <div style="margin-top:12px;">
                 <a class="btn btn-primary" href="<?php echo e($detailsUrl); ?>">View Details</a>
               </div>
+              </div>
+              <?php if ($isInventoryLocked): ?>
+                <div class="feature-lock-overlay">
+                  <?php renderLockedFeatureBlock(
+                      'Inventory Alerts',
+                      'Unlock inventory-specific alert intelligence and recommended fixes.',
+                      $inventoryAlertsRequiredPlan,
+                      $inventoryAlertsUpgradeUrl
+                  ); ?>
+                </div>
+              <?php endif; ?>
             </div>
           <?php endforeach; ?>
         </div>
@@ -106,7 +124,9 @@ try {
               if ($key === 'inventory') $detailsUrl = $inventoryDetailsUrl;
               if ($key === 'product') $detailsUrl = $productDetailsUrl;
             ?>
-            <div class="card alert-card alert-card-warning">
+            <?php $isInventoryLocked = $lockInventoryAlerts && $key === 'inventory'; ?>
+            <div class="card alert-card alert-card-warning <?php echo $isInventoryLocked ? 'feature-lock-card' : ''; ?>">
+              <div class="<?php echo $isInventoryLocked ? 'feature-lock-blur' : ''; ?>">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Warning')); ?></div>
               <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
               <?php if (!empty($alert['list']) && is_array($alert['list'])): ?>
@@ -119,6 +139,17 @@ try {
               <div style="margin-top:12px;">
                 <a class="btn btn-primary" href="<?php echo e($detailsUrl); ?>">View Details</a>
               </div>
+              </div>
+              <?php if ($isInventoryLocked): ?>
+                <div class="feature-lock-overlay">
+                  <?php renderLockedFeatureBlock(
+                      'Inventory Alerts',
+                      'Unlock inventory-specific alert intelligence and recommended fixes.',
+                      $inventoryAlertsRequiredPlan,
+                      $inventoryAlertsUpgradeUrl
+                  ); ?>
+                </div>
+              <?php endif; ?>
             </div>
           <?php endforeach; ?>
         </div>
@@ -137,12 +168,25 @@ try {
               if ($key === 'inventory') $detailsUrl = $inventoryDetailsUrl;
               if ($key === 'product') $detailsUrl = $productDetailsUrl;
             ?>
-            <div class="card alert-card alert-card-info">
+            <?php $isInventoryLocked = $lockInventoryAlerts && $key === 'inventory'; ?>
+            <div class="card alert-card alert-card-info <?php echo $isInventoryLocked ? 'feature-lock-card' : ''; ?>">
+              <div class="<?php echo $isInventoryLocked ? 'feature-lock-blur' : ''; ?>">
               <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Insight')); ?></div>
               <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
               <div style="margin-top:12px;">
                 <a class="btn btn-primary" href="<?php echo e($detailsUrl); ?>">View Details</a>
               </div>
+              </div>
+              <?php if ($isInventoryLocked): ?>
+                <div class="feature-lock-overlay">
+                  <?php renderLockedFeatureBlock(
+                      'Inventory Alerts',
+                      'Unlock inventory-specific alert intelligence and recommended fixes.',
+                      $inventoryAlertsRequiredPlan,
+                      $inventoryAlertsUpgradeUrl
+                  ); ?>
+                </div>
+              <?php endif; ?>
             </div>
           <?php endforeach; ?>
         </div>

@@ -7,6 +7,7 @@
  */
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/entitlements.php';
 
 header('Content-Type: application/json');
 
@@ -23,6 +24,17 @@ $store = getShopByDomain($shop);
 if (!$store || (($store['status'] ?? '') === 'uninstalled')) {
     http_response_code(403);
     echo json_encode(['ok' => false, 'error' => 'Store not installed.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$entitlements = function_exists('getPlanEntitlements') ? getPlanEntitlements($shop) : ['features' => []];
+if (!canAccessFeature($entitlements, 'analytics_products')) {
+    http_response_code(403);
+    echo json_encode([
+        'ok' => false,
+        'error' => 'Products analytics is not available on your current plan.',
+        'required_plan' => getFeatureRequiredPlan('analytics_products'),
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

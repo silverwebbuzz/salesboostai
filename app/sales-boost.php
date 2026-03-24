@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/embedded_bootstrap.php';
-[$shop, $host, $shopRecord] = sbm_bootstrap_embedded();
+require_once __DIR__ . '/lib/ui.php';
+require_once __DIR__ . '/lib/usage.php';
+[$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
 function e(string $v): string
 {
@@ -23,6 +25,19 @@ $errorText = '';
 $topProducts = [];
 $recommendationsByProduct = [];
 $hasAnyRecommendations = false;
+$planKey = (string)($entitlements['plan_key'] ?? 'free');
+$limits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
+$recoLimit = (int)($limits['recommendations_per_week'] ?? 1);
+$recoUsage = sbm_usage_state($shop, 'recommendations', $recoLimit);
+
+function nextPlanForRecommendation(string $planKey): string {
+    $k = strtolower(trim($planKey));
+    if ($k === 'free') return 'starter';
+    if ($k === 'starter') return 'growth';
+    return 'premium';
+}
+$nextRecoPlan = nextPlanForRecommendation($planKey);
+$recoUpgradeUrl = sbm_upgrade_url($shop, $host, $nextRecoPlan);
 
 try {
     $mysqli = db();
@@ -170,8 +185,28 @@ try {
 
     <div class="section">
         <div class="section-title">Top product recommendations</div>
+        <div class="hero-subtitle" style="margin-bottom:10px;">
+            Recommendations usage this week:
+            <?php if ($recoUsage['unlimited']): ?>
+                <strong><?php echo e((string)$recoUsage['used']); ?></strong> used (unlimited)
+            <?php else: ?>
+                <strong><?php echo e((string)$recoUsage['used']); ?></strong> / <strong><?php echo e((string)$recoUsage['limit']); ?></strong>
+            <?php endif; ?>
+        </div>
 
-        <?php if (empty($topProducts) || !$hasAnyRecommendations): ?>
+        <?php if ($recoUsage['reached']): ?>
+            <div class="card feature-lock-card">
+                <div class="feature-lock-overlay-inner" style="max-width:520px;margin:0 auto;">
+                    <?php renderLockedFeatureBlock(
+                        'Recommendations quota reached',
+                        'You reached this week\'s recommendation limit. Upgrade to continue.',
+                        $nextRecoPlan,
+                        $recoUpgradeUrl
+                    ); ?>
+                </div>
+            </div>
+        <?php elseif (empty($topProducts) || !$hasAnyRecommendations): ?>
+
             <div class="card report-empty">
                 <div style="font-size:34px;line-height:1;margin-bottom:8px;">📦</div>
                 <div class="section-title" style="margin-bottom:6px;">No recommendations available yet</div>
@@ -211,6 +246,18 @@ try {
                 </div>
             </div>
         <?php else: ?>
+            <?php
+                if (session_status() !== PHP_SESSION_ACTIVE) {
+                    @session_start();
+                }
+                $wk = (string)$recoUsage['week_key'];
+                $usageMarkKey = $shop . ':sales_boost:' . $wk;
+                if (!isset($_SESSION['sbm_reco_usage_mark'][$usageMarkKey])) {
+                    sbm_increment_weekly_usage($shop, 'recommendations', 1, $wk);
+                    $_SESSION['sbm_reco_usage_mark'][$usageMarkKey] = 1;
+                    $recoUsage = sbm_usage_state($shop, 'recommendations', $recoLimit);
+                }
+            ?>
             <div class="agents-grid">
                 <?php foreach ($topProducts as $productA): ?>
                     <?php $recs = $recommendationsByProduct[$productA] ?? []; ?>

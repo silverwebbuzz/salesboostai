@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../lib/entitlements.php';
 
 header('Content-Type: application/json');
 
@@ -57,6 +58,8 @@ function dashboardShellPayload(string $tz, array $syncStatus): array {
         ],
         'key_insights' => [],
         'sync_status' => $syncStatus,
+        'locks' => [],
+        'entitlements' => [],
         'meta' => [
             'computed_at' => gmdate('c'),
             'source' => 'shell',
@@ -87,6 +90,21 @@ $ordersTable = perStoreTableName($shopName, 'order');
 $customersTable = perStoreTableName($shopName, 'customer');
 $inventoryTable = perStoreTableName($shopName, 'products_inventory');
 $analyticsTable = perStoreTableName($shopName, 'analytics');
+$entitlements = function_exists('getPlanEntitlements') ? getPlanEntitlements($shop) : [
+    'plan_key' => 'free',
+    'plan_label' => 'Free',
+    'features' => [],
+    'limits' => [],
+];
+$featureFlags = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
+$planLimits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
+$locks = [
+    'inventory_insights' => !((bool)($featureFlags['dashboard_inventory'] ?? false)),
+    'critical_insights' => !((bool)($featureFlags['dashboard_critical_full'] ?? false)),
+    'top_lists' => !((bool)($featureFlags['dashboard_top_lists_full'] ?? false)),
+];
+$topProductsLimit = max(1, (int)($planLimits['top_products_count'] ?? 5));
+$criticalLimit = max(1, (int)($planLimits['critical_insights_count'] ?? 4));
 
 // Sync status (for first-install UX guidance)
 $syncStatus = [
@@ -148,7 +166,14 @@ if ($tz === '') {
 
 // First open / sync not complete: skip cache + skip heavy queries — UI shows sync gate only.
 if (($syncStatus['state'] ?? 'ready') !== 'ready') {
-    echo json_encode(dashboardShellPayload($tz, $syncStatus), JSON_UNESCAPED_UNICODE);
+    $shell = dashboardShellPayload($tz, $syncStatus);
+    $shell['locks'] = $locks;
+    $shell['entitlements'] = [
+        'plan_key' => (string)($entitlements['plan_key'] ?? 'free'),
+        'plan_label' => (string)($entitlements['plan_label'] ?? 'Free'),
+        'limits' => $planLimits,
+    ];
+    echo json_encode($shell, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -184,6 +209,12 @@ try {
                         $sigOk = $liveFp !== null && $storedSig !== '' && hash_equals($storedSig, $liveFp);
                         if ($sigOk) {
                             $cached['sync_status'] = $syncStatus;
+                            $cached['locks'] = $locks;
+                            $cached['entitlements'] = [
+                                'plan_key' => (string)($entitlements['plan_key'] ?? 'free'),
+                                'plan_label' => (string)($entitlements['plan_label'] ?? 'Free'),
+                                'limits' => $planLimits,
+                            ];
                             $cachedAt = strtotime((string)$row['fetched_at']);
                             $cached['meta'] = [
                                 'computed_at' => $cachedAt ? gmdate('c', $cachedAt) : gmdate('c'),
@@ -365,7 +396,7 @@ if ($recentOrders) {
 // Top products (top 5)
 $topProducts = array_values($topProductsAgg);
 usort($topProducts, fn($a, $b) => ($b['quantity'] <=> $a['quantity']));
-$topProductsTop5 = array_slice($topProducts, 0, 5);
+$topProductsTop5 = array_slice($topProducts, 0, $topProductsLimit);
 
 // High-value customers top 5
 $highValueCustomers = array_values($customersAgg);
@@ -458,6 +489,7 @@ if ($inventoryLowButSold > 0) {
         'description' => 'Several products sold recently and now have less than 5 units left.',
     ];
 }
+$criticalIssues = array_slice($criticalIssues, 0, $criticalLimit);
 
 // Key insight bullets
 $numProductsNoSales = $deadStockCount;
@@ -538,12 +570,18 @@ $out = [
     'summary_text' => $summaryText,
     'critical_issues' => $criticalIssues,
     'inventory_metrics' => [
-        'cash_in_inventory' => round($cashInInventory, 2),
-        'dead_stock_value' => round($deadStockValue, 2),
-        'restock_needed_value' => round($restockNeededValue, 2),
+        'cash_in_inventory' => $locks['inventory_insights'] ? 0.0 : round($cashInInventory, 2),
+        'dead_stock_value' => $locks['inventory_insights'] ? 0.0 : round($deadStockValue, 2),
+        'restock_needed_value' => $locks['inventory_insights'] ? 0.0 : round($restockNeededValue, 2),
     ],
     'key_insights' => $keyInsights,
     'sync_status' => $syncStatus,
+    'locks' => $locks,
+    'entitlements' => [
+        'plan_key' => (string)($entitlements['plan_key'] ?? 'free'),
+        'plan_label' => (string)($entitlements['plan_label'] ?? 'Free'),
+        'limits' => $planLimits,
+    ],
     'meta' => [
         'computed_at' => gmdate('c'),
         'source' => 'live',

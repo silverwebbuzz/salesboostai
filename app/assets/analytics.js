@@ -319,7 +319,13 @@
   function wireTabClicks() {
     document.querySelectorAll('.tab').forEach(function (tab) {
       tab.addEventListener('click', function () {
-        onTab(tab.getAttribute('data-tab')).catch(function (e) {
+        var isLocked = tab.getAttribute('data-locked') === '1';
+        var tabName = tab.getAttribute('data-tab');
+        if (isLocked) {
+          activateTab(tabName);
+          return;
+        }
+        onTab(tabName).catch(function (e) {
           setText('analyticsError', e.message || 'Failed to load analytics.');
           var err = $('#analyticsErrorWrap');
           if (err) err.style.display = 'block';
