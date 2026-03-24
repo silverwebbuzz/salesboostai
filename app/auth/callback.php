@@ -40,33 +40,34 @@ if (!is_string($accessToken) || $accessToken === '') {
 
 try {
     /*
-     * OAuth install: set up all database structures and store metadata.
-     * Intentionally NOT called here: fetchAndStoreInitialData() (no bulk orders/customers/products/inventory/analytics counts).
-     * Merchants import that data via Dashboard → Sync Now (or cron calling runOneSyncStep).
+     * Lightweight OAuth install path:
+     * - Save auth/store basics only
+     * - Do NOT create per-store tables
+     * - Do NOT enqueue sync tasks
+     * - Do NOT register webhooks here
+     *
+     * First dashboard view should be fast and show Sync box immediately.
+     * Heavy/operational setup runs when merchant clicks Sync Now.
      */
     ensureGlobalAppSchema();
 
-    // Shop profile from Shopify (single GET shop.json — not order/customer/product lists).
-    $shopDetails = fetchShopDetails($shop, $accessToken);
+    // Best-effort shop details. If unavailable, still proceed with basic install.
+    $shopDetails = [];
+    try {
+        $maybe = fetchShopDetails($shop, $accessToken);
+        if (is_array($maybe)) {
+            $shopDetails = $maybe;
+        }
+    } catch (Throwable $e) {
+        $shopDetails = [];
+    }
     upsertStore($shop, $accessToken, $host, $shopDetails);
 
     // Default subscription row on first install.
     ensureFreeSubscription($shop);
 
-    // Register operational webhooks (orders, products, customers, uninstall, etc.).
+    // Register operational webhooks during callback (as requested).
     registerWebhooks($shop, $accessToken);
-
-    // Per-store empty tables: order, customer, products_inventory, analytics (structure only).
-    $tables = ensurePerStoreTables($shop);
-
-    try {
-        upsertAnalyticsMetric(db(), $tables['analytics'], 'install_initialized_at', date('c'), null);
-    } catch (Throwable $e) {
-        // non-blocking
-    }
-
-    // Queue sync tasks (rows in store_sync_state). Actual API fetch happens in sync runner / cron.
-    enqueueFullSync($shop);
 } catch (Throwable $e) {
     error_log('[shopify_callback] ' . $e->getMessage());
     http_response_code(500);
