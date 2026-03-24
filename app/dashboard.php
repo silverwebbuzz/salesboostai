@@ -250,8 +250,13 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
       </div>
 
       <div class="section">
-        <div class="card">
-          <div class="kpi-title">Critical insights</div>
+        <div class="card critical-insights-card">
+          <div class="critical-insights-head">
+            <div class="critical-insights-title-wrap">
+              <span class="critical-insights-icon" aria-hidden="true">⚠</span>
+              <div class="critical-insights-title">CRITICAL INSIGHTS</div>
+            </div>
+          </div>
           <div id="criticalIssuesGrid"></div>
         </div>
       </div>

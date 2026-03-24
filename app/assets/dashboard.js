@@ -641,34 +641,41 @@ function renderCriticalIssues(issues) {
   grid.innerHTML = '';
 
   if (!issues || !issues.length) {
-    const empty = document.createElement('div');
-    empty.className = 'card critical-empty';
-    empty.innerHTML = `
-      <div class="critical-empty-icon">🎉</div>
-      <div class="section-title" style="margin-bottom:6px;">No critical issues detected</div>
-      <div class="sb-muted" style="padding:0;">Your store is performing well. Keep going!</div>
+    grid.innerHTML = `
+      <div class="critical-empty-state">
+        <div class="critical-empty-icon">✓</div>
+        <div class="critical-empty-title">No critical insights right now</div>
+        <div class="critical-empty-text">Your store is performing well. Keep monitoring trends.</div>
+      </div>
     `;
-    grid.appendChild(empty);
     return;
   }
 
   issues.slice(0, 4).forEach((issue) => {
     const sev = (issue.severity || 'medium').toLowerCase();
-    const badge =
-      sev === 'high' ? 'badge badge-red' :
-      sev === 'low' ? 'badge badge-green' :
-      'badge badge-orange';
+    const sevClass =
+      sev === 'high' ? 'critical-item--high' :
+      sev === 'low' ? 'critical-item--low' :
+      'critical-item--medium';
+    const badgeClass =
+      sev === 'high' ? 'critical-priority--high' :
+      sev === 'low' ? 'critical-priority--low' :
+      'critical-priority--medium';
 
     const card = document.createElement('div');
-    card.className = `card critical-card critical-${sev}`;
+    card.className = `critical-item ${sevClass}`;
     card.innerHTML = `
-      <div class="critical-top">
-        <span class="${badge}">${sev.toUpperCase()}</span>
-      </div>
-      <div class="critical-title">${escapeHtml(issue.title || 'Insight')}</div>
-      <div class="sb-muted" style="padding:0;">${escapeHtml(issue.description || '')}</div>
-      <div style="margin-top:12px;">
-        <button class="btn btn-primary" type="button">View details</button>
+      <div class="critical-item-main">
+        <div class="critical-item-left">
+          <span class="critical-priority ${badgeClass}">${sev.toUpperCase()}</span>
+          <div class="critical-item-text">
+            <div class="critical-item-title">${escapeHtml(issue.title || 'Insight')}</div>
+            <div class="critical-item-desc">${escapeHtml(issue.description || '')}</div>
+          </div>
+        </div>
+        <div class="critical-item-right">
+          <button class="critical-action-btn" type="button">View details</button>
+        </div>
       </div>
     `;
     grid.appendChild(card);
