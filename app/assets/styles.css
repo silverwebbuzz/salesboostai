@@ -71,17 +71,19 @@ body {
 
 .card.kpi {
   background: #ffffff;
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 12px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-  transition: all 0.2s ease;
+  justify-content: flex-start;
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
 .card.kpi:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  border-color: #d1d5db;
 }
 
 .kpi-title {
@@ -102,22 +104,42 @@ body {
 }
 
 .kpi-value {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 800;
   color: #111827;
+  margin-top: 2px;
 }
 
-/* KPI left accents */
-.kpi--revenue { border-left: 3px solid #10b981; }
-.kpi--orders { border-left: 3px solid #3b82f6; }
-.kpi--customers { border-left: 3px solid #8b5cf6; }
-.kpi--aov { border-left: 3px solid #f59e0b; }
+/* KPI structure + accent */
+.kpi-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.kpi-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.kpi--revenue { border-top: 3px solid #22c55e; }
+.kpi--orders { border-top: 3px solid #3b82f6; }
+.kpi--customers { border-top: 3px solid #8b5cf6; }
+.kpi--aov { border-top: 3px solid #f97316; }
 
 /* Trend styling (support both old and new class names) */
 .kpi-trend {
   font-size: 12px;
-  margin-top: 6px;
+  margin-top: 8px;
   font-weight: 600;
+  min-height: 18px;
 }
 .kpi-trend.up,
 .kpi-trend--up { color: #10b981; }
@@ -950,7 +972,7 @@ body {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 16px;
-  min-height: 124px;
+  min-height: 70px;
   display: flex;
   flex-direction: column;
   gap: 8px;

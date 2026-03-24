@@ -457,12 +457,12 @@ function setTrend(elId, pct) {
   const el = document.getElementById(elId);
   if (!el) return;
   if (pct === null) {
-    el.textContent = '';
+    el.textContent = 'No prior week data';
     el.className = 'kpi-trend';
     return;
   }
   const sign = pct >= 0 ? '+' : '';
-  el.textContent = `${sign}${pct.toFixed(0)}% ${pct >= 0 ? '↑' : '↓'}`;
+  el.textContent = `${sign}${pct.toFixed(0)}% from last week ${pct >= 0 ? '↑' : '↓'}`;
   el.className = `kpi-trend ${pct >= 0 ? 'kpi-trend--up' : 'kpi-trend--down'}`;
 }
 
