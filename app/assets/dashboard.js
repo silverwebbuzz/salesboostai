@@ -238,6 +238,49 @@ function getDashboardSummary(data) {
   return generateInsight({ revenue_change: Math.round(revChange) });
 }
 
+function normalizeAiInsightType(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'high') return { cls: 'ai-summary-item--action', label: 'Action needed', icon: '!' };
+  if (t === 'positive') return { cls: 'ai-summary-item--good', label: 'Good performance', icon: '✓' };
+  return { cls: 'ai-summary-item--opportunity', label: 'Opportunity', icon: 'i' };
+}
+
+function renderAiSummaryCards(data) {
+  const grid = document.getElementById('aiSummaryGrid');
+  if (!grid) return;
+
+  const defaults = [
+    { type: 'high', message: 'Most sales come from one product. Promote other items.' },
+    { type: 'high', message: 'Customers are not returning. Try follow-up campaigns.' },
+    { type: 'positive', message: 'Sales look steady. Keep promoting your best products.' },
+    { type: 'medium', message: 'Some winning items may run out. Restock soon.' }
+  ];
+
+  const dynamic = getDashboardKeyInsights(data);
+  const merged = [];
+  const used = new Set();
+  [...dynamic, ...defaults].forEach((item) => {
+    const msg = String(item?.message || '').trim();
+    if (!msg || used.has(msg) || merged.length >= 4) return;
+    used.add(msg);
+    merged.push({ type: item.type, message: msg });
+  });
+  while (merged.length < 4) merged.push(defaults[merged.length]);
+
+  grid.innerHTML = merged.map((item) => {
+    const t = normalizeAiInsightType(item.type);
+    return `
+      <div class="ai-summary-item ${t.cls}">
+        <div class="ai-summary-item-head">
+          <span class="ai-summary-icon">${t.icon}</span>
+          <span class="ai-summary-label">${t.label}</span>
+        </div>
+        <div class="ai-summary-text">${escapeHtml(item.message)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
 function getDashboardKeyInsights(data) {
   const out = [];
   const topProducts = data?.insights?.top_products || [];
@@ -509,6 +552,58 @@ function computeStoreHealth(data) {
   };
 }
 
+function getHealthStatusClass(status) {
+  const value = String(status || '').toLowerCase();
+  if (value === 'good') return 'health-status-good';
+  if (value === 'critical') return 'health-status-critical';
+  return 'health-status-needs-attention';
+}
+
+function renderStoreHealth(health) {
+  const statusEl = document.getElementById('storeHealthStatus');
+  const scoreEl = document.getElementById('storeHealthScoreValue');
+  const breakdownEl = document.getElementById('storeHealthBreakdown');
+  const issueEl = document.getElementById('storeHealthIssue');
+
+  if (statusEl) {
+    statusEl.textContent = health.status || 'Needs Attention';
+    statusEl.classList.remove('health-status-good', 'health-status-needs-attention', 'health-status-critical');
+    statusEl.classList.add(getHealthStatusClass(health.status));
+  }
+
+  if (scoreEl) {
+    scoreEl.textContent = String(Number(health.score || 0));
+  }
+
+  if (issueEl) {
+    issueEl.textContent = `Biggest Issue: ${health.biggestIssue || 'No major issue detected.'}`;
+  }
+
+  if (!breakdownEl) return;
+  const revenue = Number(health?.breakdown?.revenue || 0);
+  const inventory = Number(health?.breakdown?.inventory || 0);
+  const customers = Number(health?.breakdown?.customers || 0);
+  const alerts = Number(health?.breakdown?.alerts || 0);
+
+  const rows = [
+    { icon: '💵', label: 'Revenue', value: revenue, max: 30, cls: 'health-fill-revenue' },
+    { icon: '📦', label: 'Inventory', value: inventory, max: 25, cls: 'health-fill-inventory' },
+    { icon: '👥', label: 'Customers', value: customers, max: 25, cls: 'health-fill-customers' },
+    { icon: '🚨', label: 'Alerts', value: alerts, max: 20, cls: 'health-fill-alerts' }
+  ];
+
+  breakdownEl.innerHTML = rows.map((row) => {
+    const pct = row.max > 0 ? Math.max(0, Math.min(100, Math.round((row.value / row.max) * 100))) : 0;
+    return `
+      <div class="store-health-row">
+        <div class="store-health-row-label"><span class="store-health-icon">${row.icon}</span>${row.label}</div>
+        <div class="store-health-row-bar"><span class="${row.cls}" style="width:${pct}%"></span></div>
+        <div class="store-health-row-value">${Math.round(row.value)}/${row.max}</div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderCriticalIssues(issues) {
   const grid = document.getElementById('criticalIssuesGrid');
   if (!grid) return;
@@ -590,21 +685,11 @@ async function loadDashboard(opts = {}) {
     setText('sbHvCustomersStat', fmtNumber((data?.insights?.high_value_customers || []).length || 0));
 
     // AI summary
-    setHtml('aiSummaryText', formatInsight(getDashboardSummary(data)));
+    renderAiSummaryCards(data);
 
     // Store health score
     const health = computeStoreHealth(data);
-    setText('storeHealthScore', `${health.score} / 100`);
-    setText('storeHealthStatus', health.status);
-    setText('storeHealthIssue', `Biggest issue: ${health.biggestIssue}`);
-    setHtml(
-      'storeHealthBreakdown',
-      `<div class="kpi-title" style="margin-bottom:8px;">Health Breakdown</div>
-       <div class="hero-subtitle">📈 Revenue: ${health.breakdown.revenue} / 30</div>
-       <div class="hero-subtitle">📦 Inventory: ${health.breakdown.inventory} / 25</div>
-       <div class="hero-subtitle">👥 Customers: ${health.breakdown.customers} / 25</div>
-       <div class="hero-subtitle">🚨 Alerts: ${health.breakdown.alerts} / 20</div>`
-    );
+    renderStoreHealth(health);
 
     // Inventory KPIs
     const inv = data?.inventory_metrics || {};

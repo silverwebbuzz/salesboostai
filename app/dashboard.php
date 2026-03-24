@@ -81,20 +81,75 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
       </div>
 
       <div id="sbDashboardBody">
-      <div class="section">
+      <div class="section health-ai-row">
         <div class="card store-health-card">
           <div class="store-health-head">
-            <div class="kpi-title">Store Health Score</div>
-            <div class="store-health-status" id="storeHealthStatus">—</div>
+            <div class="store-health-title">Store Health Score</div>
+            <div class="store-health-status" id="storeHealthStatus">Needs Attention</div>
           </div>
-          <div class="store-health-score" id="storeHealthScore">— / 100</div>
-          <div class="hero-subtitle" id="storeHealthIssue">Biggest issue: —</div>
+          <div class="store-health-score-wrap">
+            <span class="store-health-score" id="storeHealthScoreValue">0</span>
+            <span class="store-health-score-max">/100</span>
+          </div>
           <div class="store-health-breakdown" id="storeHealthBreakdown">
-            <div class="kpi-title" style="margin-bottom:8px;">Health Breakdown</div>
-            <div class="hero-subtitle">📈 Revenue: — / 30</div>
-            <div class="hero-subtitle">📦 Inventory: — / 25</div>
-            <div class="hero-subtitle">👥 Customers: — / 25</div>
-            <div class="hero-subtitle">🚨 Alerts: — / 20</div>
+            <div class="store-health-row">
+              <div class="store-health-row-label">Revenue</div>
+              <div class="store-health-row-bar"><span style="width:0%"></span></div>
+              <div class="store-health-row-value">0/30</div>
+            </div>
+            <div class="store-health-row">
+              <div class="store-health-row-label">Inventory</div>
+              <div class="store-health-row-bar"><span style="width:0%"></span></div>
+              <div class="store-health-row-value">0/25</div>
+            </div>
+            <div class="store-health-row">
+              <div class="store-health-row-label">Customers</div>
+              <div class="store-health-row-bar"><span style="width:0%"></span></div>
+              <div class="store-health-row-value">0/25</div>
+            </div>
+            <div class="store-health-row">
+              <div class="store-health-row-label">Alerts</div>
+              <div class="store-health-row-bar"><span style="width:0%"></span></div>
+              <div class="store-health-row-value">0/20</div>
+            </div>
+          </div>
+          <div class="store-health-issue-box" id="storeHealthIssue">Biggest Issue: —</div>
+        </div>
+
+        <div class="card ai-summary-card">
+          <div class="ai-summary-head">
+            <div class="ai-summary-title">AI Summary</div>
+            <div class="ai-summary-badge">Action Needed</div>
+          </div>
+          <div class="ai-summary-grid" id="aiSummaryGrid">
+            <div class="ai-summary-item ai-summary-item--action">
+              <div class="ai-summary-item-head">
+                <span class="ai-summary-icon">!</span>
+                <span class="ai-summary-label">Action needed</span>
+              </div>
+              <div class="ai-summary-text">Most sales come from one product. Promote other items.</div>
+            </div>
+            <div class="ai-summary-item ai-summary-item--action">
+              <div class="ai-summary-item-head">
+                <span class="ai-summary-icon">!</span>
+                <span class="ai-summary-label">Action needed</span>
+              </div>
+              <div class="ai-summary-text">Customers are not returning. Try follow-up campaigns.</div>
+            </div>
+            <div class="ai-summary-item ai-summary-item--good">
+              <div class="ai-summary-item-head">
+                <span class="ai-summary-icon">✓</span>
+                <span class="ai-summary-label">Good performance</span>
+              </div>
+              <div class="ai-summary-text">Sales look steady. Keep promoting your best products.</div>
+            </div>
+            <div class="ai-summary-item ai-summary-item--opportunity">
+              <div class="ai-summary-item-head">
+                <span class="ai-summary-icon">i</span>
+                <span class="ai-summary-label">Opportunity</span>
+              </div>
+              <div class="ai-summary-text">Some winning items may run out. Restock soon.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -132,13 +187,6 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
             <div class="kpi-value" id="kpiAov">0</div>
             <div id="trendAov"></div>
           </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="card ai-summary">
-          <div class="kpi-title">AI Summary</div>
-          <div id="aiSummaryText"></div>
         </div>
       </div>
 

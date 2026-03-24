@@ -1,14 +1,4 @@
 <nav class="top-nav" aria-label="Primary">
-  <div class="top-nav__left">
-    <div class="top-nav__logo-wrap" aria-hidden="true">
-      <span class="top-nav__logo-mark">SWB</span>
-    </div>
-    <div class="top-nav__brand">
-      <div class="top-nav__title">SWB SalesBoost AI</div>
-      <div class="top-nav__subtitle">Silverwebbuzz App</div>
-    </div>
-  </div>
-
   <div class="top-nav__center" aria-label="Main navigation tabs">
     <ul class="top-nav__menu">
       <li><a id="nav-dashboard" class="top-nav__link">Dashboard</a></li>

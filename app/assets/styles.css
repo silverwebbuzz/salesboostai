@@ -377,59 +377,11 @@ body {
   border-bottom: 1px solid #e5e7eb;
 }
 
-.top-nav__left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.top-nav__logo-wrap {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.24);
-  flex-shrink: 0;
-}
-
-.top-nav__logo-mark {
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.top-nav__brand {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.top-nav__title {
-  color: #111827;
-  font-size: 15px;
-  line-height: 1.1;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.top-nav__subtitle {
-  margin-top: 2px;
-  color: #6b7280;
-  font-size: 11px;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-
 .top-nav__center {
   flex: 1;
   min-width: 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .top-nav__menu {
@@ -511,14 +463,6 @@ body {
   .top-nav {
     padding: 0 20px;
     gap: 14px;
-  }
-
-  .top-nav__title {
-    font-size: 14px;
-  }
-
-  .top-nav__subtitle {
-    display: none;
   }
 }
 
@@ -828,41 +772,236 @@ body {
   color: #4b5563;
 }
 
-/* Store health score card */
-.store-health-card {
-  border: 1px solid #e0e7ff;
-  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+/* Store health + AI summary top row */
+.health-ai-row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.store-health-card,
+.ai-summary-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: none;
 }
 
 .store-health-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.store-health-title {
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .store-health-status {
-  font-size: 12px;
-  font-weight: 700;
-  color: #4338ca;
-  background: #e0e7ff;
-  border: 1px solid #c7d2fe;
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
-  padding: 3px 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.health-status-needs-attention {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.health-status-good {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.health-status-critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.store-health-score-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .store-health-score {
-  font-size: 34px;
-  line-height: 1.1;
-  font-weight: 800;
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 700;
   color: #111827;
-  margin-bottom: 8px;
+}
+
+.store-health-score-max {
+  font-size: 16px;
+  color: #6b7280;
+  font-weight: 600;
 }
 
 .store-health-breakdown {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed #c7d2fe;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.store-health-row {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.store-health-row-label {
+  font-size: 12px;
+  color: #374151;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.store-health-icon {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.store-health-row-bar {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.store-health-row-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.health-fill-revenue { background: #22c55e; }
+.health-fill-inventory { background: #f97316; }
+.health-fill-customers { background: #3b82f6; }
+.health-fill-alerts { background: #ef4444; }
+
+.store-health-row-value {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.store-health-issue-box {
+  margin-top: 14px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.ai-summary-card {
+  background: #f9fafb;
+}
+
+.ai-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ai-summary-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.ai-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.ai-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ai-summary-item {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  min-height: 124px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-summary-item--action { border-left: 3px solid #ef4444; }
+.ai-summary-item--good { border-left: 3px solid #22c55e; }
+.ai-summary-item--opportunity { border-left: 3px solid #3b82f6; }
+
+.ai-summary-item-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-summary-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-summary-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.ai-summary-text {
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+  .health-ai-row {
+    grid-template-columns: 1fr;
+  }
+
+  .store-health-row {
+    grid-template-columns: 90px 1fr auto;
+  }
+
+  .ai-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
