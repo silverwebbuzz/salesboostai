@@ -604,6 +604,37 @@ function renderStoreHealth(health) {
   }).join('');
 }
 
+function renderInventoryInsights(inv) {
+  const cash = Number(inv?.cash_in_inventory || 0);
+  const dead = Number(inv?.dead_stock_value || 0);
+  const restock = Number(inv?.restock_needed_value || 0);
+
+  setText('kpiCashInventory', fmtCurrency(cash));
+  setText('kpiDeadStock', fmtCurrency(dead));
+  setText('kpiRestockValue', fmtCurrency(restock));
+
+  const deadBadge = document.getElementById('deadStockBadge');
+  const restockBadge = document.getElementById('restockBadge');
+  const deadMetric = document.getElementById('deadStockMetric');
+
+  if (deadBadge) {
+    deadBadge.textContent = dead > 0 ? 'High' : 'Low';
+    deadBadge.className = dead > 0 ? 'inventory-pill inventory-pill--danger' : 'inventory-pill inventory-pill--neutral';
+  }
+  if (deadMetric) {
+    deadMetric.classList.toggle('inventory-metric--dead-alert', dead > 0);
+  }
+  if (restockBadge) {
+    if (restock <= 0) {
+      restockBadge.textContent = 'Healthy';
+      restockBadge.className = 'inventory-pill inventory-pill--healthy';
+    } else {
+      restockBadge.textContent = 'Needs restock';
+      restockBadge.className = 'inventory-pill inventory-pill--info';
+    }
+  }
+}
+
 function renderCriticalIssues(issues) {
   const grid = document.getElementById('criticalIssuesGrid');
   if (!grid) return;
@@ -693,9 +724,7 @@ async function loadDashboard(opts = {}) {
 
     // Inventory KPIs
     const inv = data?.inventory_metrics || {};
-    setText('kpiCashInventory', fmtCurrency(inv.cash_in_inventory || 0));
-    setText('kpiDeadStock', fmtCurrency(inv.dead_stock_value || 0));
-    setText('kpiRestockValue', fmtCurrency(inv.restock_needed_value || 0));
+    renderInventoryInsights(inv);
 
     // Charts
     fullCharts = data?.charts || {};
@@ -755,25 +784,6 @@ async function loadDashboard(opts = {}) {
 
     // Critical issues (premium cards + empty state)
     renderCriticalIssues(data?.critical_issues || []);
-
-    // Key insights bullets
-    const kiEl = document.getElementById('keyInsightsList');
-    if (kiEl) {
-      kiEl.innerHTML = '';
-      const list = getDashboardKeyInsights(data);
-      if (!list.length) {
-        kiEl.innerHTML = `<div class="sb-muted">No insights yet. Try running one campaign this week.</div>`;
-      } else {
-        const ul = document.createElement('ul');
-        ul.className = 'sb-keyinsights-list';
-        list.forEach((t) => {
-          const li = document.createElement('li');
-          li.innerHTML = formatInsight(t);
-          ul.appendChild(li);
-        });
-        kiEl.appendChild(ul);
-      }
-    }
 
     show('sbSkeleton', false);
     show('sbContent', true);

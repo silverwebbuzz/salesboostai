@@ -118,7 +118,7 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
 
         <div class="card ai-summary-card">
           <div class="ai-summary-head">
-            <div class="ai-summary-title">AI Summary</div>
+            <div class="ai-summary-title">Key insights</div>
             <div class="ai-summary-badge">Action Needed</div>
           </div>
           <div class="ai-summary-grid" id="aiSummaryGrid">
@@ -192,23 +192,35 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
       </div>
 
       <div class="section">
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
-            <div class="kpi-title">Inventory</div>
-            <a class="btn btn-primary" href="#" id="btnViewProducts">View all products</a>
+        <div class="card inventory-insights-card">
+          <div class="inventory-insights-head">
+            <div class="inventory-insights-title-wrap">
+              <span class="inventory-insights-icon" aria-hidden="true">📦</span>
+              <div class="inventory-insights-title">Inventory</div>
+            </div>
+            <a class="inventory-outline-btn" href="#" id="btnViewProducts">View all products</a>
           </div>
-          <div class="inventory-grid">
-            <div class="card inventory-mini">
-              <div class="kpi-title">Cash in inventory</div>
+          <div class="inventory-insights-grid">
+            <div class="inventory-metric inventory-metric--cash">
+              <div class="inventory-metric-label">Cash in inventory</div>
               <div class="kpi-value" id="kpiCashInventory">0</div>
+              <div class="inventory-metric-help">Total stock value</div>
             </div>
-            <div class="card inventory-mini">
-              <div class="kpi-title">Dead stock value</div>
+            <div class="inventory-metric inventory-metric--dead" id="deadStockMetric">
+              <div class="inventory-metric-top">
+                <div class="inventory-metric-label">Dead stock value</div>
+                <span class="inventory-pill inventory-pill--danger" id="deadStockBadge">High</span>
+              </div>
               <div class="kpi-value" id="kpiDeadStock">0</div>
+              <div class="inventory-metric-help">Products not sold in last 30 days</div>
             </div>
-            <div class="card inventory-mini">
-              <div class="kpi-title">Restock needed</div>
+            <div class="inventory-metric inventory-metric--restock">
+              <div class="inventory-metric-top">
+                <div class="inventory-metric-label">Restock needed</div>
+                <span class="inventory-pill" id="restockBadge">Healthy</span>
+              </div>
               <div class="kpi-value" id="kpiRestockValue">0</div>
+              <div class="inventory-metric-help">Items below preferred stock threshold</div>
             </div>
           </div>
         </div>
@@ -261,12 +273,6 @@ $owner = (string)($shopRecord['shop_owner'] ?? '');
         </div>
       </div>
 
-      <div class="section">
-        <div class="card">
-          <div class="kpi-title">Key insights</div>
-          <div id="keyInsightsList"></div>
-        </div>
-      </div>
       </div>
     </div>
   </main>
