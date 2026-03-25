@@ -50,8 +50,9 @@ $aiUpgradeUrl = sbm_upgrade_url($shop, $host, $nextPlan);
   <main class="container">
     <?php include __DIR__ . '/nav.php'; ?>
 
+    <div id="reportsNotice" class="card reports-notice is-hidden mb-12"></div>
+
     <div class="hero">
-      <div id="reportsNotice" class="card" style="display:none;margin-bottom:12px;"></div>
       <div class="hero-head">
         <div>
           <div class="hero-title">Reports</div>

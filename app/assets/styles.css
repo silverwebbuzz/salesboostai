@@ -716,6 +716,9 @@ body {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 4px;
 }
 
 .tab {
@@ -757,6 +760,24 @@ body {
   justify-content: flex-end;
 }
 
+.is-hidden {
+  display: none !important;
+}
+
+.mb-12 {
+  margin-bottom: 12px !important;
+}
+
+/* Reports range filter highlight */
+.report-range {
+  opacity: 0.78;
+}
+
+.report-range.active {
+  opacity: 1;
+  box-shadow: 0 8px 18px rgba(99,102,241,0.28);
+}
+
 .reports-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -777,6 +798,19 @@ body {
 .reports-notice--error {
   border: 1px solid #fecaca;
   background: #fef2f2;
+}
+
+/* Action Center layout */
+.action-center-focus {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .action-center-focus {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card.ai-insight {

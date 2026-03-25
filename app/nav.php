@@ -17,11 +17,9 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
   <div class="top-nav__center" aria-label="Main navigation tabs">
     <ul class="top-nav__menu">
       <li><a id="nav-dashboard" class="top-nav__link">Dashboard</a></li>
-      <li><a id="nav-reports" class="top-nav__link">Reports</a></li>
       <li><a id="nav-analytics" class="top-nav__link">Analytics</a></li>
-      <li><a id="nav-alerts" class="top-nav__link">Alerts</a></li>
+      <li><a id="nav-action-center" class="top-nav__link">Action Center</a></li>
       <li><a id="nav-customers" class="top-nav__link">Customers</a></li>
-      <li><a id="nav-sales-boost" class="top-nav__link">Sales Boost</a></li>
     </ul>
   </div>
 
@@ -98,20 +96,16 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     var query = "?shop=" + encodeURIComponent(shop || "") + "&host=" + encodeURIComponent(host || "");
 
     var dashboardLink = document.getElementById("nav-dashboard");
-    var reportsLink = document.getElementById("nav-reports");
     var analyticsLink = document.getElementById("nav-analytics");
-    var alertsLink = document.getElementById("nav-alerts");
+    var actionCenterLink = document.getElementById("nav-action-center");
     var customersLink = document.getElementById("nav-customers");
-    var salesBoostLink = document.getElementById("nav-sales-boost");
     var agentsLink = document.getElementById("nav-ai-agents");
     var upgradeLink = document.getElementById("nav-upgrade-plan");
 
     if (dashboardLink) dashboardLink.href = "dashboard.php" + query;
-    if (reportsLink) reportsLink.href = "reports.php" + query;
+    if (actionCenterLink) actionCenterLink.href = "action-center.php" + query;
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
-    if (alertsLink) alertsLink.href = "alerts.php" + query;
     if (customersLink) customersLink.href = "customers.php" + query;
-    if (salesBoostLink) salesBoostLink.href = "sales-boost.php" + query;
     if (agentsLink) agentsLink.href = "ai-agents.php" + query;
     if (upgradeLink && !upgradeLink.getAttribute('href')) upgradeLink.href = "billing/subscribe.php" + query + "&plan=starter";
 
@@ -120,20 +114,18 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     if (path.includes("dashboard") && dashboardLink) {
       dashboardLink.classList.add("active");
     }
-    if (path.includes("reports") && reportsLink) {
-      reportsLink.classList.add("active");
+    if (path.includes("action-center") && actionCenterLink) {
+      actionCenterLink.classList.add("active");
     }
     if (path.includes("analytics") && analyticsLink) {
       analyticsLink.classList.add("active");
     }
-    if (path.includes("alerts") && alertsLink) {
-      alertsLink.classList.add("active");
-    }
     if (path.includes("customers") && customersLink) {
       customersLink.classList.add("active");
     }
-    if (path.includes("sales-boost") && salesBoostLink) {
-      salesBoostLink.classList.add("active");
+    // When viewing deeper operational pages, keep user anchored to Action Center.
+    if ((path.includes("reports") || path.includes("alerts") || path.includes("sales-boost")) && actionCenterLink) {
+      actionCenterLink.classList.add("active");
     }
     if (path.includes("ai-agents") && agentsLink) {
       agentsLink.classList.add("active");

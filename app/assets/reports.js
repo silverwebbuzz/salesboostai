@@ -177,8 +177,8 @@
     var notice = document.getElementById('reportsNotice');
     function showNotice(text, tone) {
       if (!notice) return;
-      notice.style.display = '';
-      notice.className = 'card ' + (tone === 'error' ? 'reports-notice reports-notice--error' : 'reports-notice');
+      notice.className = 'card mb-12 ' + (tone === 'error' ? 'reports-notice reports-notice--error' : 'reports-notice');
+      notice.classList.remove('is-hidden');
       notice.innerHTML = '<div><strong>' + esc(text) + '</strong></div>';
     }
 
