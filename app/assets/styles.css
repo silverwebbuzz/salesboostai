@@ -749,6 +749,36 @@ body {
   position: relative;
 }
 
+.reports-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reports-notice {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+}
+
+.reports-notice--error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+}
+
 .card.ai-insight {
   background: #eef2ff;
   border: 1px solid #e0e7ff;

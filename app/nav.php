@@ -17,6 +17,7 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
   <div class="top-nav__center" aria-label="Main navigation tabs">
     <ul class="top-nav__menu">
       <li><a id="nav-dashboard" class="top-nav__link">Dashboard</a></li>
+      <li><a id="nav-reports" class="top-nav__link">Reports</a></li>
       <li><a id="nav-analytics" class="top-nav__link">Analytics</a></li>
       <li><a id="nav-alerts" class="top-nav__link">Alerts</a></li>
       <li><a id="nav-customers" class="top-nav__link">Customers</a></li>
@@ -97,6 +98,7 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     var query = "?shop=" + encodeURIComponent(shop || "") + "&host=" + encodeURIComponent(host || "");
 
     var dashboardLink = document.getElementById("nav-dashboard");
+    var reportsLink = document.getElementById("nav-reports");
     var analyticsLink = document.getElementById("nav-analytics");
     var alertsLink = document.getElementById("nav-alerts");
     var customersLink = document.getElementById("nav-customers");
@@ -105,6 +107,7 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     var upgradeLink = document.getElementById("nav-upgrade-plan");
 
     if (dashboardLink) dashboardLink.href = "dashboard.php" + query;
+    if (reportsLink) reportsLink.href = "reports.php" + query;
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
     if (alertsLink) alertsLink.href = "alerts.php" + query;
     if (customersLink) customersLink.href = "customers.php" + query;
@@ -116,6 +119,9 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     var path = window.location.pathname.toLowerCase();
     if (path.includes("dashboard") && dashboardLink) {
       dashboardLink.classList.add("active");
+    }
+    if (path.includes("reports") && reportsLink) {
+      reportsLink.classList.add("active");
     }
     if (path.includes("analytics") && analyticsLink) {
       analyticsLink.classList.add("active");

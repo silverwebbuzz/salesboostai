@@ -8,6 +8,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/auth.php';
 require_once __DIR__ . '/../lib/entitlements.php';
+require_once __DIR__ . '/../lib/metrics.php';
 
 header('Content-Type: application/json');
 
@@ -341,79 +342,18 @@ if ($ls) {
     }
 }
 
-// Top products + high value customers (last 30 days, limit 200 orders)
-$topProductsAgg = [];
-$customersAgg = [];
-$recentOrders = $mysqli->prepare(
-    "SELECT payload_json FROM `{$ordersTable}`
-     WHERE COALESCE(created_at, fetched_at) >= ?
-     ORDER BY COALESCE(created_at, fetched_at) DESC
-     LIMIT 200"
-);
-if ($recentOrders) {
-    $recentOrders->bind_param('s', $sinceStr);
-    $recentOrders->execute();
-    $res = $recentOrders->get_result();
-    while ($row = $res->fetch_assoc()) {
-        $p = json_decode((string)($row['payload_json'] ?? ''), true);
-        if (!is_array($p)) continue;
-
-        $orderTotal = isset($p['total_price']) ? (float)$p['total_price'] : 0.0;
-
-        // line_items
-        $lineItems = isset($p['line_items']) && is_array($p['line_items']) ? $p['line_items'] : [];
-        foreach ($lineItems as $li) {
-            if (!is_array($li)) continue;
-            $title = (string)($li['title'] ?? '');
-            if ($title === '') continue;
-            $qty = isset($li['quantity']) ? (int)$li['quantity'] : 0;
-            $price = isset($li['price']) ? (float)$li['price'] : 0.0;
-            if (!isset($topProductsAgg[$title])) {
-                $topProductsAgg[$title] = ['title' => $title, 'quantity' => 0, 'revenue_estimate' => 0.0];
-            }
-            $topProductsAgg[$title]['quantity'] += $qty;
-            $topProductsAgg[$title]['revenue_estimate'] += ($price * max(0, $qty));
-        }
-
-        // customer
-        $cust = isset($p['customer']) && is_array($p['customer']) ? $p['customer'] : null;
-        if ($cust && isset($cust['id'])) {
-            $cid = (string)$cust['id'];
-            if (!isset($customersAgg[$cid])) {
-                $email = (string)($cust['email'] ?? '');
-                $fn = (string)($cust['first_name'] ?? '');
-                $ln = (string)($cust['last_name'] ?? '');
-                $label = trim(($fn . ' ' . $ln));
-                if ($label === '') $label = $email;
-                $customersAgg[$cid] = [
-                    'customer_id' => $cid,
-                    'email' => $email,
-                    'label' => $label,
-                    'total_spent' => 0.0,
-                    'order_count' => 0,
-                ];
-            }
-            $customersAgg[$cid]['total_spent'] += $orderTotal;
-            $customersAgg[$cid]['order_count'] += 1;
-        }
-    }
-    $recentOrders->close();
-}
-
-// Top products (top 5)
-$topProducts = array_values($topProductsAgg);
-usort($topProducts, fn($a, $b) => ($b['quantity'] <=> $a['quantity']));
-$topProductsTop5 = array_slice($topProducts, 0, $topProductsLimit);
-
-// High-value customers top 5
-$highValueCustomers = array_values($customersAgg);
-usort($highValueCustomers, fn($a, $b) => (($b['total_spent'] ?? 0) <=> ($a['total_spent'] ?? 0)));
-$highValueCustomers = array_slice($highValueCustomers, 0, 5);
+// Top products + high value customers (canonical helpers; last 30 days)
+$topProductsTop5 = function_exists('sbm_get_top_products_from_orders')
+    ? sbm_get_top_products_from_orders($shop, 30, 200, $topProductsLimit)
+    : [];
+$highValueCustomers = function_exists('sbm_get_top_customers_from_orders')
+    ? sbm_get_top_customers_from_orders($shop, 30, 200, 5)
+    : [];
 
 // ---- Derived AI-style insights ----
 $last30RevenueFromAgg = 0.0;
-foreach ($topProducts as $tp) {
-    $last30RevenueFromAgg += (float)($tp['revenue_estimate'] ?? 0.0);
+foreach ($topProductsTop5 as $tp) {
+    $last30RevenueFromAgg += (float)($tp['revenue'] ?? 0.0);
 }
 
 $summaryRevenue = $last30RevenueFromAgg > 0 ? $last30RevenueFromAgg : $totalRevenue;
@@ -429,8 +369,8 @@ $inventoryLowButSold = 0;
 
 // Build a set of product titles that had sales in last 30 days
 $soldTitles = [];
-foreach ($topProducts as $tp) {
-    $soldTitles[$tp['title']] = true;
+foreach ($topProductsTop5 as $tp) {
+    $soldTitles[(string)($tp['title'] ?? '')] = true;
 }
 
 $invRes = $mysqli->query("SELECT product_id, title, inventory_quantity
@@ -473,9 +413,9 @@ if ($deadStockCount > 0) {
 }
 
 // 2) Top product contributes > 40% revenue
-if (!empty($topProducts)) {
-    $tp0 = $topProducts[0];
-    $tpRev = (float)($tp0['revenue_estimate'] ?? 0.0);
+if (!empty($topProductsTop5)) {
+    $tp0 = $topProductsTop5[0];
+    $tpRev = (float)($tp0['revenue'] ?? 0.0);
     if ($summaryRevenue > 0 && $tpRev / $summaryRevenue >= 0.4) {
         $pct = round(($tpRev / $summaryRevenue) * 100);
         $criticalIssues[] = [
@@ -503,8 +443,8 @@ $numProductsNoSales = $deadStockCount;
 $top3RevShare = 0.0;
 if ($summaryRevenue > 0) {
     $top3Rev = 0.0;
-    foreach (array_slice($topProducts, 0, 3) as $tp) {
-        $top3Rev += (float)($tp['revenue_estimate'] ?? 0.0);
+    foreach (array_slice($topProductsTop5, 0, 3) as $tp) {
+        $top3Rev += (float)($tp['revenue'] ?? 0.0);
     }
     $top3RevShare = ($top3Rev / $summaryRevenue) * 100;
 }
@@ -540,9 +480,9 @@ if ($summaryRevenue > 0 && $summaryOrders > 0) {
 if ($cashInInventory > 0) {
     $summaryParts[] = "You currently have about \$" . number_format($cashInInventory, 2) . " locked in inventory.";
 }
-if (!empty($topProducts)) {
-    $tp0 = $topProducts[0];
-    $tpRev = (float)($tp0['revenue_estimate'] ?? 0.0);
+if (!empty($topProductsTop5)) {
+    $tp0 = $topProductsTop5[0];
+    $tpRev = (float)($tp0['revenue'] ?? 0.0);
     if ($summaryRevenue > 0 && $tpRev > 0) {
         $pct = round(($tpRev / $summaryRevenue) * 100);
         $summaryParts[] = "Your top product contributes about {$pct}% of revenue, which may indicate dependency risk.";
@@ -550,45 +490,9 @@ if (!empty($topProducts)) {
 }
 $summaryText = implode(' ', $summaryParts);
 
-// Action center list (derived from per-store action_items table when available)
-$actionCenter = [];
-try {
-    $actionTable = perStoreTableName($shopName, 'action_items');
-    $safeAction = $mysqli->real_escape_string($actionTable);
-    $existsAction = $mysqli->query("SHOW TABLES LIKE '{$safeAction}'");
-    if ($existsAction && $existsAction->num_rows > 0) {
-        $stmtActions = $mysqli->prepare(
-            "SELECT action_key, title, description, severity, impact_score, confidence_score, status, owner_section, cta_label, cta_url, source_json
-             FROM `{$actionTable}`
-             WHERE status IN ('new', 'viewed', 'acted')
-             ORDER BY impact_score DESC, updated_at DESC
-             LIMIT ?"
-        );
-        if ($stmtActions) {
-            $stmtActions->bind_param('i', $actionItemsLimit);
-            $stmtActions->execute();
-            $ra = $stmtActions->get_result();
-            while ($r = $ra->fetch_assoc()) {
-                $actionCenter[] = [
-                    'key' => (string)($r['action_key'] ?? ''),
-                    'title' => (string)($r['title'] ?? ''),
-                    'description' => (string)($r['description'] ?? ''),
-                    'severity' => (string)($r['severity'] ?? 'medium'),
-                    'impact_score' => round((float)($r['impact_score'] ?? 0), 2),
-                    'confidence_score' => round((float)($r['confidence_score'] ?? 0), 2),
-                    'status' => (string)($r['status'] ?? 'new'),
-                    'owner_section' => (string)($r['owner_section'] ?? ''),
-                    'cta_label' => (string)($r['cta_label'] ?? 'View details'),
-                    'cta_url' => (string)($r['cta_url'] ?? '#'),
-                    'why' => (string)($r['source_json'] ?? ''),
-                ];
-            }
-            $stmtActions->close();
-        }
-    }
-} catch (Throwable $e) {
-    $actionCenter = [];
-}
+$actionCenter = function_exists('sbm_get_action_center_items')
+    ? sbm_get_action_center_items($shop, $actionItemsLimit)
+    : [];
 
 // Row-count fingerprint (must match dashboard_cache_sig when serving cached JSON after sync/webhooks).
 $inventoryRowCount = 0;
@@ -597,38 +501,9 @@ if ($res = $mysqli->query("SELECT COUNT(*) AS c FROM `{$inventoryTable}`")) {
 }
 $dataFingerprint = $totalOrders . ':' . $totalCustomers . ':' . $inventoryRowCount;
 
-// Inventory forecast rows (days to stockout)
-$inventoryForecast = [];
-try {
-    $forecastTable = perStoreTableName($shopName, 'forecasts');
-    $safeFc = $mysqli->real_escape_string($forecastTable);
-    $existsFc = $mysqli->query("SHOW TABLES LIKE '{$safeFc}'");
-    if ($existsFc && $existsFc->num_rows > 0) {
-        $stmtFc = $mysqli->prepare(
-            "SELECT entity_id, metric_value, payload_json
-             FROM `{$forecastTable}`
-             WHERE entity_type='inventory' AND metric_name='days_to_stockout'
-             ORDER BY metric_value ASC
-             LIMIT 5"
-        );
-        if ($stmtFc) {
-            $stmtFc->execute();
-            $resFc = $stmtFc->get_result();
-            while ($row = $resFc->fetch_assoc()) {
-                $payload = json_decode((string)($row['payload_json'] ?? ''), true);
-                $inventoryForecast[] = [
-                    'title' => (string)($row['entity_id'] ?? ''),
-                    'days_to_stockout' => round((float)($row['metric_value'] ?? 0), 1),
-                    'inventory' => (int)($payload['inventory'] ?? 0),
-                    'daily_velocity' => round((float)($payload['daily_velocity'] ?? 0), 2),
-                ];
-            }
-            $stmtFc->close();
-        }
-    }
-} catch (Throwable $e) {
-    $inventoryForecast = [];
-}
+$inventoryForecast = function_exists('sbm_get_inventory_forecast_rows')
+    ? sbm_get_inventory_forecast_rows($shop, 5)
+    : [];
 if ($locks['inventory_forecast']) {
     $inventoryForecast = array_slice($inventoryForecast, 0, 1);
 }

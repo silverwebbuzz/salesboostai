@@ -54,27 +54,9 @@ try {
 }
 
 try {
-    $tables = sbm_getShopTables($shop);
-    $cohortsTable = $tables['cohorts'] ?? perStoreTableName(makeShopName($shop), 'cohorts');
-    $mysqli = db();
-    $safe = $mysqli->real_escape_string($cohortsTable);
-    $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
-    if ($exists && $exists->num_rows > 0) {
-        $resC = $mysqli->query(
-            "SELECT cohort_key, retention_rate
-             FROM `{$cohortsTable}`
-             ORDER BY cohort_key DESC
-             LIMIT 6"
-        );
-        if ($resC) {
-            while ($r = $resC->fetch_assoc()) {
-                $retentionRows[] = [
-                    'cohort_key' => (string)($r['cohort_key'] ?? ''),
-                    'retention_rate' => (float)($r['retention_rate'] ?? 0),
-                ];
-            }
-        }
-    }
+    $retentionRows = function_exists('sbm_get_retention_cohort_rows')
+        ? sbm_get_retention_cohort_rows($shop, 6)
+        : [];
 } catch (Throwable $e) {
     $retentionRows = [];
 }
@@ -86,6 +68,7 @@ $features = is_array($entitlements['features'] ?? null) ? $entitlements['feature
 $lockCustomersLtv = !((bool)($features['customers_ltv'] ?? false));
 $customersLtvRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('customers_ltv') : 'starter';
 $customersLtvUpgradeUrl = sbm_upgrade_url($shop, $host, $customersLtvRequiredPlan);
+$reportsUrl = BASE_URL . '/reports.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -199,30 +182,12 @@ $customersLtvUpgradeUrl = sbm_upgrade_url($shop, $host, $customersLtvRequiredPla
     </div>
 
     <div class="section">
-      <div class="card feature-lock-card">
-        <div class="<?php echo $lockCustomersLtv ? 'feature-lock-blur' : ''; ?>">
-          <div class="section-title" style="margin-bottom:8px;">Retention Cohorts</div>
-          <?php if (empty($retentionRows)): ?>
-            <div class="sb-muted">No cohort retention data yet.</div>
-          <?php else: ?>
-            <?php foreach ($retentionRows as $rr): ?>
-              <div class="SbListRow">
-                <div class="sb-list-left"><?php echo e($rr['cohort_key']); ?></div>
-                <div class="sb-list-right"><?php echo e(number_format((float)$rr['retention_rate'], 1)); ?>%</div>
-              </div>
-            <?php endforeach; ?>
-          <?php endif; ?>
+      <div class="card">
+        <div class="section-title" style="margin-bottom:8px;">Customer Reports</div>
+        <div class="hero-subtitle" style="margin-top:6px;">For a clean, executive view (Summary → Insights → Recommendations → Actions), use Reports.</div>
+        <div style="margin-top:12px;">
+          <a class="btn btn-primary" href="<?php echo e($reportsUrl); ?>">Open Reports →</a>
         </div>
-        <?php if ($lockCustomersLtv): ?>
-          <div class="feature-lock-overlay">
-            <?php renderLockedFeatureBlock(
-                'Retention Cohorts',
-                'Unlock cohort-level retention visibility to improve repeat purchase rates.',
-                $customersLtvRequiredPlan,
-                $customersLtvUpgradeUrl
-            ); ?>
-          </div>
-        <?php endif; ?>
       </div>
     </div>
   </main>

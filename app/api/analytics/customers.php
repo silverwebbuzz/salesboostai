@@ -8,6 +8,7 @@
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../lib/auth.php';
 require_once __DIR__ . '/../../lib/entitlements.php';
+require_once __DIR__ . '/../../lib/metrics.php';
 
 header('Content-Type: application/json');
 
@@ -75,58 +76,9 @@ try {
 
 $returningCustomers = max(0, $totalCustomers - $newCustomers);
 
-// Top customers from last 30 days orders (best-effort)
-$agg = [];
-$stmt = $mysqli->prepare(
-    "SELECT payload_json FROM `{$ordersTable}`
-     WHERE COALESCE(created_at, fetched_at) >= ?
-     ORDER BY COALESCE(created_at, fetched_at) DESC
-     LIMIT 300"
-);
-if ($stmt) {
-    $stmt->bind_param('s', $sinceStr);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) {
-        $p = json_decode((string)($row['payload_json'] ?? ''), true);
-        if (!is_array($p)) continue;
-
-        $orderTotal = isset($p['total_price']) ? (float)$p['total_price'] : 0.0;
-        $cust = isset($p['customer']) && is_array($p['customer']) ? $p['customer'] : null;
-        if (!$cust || !isset($cust['id'])) continue;
-
-        $cid = (string)$cust['id'];
-        if (!isset($agg[$cid])) {
-            $email = (string)($cust['email'] ?? '');
-            $fn = (string)($cust['first_name'] ?? '');
-            $ln = (string)($cust['last_name'] ?? '');
-            $label = trim($fn . ' ' . $ln);
-            if ($label === '') $label = $email !== '' ? $email : ('Customer #' . $cid);
-
-            $agg[$cid] = [
-                'id' => $cid,
-                'label' => $label,
-                'total' => 0.0,
-                'orders' => 0,
-            ];
-        }
-        $agg[$cid]['total'] += $orderTotal;
-        $agg[$cid]['orders'] += 1;
-    }
-    $stmt->close();
-}
-
-$top = array_values($agg);
-usort($top, fn($a, $b) => ((float)($b['total'] ?? 0)) <=> ((float)($a['total'] ?? 0)));
-$top = array_slice($top, 0, 5);
-$top = array_map(function ($x) {
-    return [
-        'id' => (string)($x['id'] ?? ''),
-        'label' => (string)($x['label'] ?? ''),
-        'total' => round((float)($x['total'] ?? 0), 2),
-        'orders' => (int)($x['orders'] ?? 0),
-    ];
-}, $top);
+$top = function_exists('sbm_get_top_customers_from_orders')
+    ? sbm_get_top_customers_from_orders($shop, 30, 300, 5)
+    : [];
 
 // Retention cohorts (derived table preferred, fallback estimate)
 $retention = [
@@ -137,36 +89,9 @@ $retention = [
         ? round(($returningCustomers / max(1, ($newCustomers + $returningCustomers))) * 100, 2)
         : 0.0,
 ];
-try {
-    $cohortsTable = perStoreTableName($shopName, 'cohorts');
-    $safe = $mysqli->real_escape_string($cohortsTable);
-    $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
-    if ($exists && $exists->num_rows > 0) {
-        $stmtC = $mysqli->prepare(
-            "SELECT cohort_key, period_index, base_customers, retained_customers, retention_rate
-             FROM `{$cohortsTable}`
-             ORDER BY cohort_key DESC, period_index ASC
-             LIMIT ?"
-        );
-        if ($stmtC) {
-            $stmtC->bind_param('i', $cohortMonthsLimit);
-            $stmtC->execute();
-            $resC = $stmtC->get_result();
-            while ($row = $resC->fetch_assoc()) {
-                $retention['cohorts'][] = [
-                    'cohort_key' => (string)($row['cohort_key'] ?? ''),
-                    'period_index' => (int)($row['period_index'] ?? 0),
-                    'base_customers' => (int)($row['base_customers'] ?? 0),
-                    'retained_customers' => (int)($row['retained_customers'] ?? 0),
-                    'retention_rate' => (float)($row['retention_rate'] ?? 0),
-                ];
-            }
-            $stmtC->close();
-        }
-    }
-} catch (Throwable $e) {
-    // fallback to empty cohorts
-}
+$retention['cohorts'] = function_exists('sbm_get_retention_cohort_detail_rows')
+    ? sbm_get_retention_cohort_detail_rows($shop, $cohortMonthsLimit)
+    : [];
 
 if (!$retentionEnabled) {
     // Free/locked tiers only get top-line retention preview.

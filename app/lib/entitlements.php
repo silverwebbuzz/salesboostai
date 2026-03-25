@@ -36,6 +36,7 @@ if (!function_exists('sbm_entitlement_matrix')) {
                     'inventory_forecasting' => false,
                     'goals_tracking' => false,
                     'reports_scheduled' => false,
+                    'reports_export' => false,
                     'insight_explainability' => false,
                 ],
                 'limits' => [
@@ -73,6 +74,7 @@ if (!function_exists('sbm_entitlement_matrix')) {
                     'inventory_forecasting' => true,
                     'goals_tracking' => true,
                     'reports_scheduled' => false,
+                    'reports_export' => false,
                     'insight_explainability' => false,
                 ],
                 'limits' => [
@@ -110,6 +112,7 @@ if (!function_exists('sbm_entitlement_matrix')) {
                     'inventory_forecasting' => true,
                     'goals_tracking' => true,
                     'reports_scheduled' => true,
+                    'reports_export' => true,
                     'insight_explainability' => true,
                 ],
                 'limits' => [
@@ -147,6 +150,7 @@ if (!function_exists('sbm_entitlement_matrix')) {
                     'inventory_forecasting' => true,
                     'goals_tracking' => true,
                     'reports_scheduled' => true,
+                    'reports_export' => true,
                     'insight_explainability' => true,
                 ],
                 'limits' => [

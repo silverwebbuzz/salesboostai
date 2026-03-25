@@ -15,7 +15,6 @@ $errorText = '';
 $inventoryAgentId = 0;
 $revenueAgentId = 0;
 $productAgentId = 0;
-$forecastRows = [];
 $features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
 $lockInventoryAlerts = !((bool)($features['alerts_inventory'] ?? false));
 $inventoryAlertsRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('alerts_inventory') : 'growth';
@@ -31,33 +30,6 @@ try {
     $productAgentId = (int)($alerts['productAgentId'] ?? 0);
 } catch (Throwable $e) {
     $errorText = 'Unable to load alerts right now.';
-}
-
-try {
-    $tables = sbm_getShopTables($shop);
-    $fcTable = $tables['forecasts'] ?? perStoreTableName(makeShopName($shop), 'forecasts');
-    $mysqli = db();
-    $safe = $mysqli->real_escape_string($fcTable);
-    $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
-    if ($exists && $exists->num_rows > 0) {
-        $resF = $mysqli->query(
-            "SELECT entity_id, metric_value
-             FROM `{$fcTable}`
-             WHERE entity_type='inventory' AND metric_name='days_to_stockout'
-             ORDER BY metric_value ASC
-             LIMIT 5"
-        );
-        if ($resF) {
-            while ($r = $resF->fetch_assoc()) {
-                $forecastRows[] = [
-                    'title' => (string)($r['entity_id'] ?? ''),
-                    'days' => round((float)($r['metric_value'] ?? 0), 1),
-                ];
-            }
-        }
-    }
-} catch (Throwable $e) {
-    $forecastRows = [];
 }
 ?>
 <!DOCTYPE html>
@@ -77,6 +49,21 @@ try {
         <div>
           <div class="hero-title">Alerts</div>
           <div class="hero-subtitle">Important issues and opportunities in your store</div>
+        </div>
+      </div>
+    </div>
+
+    <?php
+      $reportsInventoryUrl = BASE_URL . '/reports.php?tab=inventory&shop=' . urlencode($shop);
+      if ($host !== '') $reportsInventoryUrl .= '&host=' . urlencode($host);
+    ?>
+
+    <div class="section">
+      <div class="card">
+        <div class="kpi-title">Inventory Forecasting & Actions</div>
+        <div class="hero-subtitle" style="margin-top:6px;">For stockout forecasts, recommendations, and action tracking, use Reports → Inventory.</div>
+        <div style="margin-top:12px;">
+          <a class="btn btn-primary" href="<?php echo e($reportsInventoryUrl); ?>">Open Inventory Report →</a>
         </div>
       </div>
     </div>
@@ -139,33 +126,6 @@ try {
       </div>
     <?php endif; ?>
 
-    <?php if (!empty($forecastRows)): ?>
-      <div class="section">
-        <div class="section-title">📦 Stockout Forecast</div>
-        <div class="alerts-grid">
-          <?php foreach ($forecastRows as $fc): ?>
-            <?php $isInventoryLocked = $lockInventoryAlerts; ?>
-            <div class="card alert-card alert-card-warning <?php echo $isInventoryLocked ? 'feature-lock-card' : ''; ?>">
-              <div class="<?php echo $isInventoryLocked ? 'feature-lock-blur' : ''; ?>">
-                <div class="alert-title"><?php echo e($fc['title'] ?: 'Product'); ?></div>
-                <div class="alert-meta">Estimated stockout in about <?php echo e((string)$fc['days']); ?> days.</div>
-              </div>
-              <?php if ($isInventoryLocked): ?>
-                <div class="feature-lock-overlay">
-                  <?php renderLockedFeatureBlock(
-                      'Inventory Forecast',
-                      'Unlock projected stockout dates and proactive replenishment alerts.',
-                      $inventoryAlertsRequiredPlan,
-                      $inventoryAlertsUpgradeUrl
-                  ); ?>
-                </div>
-              <?php endif; ?>
-            </div>
-          <?php endforeach; ?>
-        </div>
-      </div>
-    <?php endif; ?>
-
     <?php if (!empty($warningAlerts)): ?>
       <div class="section">
         <div class="section-title">🟡 Warnings</div>
@@ -211,44 +171,7 @@ try {
       </div>
     <?php endif; ?>
 
-    <?php if (!empty($infoAlerts)): ?>
-      <div class="section">
-        <div class="section-title">🔵 Info</div>
-        <div class="alerts-grid">
-          <?php foreach ($infoAlerts as $alert): ?>
-            <?php
-              $detailsUrl = $inventoryDetailsUrl;
-              $key = (string)($alert['details_url_key'] ?? '');
-              if ($key === 'revenue') $detailsUrl = $revenueDetailsUrl;
-              if ($key === 'inventory') $detailsUrl = $inventoryDetailsUrl;
-              if ($key === 'product') $detailsUrl = $productDetailsUrl;
-            ?>
-            <?php $isInventoryLocked = $lockInventoryAlerts && $key === 'inventory'; ?>
-            <div class="card alert-card alert-card-info <?php echo $isInventoryLocked ? 'feature-lock-card' : ''; ?>">
-              <div class="<?php echo $isInventoryLocked ? 'feature-lock-blur' : ''; ?>">
-              <div class="alert-title"><?php echo e((string)($alert['title'] ?? 'Insight')); ?></div>
-              <?php if (!empty($alert['meta'])): ?><div class="alert-meta"><?php echo e((string)$alert['meta']); ?></div><?php endif; ?>
-              <div style="margin-top:12px;">
-                <a class="btn btn-primary" href="<?php echo e($detailsUrl); ?>">View Details</a>
-              </div>
-              </div>
-              <?php if ($isInventoryLocked): ?>
-                <div class="feature-lock-overlay">
-                  <?php renderLockedFeatureBlock(
-                      'Inventory Alerts',
-                      'Unlock inventory-specific alert intelligence and recommended fixes.',
-                      $inventoryAlertsRequiredPlan,
-                      $inventoryAlertsUpgradeUrl
-                  ); ?>
-                </div>
-              <?php endif; ?>
-            </div>
-          <?php endforeach; ?>
-        </div>
-      </div>
-    <?php endif; ?>
-
-    <?php if (empty($criticalAlerts) && empty($warningAlerts) && empty($infoAlerts) && $errorText === ''): ?>
+    <?php if (empty($criticalAlerts) && empty($warningAlerts) && $errorText === ''): ?>
       <div class="section">
         <div class="card">
           <div class="sb-muted">✅ No critical issues detected</div>

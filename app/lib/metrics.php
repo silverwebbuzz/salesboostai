@@ -535,6 +535,327 @@ if (!function_exists('sbm_refresh_foundation_analytics')) {
     }
 }
 
+if (!function_exists('sbm_get_top_products_from_orders')) {
+    /**
+     * Single source of truth for "top products" aggregation across the app.
+     *
+     * @return array<int,array{title:string,quantity:int,revenue:float}>
+     */
+    function sbm_get_top_products_from_orders(string $shop, int $days = 30, int $orderLimit = 700, int $limit = 5): array
+    {
+        $mysqli = db();
+        $tables = sbm_getShopTables($shop);
+        $ordersTable = $tables['order'];
+
+        $days = max(1, $days);
+        $orderLimit = max(50, $orderLimit);
+        $limit = max(1, $limit);
+
+        $since = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-' . ($days - 1) . ' days')->setTime(0, 0, 0);
+        $sinceStr = $since->format('Y-m-d H:i:s');
+
+        $agg = [];
+        $stmt = $mysqli->prepare(
+            "SELECT payload_json FROM `{$ordersTable}`
+             WHERE COALESCE(created_at, fetched_at) >= ?
+             ORDER BY COALESCE(created_at, fetched_at) DESC
+             LIMIT ?"
+        );
+        if ($stmt) {
+            $stmt->bind_param('si', $sinceStr, $orderLimit);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $p = json_decode((string)($row['payload_json'] ?? ''), true);
+                if (!is_array($p)) continue;
+                $lineItems = isset($p['line_items']) && is_array($p['line_items']) ? $p['line_items'] : [];
+                foreach ($lineItems as $li) {
+                    if (!is_array($li)) continue;
+                    $title = sbm_cleanProductName((string)($li['title'] ?? ''));
+                    if ($title === 'Unnamed product') continue;
+                    $qty = isset($li['quantity']) ? (int)$li['quantity'] : 0;
+                    $price = isset($li['price']) ? (float)$li['price'] : 0.0;
+                    if (!isset($agg[$title])) {
+                        $agg[$title] = ['title' => $title, 'quantity' => 0, 'revenue' => 0.0];
+                    }
+                    $agg[$title]['quantity'] += max(0, $qty);
+                    $agg[$title]['revenue'] += ($price * max(0, $qty));
+                }
+            }
+            $stmt->close();
+        }
+
+        $items = array_values($agg);
+        usort($items, fn($a, $b) => ((float)($b['revenue'] ?? 0)) <=> ((float)($a['revenue'] ?? 0)));
+        $top = array_slice($items, 0, $limit);
+        return array_map(function ($x) {
+            return [
+                'title' => (string)($x['title'] ?? ''),
+                'quantity' => (int)($x['quantity'] ?? 0),
+                'revenue' => round((float)($x['revenue'] ?? 0), 2),
+            ];
+        }, $top);
+    }
+}
+
+if (!function_exists('sbm_get_top_customers_from_orders')) {
+    /**
+     * Single source of truth for "top customers" aggregation across the app.
+     *
+     * @return array<int,array{id:string,label:string,total:float,orders:int}>
+     */
+    function sbm_get_top_customers_from_orders(string $shop, int $days = 30, int $orderLimit = 300, int $limit = 5): array
+    {
+        $mysqli = db();
+        $tables = sbm_getShopTables($shop);
+        $ordersTable = $tables['order'];
+
+        $days = max(1, $days);
+        $orderLimit = max(50, $orderLimit);
+        $limit = max(1, $limit);
+
+        $since = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('-' . ($days - 1) . ' days')->setTime(0, 0, 0);
+        $sinceStr = $since->format('Y-m-d H:i:s');
+
+        $agg = [];
+        $stmt = $mysqli->prepare(
+            "SELECT payload_json FROM `{$ordersTable}`
+             WHERE COALESCE(created_at, fetched_at) >= ?
+             ORDER BY COALESCE(created_at, fetched_at) DESC
+             LIMIT ?"
+        );
+        if ($stmt) {
+            $stmt->bind_param('si', $sinceStr, $orderLimit);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $p = json_decode((string)($row['payload_json'] ?? ''), true);
+                if (!is_array($p)) continue;
+                $orderTotal = isset($p['total_price']) ? (float)$p['total_price'] : 0.0;
+                $cust = isset($p['customer']) && is_array($p['customer']) ? $p['customer'] : null;
+                if (!$cust || !isset($cust['id'])) continue;
+                $cid = (string)$cust['id'];
+                if (!isset($agg[$cid])) {
+                    $email = (string)($cust['email'] ?? '');
+                    $fn = (string)($cust['first_name'] ?? '');
+                    $ln = (string)($cust['last_name'] ?? '');
+                    $label = trim($fn . ' ' . $ln);
+                    if ($label === '') $label = $email !== '' ? $email : ('Customer #' . $cid);
+                    $agg[$cid] = ['id' => $cid, 'label' => $label, 'total' => 0.0, 'orders' => 0];
+                }
+                $agg[$cid]['total'] += max(0.0, $orderTotal);
+                $agg[$cid]['orders'] += 1;
+            }
+            $stmt->close();
+        }
+
+        $top = array_values($agg);
+        usort($top, fn($a, $b) => ((float)($b['total'] ?? 0)) <=> ((float)($a['total'] ?? 0)));
+        $top = array_slice($top, 0, $limit);
+        return array_map(function ($x) {
+            return [
+                'id' => (string)($x['id'] ?? ''),
+                'label' => (string)($x['label'] ?? ''),
+                'total' => round((float)($x['total'] ?? 0), 2),
+                'orders' => (int)($x['orders'] ?? 0),
+            ];
+        }, $top);
+    }
+}
+
+if (!function_exists('sbm_get_action_center_items')) {
+    /**
+     * Canonical Action Center fetcher.
+     *
+     * @return array<int,array{key:string,title:string,description:string,severity:string,impact_score:float,confidence_score:float,status:string,owner_section:string,cta_label:string,cta_url:string,why:string}>
+     */
+    function sbm_get_action_center_items(string $shop, int $limit = 8): array
+    {
+        $mysqli = db();
+        $shopName = makeShopName($shop);
+        $actionTable = perStoreTableName($shopName, 'action_items');
+        $limit = max(1, $limit);
+
+        $items = [];
+        try {
+            $safe = $mysqli->real_escape_string($actionTable);
+            $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+            if ($exists && $exists->num_rows > 0) {
+                $stmt = $mysqli->prepare(
+                    "SELECT action_key, title, description, severity, impact_score, confidence_score, status, owner_section, cta_label, cta_url, source_json
+                     FROM `{$actionTable}`
+                     WHERE status IN ('new', 'viewed', 'acted')
+                     ORDER BY impact_score DESC, updated_at DESC
+                     LIMIT ?"
+                );
+                if ($stmt) {
+                    $stmt->bind_param('i', $limit);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    while ($r = $res->fetch_assoc()) {
+                        $items[] = [
+                            'key' => (string)($r['action_key'] ?? ''),
+                            'title' => (string)($r['title'] ?? ''),
+                            'description' => (string)($r['description'] ?? ''),
+                            'severity' => (string)($r['severity'] ?? 'medium'),
+                            'impact_score' => round((float)($r['impact_score'] ?? 0), 2),
+                            'confidence_score' => round((float)($r['confidence_score'] ?? 0), 2),
+                            'status' => (string)($r['status'] ?? 'new'),
+                            'owner_section' => (string)($r['owner_section'] ?? ''),
+                            'cta_label' => (string)($r['cta_label'] ?? 'View details'),
+                            'cta_url' => (string)($r['cta_url'] ?? '#'),
+                            'why' => (string)($r['source_json'] ?? ''),
+                        ];
+                    }
+                    $stmt->close();
+                }
+            }
+        } catch (Throwable $e) {
+            $items = [];
+        }
+        return $items;
+    }
+}
+
+if (!function_exists('sbm_get_inventory_forecast_rows')) {
+    /**
+     * Canonical inventory forecast fetcher.
+     *
+     * @return array<int,array{title:string,days_to_stockout:float,inventory:int,daily_velocity:float}>
+     */
+    function sbm_get_inventory_forecast_rows(string $shop, int $limit = 5): array
+    {
+        $mysqli = db();
+        $shopName = makeShopName($shop);
+        $forecastTable = perStoreTableName($shopName, 'forecasts');
+        $limit = max(1, $limit);
+
+        $rows = [];
+        try {
+            $safe = $mysqli->real_escape_string($forecastTable);
+            $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+            if ($exists && $exists->num_rows > 0) {
+                $stmt = $mysqli->prepare(
+                    "SELECT entity_id, metric_value, payload_json
+                     FROM `{$forecastTable}`
+                     WHERE entity_type='inventory' AND metric_name='days_to_stockout'
+                     ORDER BY metric_value ASC
+                     LIMIT ?"
+                );
+                if ($stmt) {
+                    $stmt->bind_param('i', $limit);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    while ($r = $res->fetch_assoc()) {
+                        $payload = json_decode((string)($r['payload_json'] ?? ''), true);
+                        $rows[] = [
+                            'title' => (string)($r['entity_id'] ?? ''),
+                            'days_to_stockout' => round((float)($r['metric_value'] ?? 0), 1),
+                            'inventory' => (int)($payload['inventory'] ?? 0),
+                            'daily_velocity' => round((float)($payload['daily_velocity'] ?? 0), 2),
+                        ];
+                    }
+                    $stmt->close();
+                }
+            }
+        } catch (Throwable $e) {
+            $rows = [];
+        }
+        return $rows;
+    }
+}
+
+if (!function_exists('sbm_get_retention_cohort_rows')) {
+    /**
+     * Canonical retention cohort fetcher.
+     *
+     * @return array<int,array{cohort_key:string,retention_rate:float}>
+     */
+    function sbm_get_retention_cohort_rows(string $shop, int $limit = 6): array
+    {
+        $mysqli = db();
+        $shopName = makeShopName($shop);
+        $cohortsTable = perStoreTableName($shopName, 'cohorts');
+        $limit = max(1, $limit);
+
+        $rows = [];
+        try {
+            $safe = $mysqli->real_escape_string($cohortsTable);
+            $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+            if ($exists && $exists->num_rows > 0) {
+                $stmt = $mysqli->prepare(
+                    "SELECT cohort_key, retention_rate
+                     FROM `{$cohortsTable}`
+                     ORDER BY cohort_key DESC
+                     LIMIT ?"
+                );
+                if ($stmt) {
+                    $stmt->bind_param('i', $limit);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    while ($r = $res->fetch_assoc()) {
+                        $rows[] = [
+                            'cohort_key' => (string)($r['cohort_key'] ?? ''),
+                            'retention_rate' => (float)($r['retention_rate'] ?? 0),
+                        ];
+                    }
+                    $stmt->close();
+                }
+            }
+        } catch (Throwable $e) {
+            $rows = [];
+        }
+        return $rows;
+    }
+}
+
+if (!function_exists('sbm_get_retention_cohort_detail_rows')) {
+    /**
+     * Canonical cohort detail fetcher for retention charts/tables.
+     *
+     * @return array<int,array{cohort_key:string,period_index:int,base_customers:int,retained_customers:int,retention_rate:float}>
+     */
+    function sbm_get_retention_cohort_detail_rows(string $shop, int $limit = 6): array
+    {
+        $mysqli = db();
+        $shopName = makeShopName($shop);
+        $cohortsTable = perStoreTableName($shopName, 'cohorts');
+        $limit = max(1, $limit);
+
+        $rows = [];
+        try {
+            $safe = $mysqli->real_escape_string($cohortsTable);
+            $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+            if ($exists && $exists->num_rows > 0) {
+                $stmt = $mysqli->prepare(
+                    "SELECT cohort_key, period_index, base_customers, retained_customers, retention_rate
+                     FROM `{$cohortsTable}`
+                     ORDER BY cohort_key DESC, period_index ASC
+                     LIMIT ?"
+                );
+                if ($stmt) {
+                    $stmt->bind_param('i', $limit);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    while ($r = $res->fetch_assoc()) {
+                        $rows[] = [
+                            'cohort_key' => (string)($r['cohort_key'] ?? ''),
+                            'period_index' => (int)($r['period_index'] ?? 0),
+                            'base_customers' => (int)($r['base_customers'] ?? 0),
+                            'retained_customers' => (int)($r['retained_customers'] ?? 0),
+                            'retention_rate' => (float)($r['retention_rate'] ?? 0),
+                        ];
+                    }
+                    $stmt->close();
+                }
+            }
+        } catch (Throwable $e) {
+            $rows = [];
+        }
+        return $rows;
+    }
+}
+
 if (!function_exists('getAlertsData')) {
     function getAlertsData(string $shop, array $shopRecord, int $ttlSec = 180): array
     {
