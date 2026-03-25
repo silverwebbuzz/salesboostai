@@ -79,6 +79,18 @@
     return data;
   }
 
+  async function fetchAlertsSummary(limit) {
+    var shop = getParam('shop');
+    if (!shop) throw new Error('Missing shop.');
+    var url = '/app/api/alerts/summary.php?shop=' + encodeURIComponent(shop) +
+      '&limit=' + encodeURIComponent(String(limit || 6));
+    var doFetch = window.authFetch || fetch;
+    var res = await doFetch(url, { headers: { Accept: 'application/json' } });
+    var data = await res.json();
+    if (!res.ok || !data || data.ok !== true) return null;
+    return data;
+  }
+
   async function fetchActionList(status, limit) {
     var shop = getParam('shop');
     if (!shop) throw new Error('Missing shop.');
@@ -168,7 +180,20 @@
   }
 
   async function loadOverview(rangeDays) {
-    var dash = await fetchDashboard(rangeDays);
+    // Load dashboard + alerts in parallel (keep UI snappy).
+    var dash = null;
+    var alerts = null;
+    try {
+      var results = await Promise.all([
+        fetchDashboard(rangeDays),
+        fetchAlertsSummary(6)
+      ]);
+      dash = results[0];
+      alerts = results[1];
+    } catch (e) {
+      dash = await fetchDashboard(rangeDays);
+      alerts = null;
+    }
 
     var actions = Array.isArray(dash.action_center) ? dash.action_center : [];
     setHTML('acPriorityQueue', renderPriorityQueue(actions));
@@ -190,18 +215,48 @@
     var forecast = Array.isArray(dash.inventory_forecast) ? dash.inventory_forecast : [];
     setHTML('acStockoutCount', String(forecast.length));
 
-    // Alerts tab theme preview (use critical issue codes as lightweight themes)
-    var themes = {};
-    critical.forEach(function (c) {
-      var code = String(c.code || c.title || 'Other');
-      themes[code] = (themes[code] || 0) + 1;
-    });
-    var themeRows = Object.keys(themes).slice(0, 6).map(function (k) {
-      return { left: k.replace(/_/g, ' '), right: String(themes[k]) };
-    });
+    // Alerts theme preview (from alerts API if available)
+    var themeRows = [];
+    if (alerts && Array.isArray(alerts.themes)) {
+      themeRows = alerts.themes.map(function (t) {
+        return { left: String(t.key || 'other').replace(/_/g, ' '), right: String(t.count || 0) };
+      });
+    }
     setHTML('acAlertThemes', renderSimpleList(themeRows, 'No alert themes yet.'));
 
+    // Alerts tab list preview (rendered even on Overview load for instant tab switch)
+    if (alerts) {
+      renderAlertsTab(alerts);
+    }
+
     await wireActionButtons();
+  }
+
+  function renderAlertsTab(alerts) {
+    var critical = alerts && Array.isArray(alerts.critical) ? alerts.critical : [];
+    var warning = alerts && Array.isArray(alerts.warning) ? alerts.warning : [];
+
+    function listBlock(title, items) {
+      if (!items.length) return '<div class="sb-muted">No ' + esc(title.toLowerCase()) + ' alerts.</div>';
+      return items.slice(0, 6).map(function (a) {
+        var t = a && a.title ? String(a.title) : 'Alert';
+        var meta = a && a.meta ? String(a.meta) : '';
+        var key = a && a.details_url_key ? String(a.details_url_key) : '';
+        return (
+          '<div class="SbListRow">' +
+            '<div class="sb-list-left">' + esc(t) + (meta ? '<div class="sb-muted" style="margin-top:3px;">' + esc(meta) + '</div>' : '') + '</div>' +
+            '<div class="sb-list-right">' + esc(key ? key.toUpperCase() : '') + '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    setHTML('acAlertsCritical',
+      '<div class="kpi-title" style="margin-bottom:8px;">Critical</div>' + listBlock('Critical', critical)
+    );
+    setHTML('acAlertsWarning',
+      '<div class="kpi-title" style="margin-bottom:8px;">Warnings</div>' + listBlock('Warnings', warning)
+    );
   }
 
   async function loadReports(rangeDays) {
@@ -231,6 +286,30 @@
     if (cust && cust.recommendations && cust.recommendations[0]) plan.push('Customers: ' + (cust.recommendations[0].title || 'Improve retention sequence'));
     if (!plan.length) plan = ['Generate a plan after your first sync completes.'];
     setHTML('acWeeklyPlan', '<ul class="report-list">' + plan.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>');
+  }
+
+  async function loadRecommendations(rangeDays) {
+    var rev = await fetchReportSummary('revenue', rangeDays);
+    var cust = await fetchReportSummary('customers', rangeDays);
+    var inv = await fetchReportSummary('inventory', rangeDays);
+
+    var blocks = [];
+    function addBlock(label, data) {
+      var recs = data && Array.isArray(data.recommendations) ? data.recommendations : [];
+      if (!recs.length) return;
+      blocks.push(
+        '<div class="SbListRow"><div class="sb-list-left"><strong>' + esc(label) + '</strong></div><div class="sb-list-right"></div></div>' +
+        recs.slice(0, 2).map(function (r) {
+          return '<div class="SbListRow"><div class="sb-list-left">' + esc(r.title || 'Recommendation') +
+            (r.impact ? '<div class="sb-muted" style="margin-top:3px;">' + esc(r.impact) + '</div>' : '') +
+          '</div><div class="sb-list-right">—</div></div>';
+        }).join('')
+      );
+    }
+    addBlock('Revenue', rev);
+    addBlock('Customers', cust);
+    addBlock('Inventory', inv);
+    setHTML('acRecoFromReports', blocks.length ? blocks.join('') : '<div class="sb-muted">No recommendations yet.</div>');
   }
 
   async function loadHistory() {
@@ -263,6 +342,42 @@
     return btn ? Number(btn.getAttribute('data-range') || 7) : 7;
   }
 
+  function getActiveTabName() {
+    var activeTab = document.querySelector('#acTabs .tab.active');
+    return activeTab ? (activeTab.getAttribute('data-tab') || 'overview') : 'overview';
+  }
+
+  function setUrlState(tabName, rangeDays) {
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('tab', String(tabName || 'overview'));
+      url.searchParams.set('range', String(rangeDays || 7));
+      window.history.replaceState({}, '', url.toString());
+    } catch (e) {}
+  }
+
+  function applyInitialStateFromUrl() {
+    var tab = (getParam('tab') || 'overview').toLowerCase();
+    var allowedTabs = { overview: 1, alerts: 1, recommendations: 1, reports: 1, history: 1 };
+    if (!allowedTabs[tab]) tab = 'overview';
+
+    var range = Number(getParam('range') || 7);
+    if ([7, 30, 90].indexOf(range) === -1) range = 7;
+
+    // Range button state
+    document.querySelectorAll('.ac-range').forEach(function (b) {
+      b.classList.toggle('active', Number(b.getAttribute('data-range') || 0) === range);
+    });
+
+    // Tab state
+    activateTab(tab);
+
+    // Ensure URL is normalized
+    setUrlState(tab, range);
+
+    return { tab: tab, range: range };
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     // Tabs
     document.querySelectorAll('#acTabs .tab').forEach(function (tab) {
@@ -270,6 +385,7 @@
         var name = tab.getAttribute('data-tab') || 'overview';
         activateTab(name);
         var range = getActiveRange();
+        setUrlState(name, range);
         if (name === 'overview' || name === 'alerts') {
           loadOverview(range).catch(function (e) { showNotice(e && e.message ? e.message : 'Failed to load Action Center.', 'error'); });
         }
@@ -280,6 +396,7 @@
           loadHistory().catch(function () {});
         }
         if (name === 'recommendations') {
+          loadRecommendations(range).catch(function () {});
           setHTML('acRecoQuickWins', '<ul class="report-list"><li>Start with 1 cross-sell bundle on your top product page.</li><li>Add an upsell to cart for best sellers.</li><li>Send a 7-day post-purchase offer.</li></ul>');
         }
       });
@@ -290,18 +407,32 @@
       btn.addEventListener('click', function () {
         document.querySelectorAll('.ac-range').forEach(function (b) { b.classList.remove('active'); });
         btn.classList.add('active');
-        var activeTab = document.querySelector('#acTabs .tab.active');
-        var name = activeTab ? (activeTab.getAttribute('data-tab') || 'overview') : 'overview';
+        var name = getActiveTabName();
         var range = getActiveRange();
+        setUrlState(name, range);
         if (name === 'overview' || name === 'alerts') loadOverview(range).catch(function () {});
         if (name === 'reports') loadReports(range).catch(function () {});
+        if (name === 'recommendations') loadRecommendations(range).catch(function () {});
       });
     });
 
     // Initial load
-    loadOverview(getActiveRange()).catch(function (e) {
-      showNotice(e && e.message ? e.message : 'Failed to load Action Center.', 'error');
-    });
+    var initial = applyInitialStateFromUrl();
+    var initialTab = initial.tab;
+    var initialRange = initial.range;
+
+    if (initialTab === 'overview' || initialTab === 'alerts') {
+      loadOverview(initialRange).catch(function (e) {
+        showNotice(e && e.message ? e.message : 'Failed to load Action Center.', 'error');
+      });
+    } else if (initialTab === 'reports') {
+      loadReports(initialRange).catch(function () {});
+    } else if (initialTab === 'recommendations') {
+      loadRecommendations(initialRange).catch(function () {});
+      setHTML('acRecoQuickWins', '<ul class="report-list"><li>Start with 1 cross-sell bundle on your top product page.</li><li>Add an upsell to cart for best sellers.</li><li>Send a 7-day post-purchase offer.</li></ul>');
+    } else if (initialTab === 'history') {
+      loadHistory().catch(function () {});
+    }
   });
 })();
 

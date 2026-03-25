@@ -20,6 +20,8 @@ $lockInventoryAlerts = !((bool)($features['alerts_inventory'] ?? false));
 $inventoryAlertsRequiredPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('alerts_inventory') : 'growth';
 $inventoryAlertsUpgradeUrl = sbm_upgrade_url($shop, $host, $inventoryAlertsRequiredPlan);
 
+$actionCenterUrl = BASE_URL . '/action-center.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
+
 try {
     $alerts = sbm_getAlertsData($shop, $shopRecord, 180);
     $criticalAlerts = $alerts['criticalAlerts'] ?? [];
@@ -49,6 +51,9 @@ try {
         <div>
           <div class="hero-title">Alerts</div>
           <div class="hero-subtitle">Important issues and opportunities in your store</div>
+        </div>
+        <div class="reports-controls">
+          <a class="btn btn-primary btn-sm" href="<?php echo e($actionCenterUrl); ?>">← Back to Action Center</a>
         </div>
       </div>
     </div>

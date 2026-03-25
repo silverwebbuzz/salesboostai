@@ -133,8 +133,11 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
         <div class="card">
           <div class="kpi-title">Alerts Inbox</div>
           <div class="hero-subtitle" style="margin-top:6px;">Critical and warning alerts, grouped by urgency.</div>
-          <div style="margin-top:12px;">
-            <a class="btn btn-primary" href="<?php echo e($alertsUrl); ?>">Open Alerts →</a>
+          <div style="margin-top:12px;" id="acAlertsCritical"></div>
+          <div style="height:12px;"></div>
+          <div id="acAlertsWarning"></div>
+          <div style="margin-top:14px;">
+            <a class="btn btn-primary btn-sm" href="<?php echo e($alertsUrl); ?>">Open full Alerts →</a>
           </div>
         </div>
         <div class="card">
@@ -149,8 +152,9 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
         <div class="card">
           <div class="kpi-title">Recommendations</div>
           <div class="hero-subtitle" style="margin-top:6px;">Product bundles, upsells, and quick boosts based on your recent orders.</div>
-          <div style="margin-top:12px;">
-            <a class="btn btn-primary" href="<?php echo e($salesBoostUrl); ?>">Open Sales Boost →</a>
+          <div style="margin-top:12px;" id="acRecoFromReports"></div>
+          <div style="margin-top:14px;">
+            <a class="btn btn-primary btn-sm" href="<?php echo e($salesBoostUrl); ?>">Open full Sales Boost →</a>
           </div>
         </div>
         <div class="card">

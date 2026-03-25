@@ -37,6 +37,8 @@ $nextPlan = 'starter';
 if (($entitlements['plan_key'] ?? 'free') === 'starter') $nextPlan = 'growth';
 if (($entitlements['plan_key'] ?? 'free') === 'growth') $nextPlan = 'premium';
 $aiUpgradeUrl = sbm_upgrade_url($shop, $host, $nextPlan);
+
+$actionCenterUrl = BASE_URL . '/action-center.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,6 +66,7 @@ $aiUpgradeUrl = sbm_upgrade_url($shop, $host, $nextPlan);
             <button type="button" class="btn btn-primary btn-sm report-range" data-range="30">30 days</button>
             <button type="button" class="btn btn-primary btn-sm report-range" data-range="90">90 days</button>
           </div>
+          <a class="btn btn-primary btn-sm" href="<?php echo e($actionCenterUrl); ?>">← Back to Action Center</a>
           <?php if ($lockReportsExport): ?>
             <a class="btn btn-primary btn-sm" href="<?php echo e($reportsExportUpgradeUrl); ?>">Upgrade to Export</a>
           <?php else: ?>

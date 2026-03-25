@@ -39,6 +39,8 @@ function nextPlanForRecommendation(string $planKey): string {
 $nextRecoPlan = nextPlanForRecommendation($planKey);
 $recoUpgradeUrl = sbm_upgrade_url($shop, $host, $nextRecoPlan);
 
+$actionCenterUrl = BASE_URL . '/action-center.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
+
 try {
     $mysqli = db();
     $shopNameSafe = makeShopName($shop);
@@ -164,6 +166,9 @@ try {
             <div>
                 <div class="hero-title">Sales Boost</div>
                 <div class="hero-subtitle">Increase revenue with smart product recommendations</div>
+            </div>
+            <div class="reports-controls">
+                <a class="btn btn-primary btn-sm" href="<?php echo e($actionCenterUrl); ?>">← Back to Action Center</a>
             </div>
         </div>
         <div class="hero-subtitle"><?php echo e($shopName); ?></div>

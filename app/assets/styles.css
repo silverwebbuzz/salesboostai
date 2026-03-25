@@ -1133,6 +1133,46 @@ body {
   margin-bottom: 10px;
 }
 
+/* Generic list rows (used by Reports + Action Center JS) */
+.sb-muted {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.SbListRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.SbListRow:last-child {
+  border-bottom: 0;
+}
+
+.sb-list-left {
+  flex: 1;
+  min-width: 0;
+  color: #111827;
+  font-size: 14px;
+}
+
+.sb-list-right {
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.sb-list-left strong {
+  font-weight: 700;
+}
+
+.sb-list-left .sb-muted {
+  margin-top: 2px;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
