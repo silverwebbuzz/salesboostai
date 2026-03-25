@@ -50,6 +50,157 @@
     return 'critical-priority critical-priority--medium';
   }
 
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  function computeTrend(current, previous) {
+    if (previous <= 0) return null;
+    var pct = ((current - previous) / previous) * 100;
+    if (!isFinite(pct)) return null;
+    return pct;
+  }
+
+  // Same scoring logic as Dashboard for consistency.
+  function computeStoreHealth(data) {
+    var issues = (data && data.critical_issues) ? data.critical_issues : [];
+
+    // 1) Revenue score (30)
+    var rev = (data && data.charts && data.charts.revenue) ? data.charts.revenue : [];
+    var last7Rev = rev.slice(-7).reduce(function (a, b) { return a + Number(b || 0); }, 0);
+    var prev7Rev = rev.slice(-14, -7).reduce(function (a, b) { return a + Number(b || 0); }, 0);
+    var revTrend = computeTrend(last7Rev, prev7Rev);
+    var revenueScore = 30;
+    if (revTrend !== null && revTrend < 0) {
+      var drop = Math.abs(revTrend);
+      if (drop >= 20) revenueScore = 10;
+      else revenueScore = 20;
+    }
+
+    // 2) Inventory score (25)
+    var inv = (data && data.inventory_metrics) ? data.inventory_metrics : {};
+    var deadStock = Number(inv.dead_stock_value || 0);
+    var restockNeeded = Number(inv.restock_needed_value || 0);
+    var inventoryScore = 25;
+    if (deadStock > 1000) {
+      inventoryScore = 10;
+    } else if (deadStock > 0 || restockNeeded > 0) {
+      inventoryScore = 18;
+    }
+
+    // 3) Customer score (25)
+    var totalOrders = Number(data && data.kpi ? data.kpi.orders : 0);
+    var totalCustomers = Number(data && data.kpi ? data.kpi.customers : 0);
+    var repeatRate = totalCustomers > 0 ? clamp((totalOrders - totalCustomers) / totalCustomers, 0, 1) : 0;
+    var customerScore = 25;
+    if (repeatRate < 0.2) customerScore = 10;
+    else if (repeatRate < 0.3) customerScore = 18;
+
+    // 4) Alert score (20)
+    var criticalCount = (issues || []).filter(function (i) { return String(i && i.severity || '').toLowerCase() === 'high'; }).length;
+    var alertScore = 20;
+    if (criticalCount >= 3) alertScore = 5;
+    else if (criticalCount >= 1) alertScore = 12;
+
+    var score = clamp(Math.round(revenueScore + inventoryScore + customerScore + alertScore), 0, 100);
+    if (!isFinite(score)) {
+      return { score: 0, status: 'Needs Attention', biggestIssue: 'No health data available yet.', breakdown: { revenue: 0, inventory: 0, customers: 0, alerts: 0 } };
+    }
+    var status = 'Critical';
+    if (score >= 80) status = 'Good';
+    else if (score >= 50) status = 'Needs Attention';
+
+    var biggestIssue = 'No major issue detected.';
+    if (revenueScore <= 10) {
+      biggestIssue = 'Revenue dropped by more than 20% versus last week.';
+    } else if (alertScore <= 12 && criticalCount > 0) {
+      var highIssue = (issues || []).find(function (i) { return String(i && i.severity || '').toLowerCase() === 'high'; });
+      biggestIssue = (highIssue && (highIssue.description || highIssue.title)) || 'Critical alerts need immediate action.';
+    } else if (inventoryScore <= 18) {
+      biggestIssue = deadStock > 1000 ? 'High dead stock is tying up inventory value.' : 'Some inventory is not moving or needs restock.';
+    } else if (customerScore <= 18) {
+      biggestIssue = 'Repeat customer rate is low.';
+    }
+
+    return {
+      score: score,
+      status: status,
+      biggestIssue: biggestIssue,
+      breakdown: { revenue: revenueScore, inventory: inventoryScore, customers: customerScore, alerts: alertScore }
+    };
+  }
+
+  function getHealthStatusClass(status) {
+    var value = String(status || '').toLowerCase();
+    if (value === 'good') return 'health-status-good';
+    if (value === 'critical') return 'health-status-critical';
+    return 'health-status-needs-attention';
+  }
+
+  function renderAcStoreHealth(health) {
+    var statusEl = document.getElementById('acStoreHealthStatus');
+    var scoreEl = document.getElementById('acStoreHealthScoreValue');
+    var breakdownEl = document.getElementById('acStoreHealthBreakdown');
+    var issueEl = document.getElementById('acStoreHealthIssue');
+
+    if (statusEl) {
+      statusEl.textContent = health.status || 'Needs Attention';
+      statusEl.classList.remove('health-status-good', 'health-status-needs-attention', 'health-status-critical');
+      statusEl.classList.add(getHealthStatusClass(health.status));
+    }
+    if (scoreEl) scoreEl.textContent = String(Number(health.score || 0));
+    if (issueEl) issueEl.textContent = 'Biggest Issue: ' + (health.biggestIssue || 'No major issue detected.');
+    if (!breakdownEl) return;
+
+    var revenue = Number(health && health.breakdown ? health.breakdown.revenue : 0);
+    var inventory = Number(health && health.breakdown ? health.breakdown.inventory : 0);
+    var customers = Number(health && health.breakdown ? health.breakdown.customers : 0);
+    var alerts = Number(health && health.breakdown ? health.breakdown.alerts : 0);
+
+    var rows = [
+      { icon: '💵', label: 'Revenue', value: revenue, max: 30, cls: 'health-fill-revenue' },
+      { icon: '📦', label: 'Inventory', value: inventory, max: 25, cls: 'health-fill-inventory' },
+      { icon: '👥', label: 'Customers', value: customers, max: 25, cls: 'health-fill-customers' },
+      { icon: '🚨', label: 'Alerts', value: alerts, max: 20, cls: 'health-fill-alerts' }
+    ];
+    breakdownEl.innerHTML = rows.map(function (row) {
+      var pct = row.max > 0 ? Math.max(0, Math.min(100, Math.round((row.value / row.max) * 100))) : 0;
+      return (
+        '<div class="store-health-row">' +
+          '<div class="store-health-row-label"><span class="store-health-icon">' + row.icon + '</span>' + row.label + '</div>' +
+          '<div class="store-health-row-bar"><span class="' + row.cls + '" style="width:' + pct + '%"></span></div>' +
+          '<div class="store-health-row-value">' + Math.round(row.value) + '/' + row.max + '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function renderCriticalIssues(targetId, issues) {
+    var el = document.getElementById(targetId);
+    if (!el) return;
+    var arr = Array.isArray(issues) ? issues : [];
+    if (!arr.length) {
+      el.innerHTML = '<div class="critical-empty-state"><div class="critical-empty-title">No critical issues</div><div class="critical-empty-text">You’re looking good right now.</div></div>';
+      return;
+    }
+    el.innerHTML = arr.map(function (i) {
+      var sev = String(i && i.severity || 'medium').toLowerCase();
+      return (
+        '<div class="critical-item ' + toSeverityClass(sev) + '">' +
+          '<div class="critical-item-main">' +
+            '<div class="critical-item-left">' +
+              '<span class="' + toPriorityBadge(sev) + '">' + esc(sev.toUpperCase()) + '</span>' +
+              '<div class="critical-item-text">' +
+                '<div class="critical-item-title">' + esc(i.title || 'Insight') + '</div>' +
+                (i.description ? '<div class="critical-item-desc">' + esc(i.description) + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
   async function fetchDashboard(rangeDays) {
     var shop = getParam('shop');
     var host = getParam('host');
@@ -201,17 +352,11 @@
     setHTML('acActionsPreview', renderPriorityQueue(actions.slice(0, 5)));
 
     var critical = Array.isArray(dash.critical_issues) ? dash.critical_issues : [];
-    setHTML('acCriticalInsights', renderSimpleList(
-      critical.map(function (c) {
-        return { left: c.title || 'Insight', right: String(c.severity || 'medium').toUpperCase() };
-      }),
-      'No critical insights yet.'
-    ));
+    renderCriticalIssues('acCriticalIssuesGrid', critical);
 
-    // Snapshot
-    var health = dash.store_health || {};
-    var score = (health && typeof health.score !== 'undefined') ? Number(health.score || 0) : NaN;
-    setHTML('acHealthScore', Number.isFinite(score) ? (Math.round(score) + '/100') : '—');
+    // Store health (computed using same logic as Dashboard)
+    var health = computeStoreHealth(dash);
+    renderAcStoreHealth(health);
     setHTML('acCriticalCount', String(critical.length));
     var forecast = Array.isArray(dash.inventory_forecast) ? dash.inventory_forecast : [];
     setHTML('acStockoutCount', String(forecast.length));

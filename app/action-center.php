@@ -66,8 +66,20 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
 
       <div class="card">
         <div class="kpi-title">This Week Snapshot</div>
+        <div class="store-health-card" style="padding:0;border:0;box-shadow:none;background:transparent;margin-top:10px;">
+          <div class="store-health-head">
+            <div class="store-health-title" style="font-size:14px;">Store Health Score</div>
+            <div class="store-health-status" id="acStoreHealthStatus">—</div>
+          </div>
+          <div class="store-health-score-wrap">
+            <span class="store-health-score" id="acStoreHealthScoreValue">0</span>
+            <span class="store-health-score-max">/100</span>
+          </div>
+          <div class="store-health-breakdown" id="acStoreHealthBreakdown"></div>
+          <div class="store-health-issue-box" id="acStoreHealthIssue">Biggest Issue: —</div>
+        </div>
+
         <div class="ac-snapshot" style="margin-top:10px;">
-          <div class="SbListRow"><div class="sb-list-left">Store health</div><div class="sb-list-right" id="acHealthScore">—</div></div>
           <div class="SbListRow"><div class="sb-list-left">Critical issues</div><div class="sb-list-right" id="acCriticalCount">—</div></div>
           <div class="SbListRow"><div class="sb-list-left">Stockout risks</div><div class="sb-list-right" id="acStockoutCount">—</div></div>
         </div>
@@ -117,9 +129,14 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
 
     <div id="ac-tab-overview" class="tab-panel active">
       <div class="section reports-grid">
-        <div class="card">
-          <div class="kpi-title">Critical Insights</div>
-          <div id="acCriticalInsights"></div>
+        <div class="card critical-insights-card" style="padding:18px 20px;">
+          <div class="critical-insights-head" style="margin-bottom:12px;">
+            <div class="critical-insights-title-wrap">
+              <span class="critical-insights-icon" aria-hidden="true">!</span>
+              <div class="critical-insights-title" style="font-size:16px;">Critical Insights</div>
+            </div>
+          </div>
+          <div id="acCriticalIssuesGrid"></div>
         </div>
         <div class="card">
           <div class="kpi-title">Next-best Actions</div>
