@@ -19,7 +19,6 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
       <li><a id="nav-dashboard" class="top-nav__link">Dashboard</a></li>
       <li><a id="nav-analytics" class="top-nav__link">Analytics</a></li>
       <li><a id="nav-action-center" class="top-nav__link">Action Center</a></li>
-      <li><a id="nav-customers" class="top-nav__link">Customers</a></li>
     </ul>
   </div>
 
@@ -98,14 +97,12 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     var dashboardLink = document.getElementById("nav-dashboard");
     var analyticsLink = document.getElementById("nav-analytics");
     var actionCenterLink = document.getElementById("nav-action-center");
-    var customersLink = document.getElementById("nav-customers");
     var agentsLink = document.getElementById("nav-ai-agents");
     var upgradeLink = document.getElementById("nav-upgrade-plan");
 
     if (dashboardLink) dashboardLink.href = "dashboard.php" + query;
     if (actionCenterLink) actionCenterLink.href = "action-center.php" + query;
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
-    if (customersLink) customersLink.href = "customers.php" + query;
     if (agentsLink) agentsLink.href = "ai-agents.php" + query;
     if (upgradeLink && !upgradeLink.getAttribute('href')) upgradeLink.href = "billing/subscribe.php" + query + "&plan=starter";
 
@@ -120,8 +117,9 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     if (path.includes("analytics") && analyticsLink) {
       analyticsLink.classList.add("active");
     }
-    if (path.includes("customers") && customersLink) {
-      customersLink.classList.add("active");
+    // Customers is considered part of Analytics (tab-level).
+    if (path.includes("customers") && analyticsLink) {
+      analyticsLink.classList.add("active");
     }
     // When viewing deeper operational pages, keep user anchored to Action Center.
     if ((path.includes("reports") || path.includes("alerts") || path.includes("sales-boost")) && actionCenterLink) {

@@ -54,7 +54,8 @@
     var shop = getParam('shop');
     var host = getParam('host');
     if (!shop) throw new Error('Missing shop.');
-    var url = '/app/api/dashboard.php?shop=' + encodeURIComponent(shop) + '&host=' + encodeURIComponent(host || '') + '&range=' + encodeURIComponent(String(rangeDays || 30));
+    // Dashboard API route is /app/api/dashboard (no .php).
+    var url = '/app/api/dashboard?shop=' + encodeURIComponent(shop) + '&host=' + encodeURIComponent(host || '') + '&range=' + encodeURIComponent(String(rangeDays || 30));
     var doFetch = window.authFetch || fetch;
     var res = await doFetch(url, { headers: { Accept: 'application/json' } });
     var data = await res.json();

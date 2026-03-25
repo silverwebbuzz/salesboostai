@@ -6,6 +6,12 @@ require_once __DIR__ . '/lib/embedded_bootstrap.php';
 require_once __DIR__ . '/lib/ui.php';
 [$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
+// Customers is merged into Analytics → Customers tab.
+// Keep this page as a backward-compatible entry point.
+$analyticsCustomersUrl = BASE_URL . '/analytics.php?tab=customers&shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
+header('Location: ' . $analyticsCustomersUrl, true, 302);
+exit;
+
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
 function money(float $v): string {

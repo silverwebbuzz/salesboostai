@@ -2,6 +2,19 @@
 (function () {
   function $(sel) { return document.querySelector(sel); }
 
+  function getParam(name) {
+    var params = new URLSearchParams(window.location.search);
+    return params.get(name) || '';
+  }
+
+  function setUrlTab(tabName) {
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('tab', String(tabName || 'revenue'));
+      window.history.replaceState({}, '', url.toString());
+    } catch (e) {}
+  }
+
   function getShop() {
     var params = new URLSearchParams(window.location.search);
     return params.get('shop') || '';
@@ -345,6 +358,7 @@
 
   async function onTab(tabName) {
     activateTab(tabName);
+    setUrlTab(tabName);
     if (tabName === 'revenue') {
       var active = document.querySelector('.time-filter.active');
       var range = active ? Number(active.getAttribute('data-range') || 7) : 7;
@@ -392,8 +406,12 @@
     wireTabClicks();
     wireRevenueFilters();
 
-    // Default: revenue tab
-    onTab('revenue').catch(function (e) {
+    // Initial tab from URL (?tab=customers etc.)
+    var initial = (getParam('tab') || 'revenue').toLowerCase();
+    var allowed = { revenue: 1, products: 1, customers: 1, aov: 1 };
+    if (!allowed[initial]) initial = 'revenue';
+
+    onTab(initial).catch(function (e) {
       setText('analyticsError', e.message || 'Failed to load analytics.');
       var err = $('#analyticsErrorWrap');
       if (err) err.style.display = 'block';

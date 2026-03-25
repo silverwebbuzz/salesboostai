@@ -157,6 +157,20 @@ $reportsUrl = BASE_URL . '/reports.php?shop=' . urlencode($shop) . ($host !== ''
           <div id="customersTopList"></div>
         </div>
       </div>
+      <div class="section reports-grid">
+        <div class="card">
+          <div class="kpi-title">Retention</div>
+          <div class="hero-subtitle" style="margin-top:6px;">Preview based on recent cohorts (plan-gated depth).</div>
+          <div style="margin-top:12px;" id="customersRetentionList"></div>
+        </div>
+        <div class="card">
+          <div class="kpi-title">Next step</div>
+          <div class="hero-subtitle" style="margin-top:6px;">Use Reports for executive summaries, action plans, and deeper retention insights.</div>
+          <div style="margin-top:12px;">
+            <a class="btn btn-primary btn-sm" href="<?php echo e($reportsUrl); ?>&tab=customers">Open Customer Report →</a>
+          </div>
+        </div>
+      </div>
       <div class="section">
         <div class="card ai-insight" id="customersInsight">—</div>
       </div>
@@ -165,7 +179,7 @@ $reportsUrl = BASE_URL . '/reports.php?shop=' . urlencode($shop) . ($host !== ''
           <div class="kpi-title">Full Customers Report</div>
           <div class="hero-subtitle" style="margin-top:6px;">Retention cohorts and deeper customer insights are available in Reports.</div>
           <div style="margin-top:12px;">
-            <a class="btn btn-primary" href="<?php echo e($reportsUrl); ?>">Open Reports →</a>
+            <a class="btn btn-primary" href="<?php echo e($reportsUrl); ?>&tab=customers">Open Reports →</a>
           </div>
         </div>
       </div>
