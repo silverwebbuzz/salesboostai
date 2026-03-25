@@ -15,18 +15,21 @@ $lockAov = !((bool)($features['analytics_aov'] ?? false));
 $lockFunnel = !((bool)($features['analytics_funnel'] ?? false));
 $lockAttribution = !((bool)($features['analytics_attribution'] ?? false));
 $lockRetention = !((bool)($features['analytics_retention'] ?? false));
+$lockCustomersLtv = !((bool)($features['customers_ltv'] ?? false));
 $productsReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_products') : 'starter';
 $customersReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_customers') : 'starter';
 $aovReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_aov') : 'starter';
 $funnelReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_funnel') : 'starter';
 $attributionReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_attribution') : 'growth';
 $retentionReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('analytics_retention') : 'starter';
+$customersLtvReqPlan = function_exists('getFeatureRequiredPlan') ? getFeatureRequiredPlan('customers_ltv') : 'starter';
 $productsUpgradeUrl = sbm_upgrade_url($shop, $host, $productsReqPlan);
 $customersUpgradeUrl = sbm_upgrade_url($shop, $host, $customersReqPlan);
 $aovUpgradeUrl = sbm_upgrade_url($shop, $host, $aovReqPlan);
 $funnelUpgradeUrl = sbm_upgrade_url($shop, $host, $funnelReqPlan);
 $attributionUpgradeUrl = sbm_upgrade_url($shop, $host, $attributionReqPlan);
 $retentionUpgradeUrl = sbm_upgrade_url($shop, $host, $retentionReqPlan);
+$customersLtvUpgradeUrl = sbm_upgrade_url($shop, $host, $customersLtvReqPlan);
 $reportsUrl = BASE_URL . '/reports.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
 ?>
 <!DOCTYPE html>
@@ -155,6 +158,34 @@ $reportsUrl = BASE_URL . '/reports.php?shop=' . urlencode($shop) . ($host !== ''
         <div class="card">
           <div class="kpi-title">Top Customers</div>
           <div id="customersTopList"></div>
+        </div>
+      </div>
+      <div class="section grid-50-50">
+        <div class="card">
+          <div class="kpi-title">Customer Segments</div>
+          <div class="SbListRow"><div class="sb-list-left">Total customers</div><div class="sb-list-right" id="customersTotal">—</div></div>
+          <div class="SbListRow"><div class="sb-list-left">Repeat customers</div><div class="sb-list-right" id="customersRepeat">—</div></div>
+          <div class="SbListRow"><div class="sb-list-left">VIP customers</div><div class="sb-list-right" id="customersVip">—</div></div>
+          <div class="SbListRow"><div class="sb-list-left">At-risk customers</div><div class="sb-list-right" id="customersAtRisk">—</div></div>
+          <div class="SbListRow"><div class="sb-list-left">Inactive customers</div><div class="sb-list-right" id="customersInactive">—</div></div>
+        </div>
+        <div class="card feature-lock-card analytics-lock-wrap">
+          <div class="<?php echo $lockCustomersLtv ? 'feature-lock-blur' : ''; ?>">
+            <div class="kpi-title">LTV & Value</div>
+            <div class="SbListRow"><div class="sb-list-left">Avg LTV (est.)</div><div class="sb-list-right" id="customersAvgLtv">—</div></div>
+            <div class="SbListRow"><div class="sb-list-left">VIP LTV (est.)</div><div class="sb-list-right" id="customersVipLtv">—</div></div>
+            <div class="SbListRow"><div class="sb-list-left">Orders scanned</div><div class="sb-list-right" id="customersOrdersScanned">—</div></div>
+          </div>
+          <?php if ($lockCustomersLtv): ?>
+            <div class="feature-lock-overlay">
+              <?php renderLockedFeatureBlock(
+                  'Customer LTV',
+                  'Unlock LTV and churn-style value metrics for customer segmentation and retention planning.',
+                  $customersLtvReqPlan,
+                  $customersLtvUpgradeUrl
+              ); ?>
+            </div>
+          <?php endif; ?>
         </div>
       </div>
       <div class="section reports-grid">

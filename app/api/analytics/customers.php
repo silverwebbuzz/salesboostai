@@ -80,6 +80,32 @@ $top = function_exists('sbm_get_top_customers_from_orders')
     ? sbm_get_top_customers_from_orders($shop, 30, 300, 5)
     : [];
 
+// Customer segments + LTV metrics (from canonical helper used by legacy customers.php)
+$segments = [];
+try {
+    $m = function_exists('sbm_getCustomerMetrics') ? sbm_getCustomerMetrics($shop, 180) : [];
+    if (is_array($m)) {
+        $segments = [
+            'total_customers' => (int)($m['totalCustomers'] ?? 0),
+            'new_customers' => (int)($m['newCustomers'] ?? 0),
+            'repeat_customers' => (int)($m['repeatCustomers'] ?? 0),
+            'vip_customers' => (int)($m['vipCustomers'] ?? 0),
+            'at_risk_customers' => (int)($m['atRiskCustomers'] ?? 0),
+            'inactive_customers' => (int)($m['inactiveCustomers'] ?? 0),
+            'orders_scanned' => (int)($m['ordersScanned'] ?? 0),
+            'avg_ltv' => round((float)($m['avgLtv'] ?? 0), 2),
+            'vip_ltv' => round((float)($m['vipLtv'] ?? 0), 2),
+        ];
+    }
+} catch (Throwable $e) { $segments = []; }
+
+// If LTV is not enabled for plan, only allow counts (hide monetary values).
+$customersLtvEnabled = (bool)($features['customers_ltv'] ?? false);
+if (!$customersLtvEnabled && !empty($segments)) {
+    $segments['avg_ltv'] = 0.0;
+    $segments['vip_ltv'] = 0.0;
+}
+
 // Retention cohorts (derived table preferred, fallback estimate)
 $retention = [
     'enabled' => $retentionEnabled,
@@ -102,6 +128,7 @@ echo json_encode([
     'new' => $newCustomers,
     'returning' => $returningCustomers,
     'top' => $top,
+    'segments' => $segments,
     'retention' => $retention,
 ], JSON_UNESCAPED_UNICODE);
 

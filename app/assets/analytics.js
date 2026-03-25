@@ -263,6 +263,25 @@
     setText('customersNew', String(data.new ?? 0));
     setText('customersReturning', String(data.returning ?? 0));
 
+    // Segments (from legacy customers.php metrics)
+    var seg = (data && data.segments) ? data.segments : null;
+    if (seg) {
+      setText('customersTotal', String(seg.total_customers ?? '—'));
+      setText('customersRepeat', String(seg.repeat_customers ?? '—'));
+      setText('customersVip', String(seg.vip_customers ?? '—'));
+      setText('customersAtRisk', String(seg.at_risk_customers ?? '—'));
+      setText('customersInactive', String(seg.inactive_customers ?? '—'));
+      if (document.getElementById('customersOrdersScanned')) {
+        setText('customersOrdersScanned', String(seg.orders_scanned ?? '—'));
+      }
+      if (document.getElementById('customersAvgLtv')) {
+        setText('customersAvgLtv', money(seg.avg_ltv ?? 0));
+      }
+      if (document.getElementById('customersVipLtv')) {
+        setText('customersVipLtv', money(seg.vip_ltv ?? 0));
+      }
+    }
+
     // Chart (new vs returning)
     var cctx = document.getElementById('analyticsCustomersChart');
     if (cctx && window.Chart) {
