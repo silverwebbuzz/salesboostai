@@ -34,6 +34,7 @@ function dashboardShellPayload(string $tz, array $syncStatus): array {
     $labels = lastNDaysLabels(30, $tz);
     $n = count($labels);
     return [
+        'ok' => true,
         'kpi' => [
             'revenue' => 0.0,
             'orders' => 0,
@@ -556,6 +557,7 @@ if ($locks['goals']) {
 }
 
 $out = [
+    'ok' => true,
     'kpi' => [
         'revenue' => round($totalRevenue, 2),
         'orders' => $totalOrders,
