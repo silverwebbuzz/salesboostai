@@ -42,6 +42,7 @@ $planLimits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'
 $features = is_array($entitlements['features'] ?? null) ? $entitlements['features'] : [];
 $cohortMonthsLimit = max(1, (int)($planLimits['cohort_months'] ?? 3));
 $retentionEnabled = (bool)($features['analytics_retention'] ?? false);
+$topCustomersLimit = max(1, (int)($planLimits['top_customers_count'] ?? 5));
 
 $mysqli = db();
 $shopName = makeShopName($shop);
@@ -77,7 +78,7 @@ try {
 $returningCustomers = max(0, $totalCustomers - $newCustomers);
 
 $top = function_exists('sbm_get_top_customers_from_orders')
-    ? sbm_get_top_customers_from_orders($shop, 30, 300, 5)
+    ? sbm_get_top_customers_from_orders($shop, 30, 300, $topCustomersLimit)
     : [];
 
 // Customer segments + LTV metrics (from canonical helper used by legacy customers.php)

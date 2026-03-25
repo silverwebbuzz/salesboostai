@@ -40,14 +40,16 @@ if (!canAccessFeature($entitlements, 'analytics_products')) {
 }
 
 $mysqli = db();
+$planLimits = is_array($entitlements['limits'] ?? null) ? $entitlements['limits'] : [];
+$topProductsLimit = max(1, (int)($planLimits['top_products_count'] ?? 5));
 $top = function_exists('sbm_get_top_products_from_orders')
-    ? sbm_get_top_products_from_orders($shop, 30, 700, 5)
+    ? sbm_get_top_products_from_orders($shop, 30, 700, $topProductsLimit)
     : [];
 
 // Worst-performing uses same aggregation and then sorts ascending.
 $worst = $top;
 usort($worst, fn($a, $b) => ((float)($a['revenue'] ?? 0)) <=> ((float)($b['revenue'] ?? 0)));
-$worst = array_slice($worst, 0, 5);
+$worst = array_slice($worst, 0, $topProductsLimit);
 
 echo json_encode([
     'top' => $top,
