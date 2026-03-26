@@ -248,3 +248,23 @@ This is optional and not required to ship the first AI features.
 6. Add Premium-only sales boost suggestions
 7. Add executive report generator (Premium)
 
+## Appendix — Production cronjobs (your server)
+
+Documented from your final server cron screenshot (PHP path + app path).
+
+> Note: these jobs are safe to run frequently. They only call Anthropic when eligibility + TTL/fingerprint rules require regeneration.
+
+- `run_sync.php` (sync runner):
+  - Command: `/usr/bin/php /home/silverwebbuzz_in/public_html/silverwebbuzzcom/salesboost/app/jobs/run_sync.php >/dev/null 2>&1`
+
+- `process_webhooks.php` (webhook processing):
+  - Command: `/usr/bin/php /home/silverwebbuzz_in/public_html/silverwebbuzzcom/salesboost/app/jobs/process_webhooks.php >/dev/null 2>&1`
+
+- `ai_weekly_digest.php` (AI weekly digest):
+  - Schedule shown: `minute=0, hour=0,12` (twice daily)
+  - Command: `/usr/bin/php /home/silverwebbuzz_in/public_html/silverwebbuzzcom/salesboost/app/jobs/ai_weekly_digest.php >/dev/null 2>&1`
+
+- `ai_dynamic_actions.php` (AI dynamic actions):
+  - Schedule shown: `minute=0, hour=*` (hourly)
+  - Command: `/usr/bin/php /home/silverwebbuzz_in/public_html/silverwebbuzzcom/salesboost/app/jobs/ai_dynamic_actions.php >/dev/null 2>&1`
+
