@@ -268,3 +268,11 @@ Documented from your final server cron screenshot (PHP path + app path).
   - Schedule shown: `minute=0, hour=*` (hourly)
   - Command: `/usr/bin/php /home/silverwebbuzz_in/public_html/silverwebbuzzcom/salesboost/app/jobs/ai_dynamic_actions.php >/dev/null 2>&1`
 
+---
+
+## Quick reference — feature matrix
+
+See `FEATURES_MATRIX.md` for:
+- plan × AI features × where they show
+- plan × non‑AI features × where they show
+
