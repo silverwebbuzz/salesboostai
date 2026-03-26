@@ -179,6 +179,7 @@ $goalsUpgradeUrl = sbm_upgrade_url($shop, $host, $goalsRequiredPlan);
             </div>
             <div class="kpi-value" id="kpiRevenue">0</div>
             <div id="trendRevenue"></div>
+            <button class="sb-kpi-why" type="button" data-ai-metric="revenue" data-ai-period="7">Why did this change?</button>
           </div>
           <div class="card kpi kpi--orders">
             <div class="kpi-head">
@@ -187,6 +188,7 @@ $goalsUpgradeUrl = sbm_upgrade_url($shop, $host, $goalsRequiredPlan);
             </div>
             <div class="kpi-value" id="kpiOrders">0</div>
             <div id="trendOrders"></div>
+            <button class="sb-kpi-why" type="button" data-ai-metric="orders" data-ai-period="7">Why did this change?</button>
           </div>
           <div class="card kpi kpi--customers">
             <div class="kpi-head">
@@ -203,7 +205,22 @@ $goalsUpgradeUrl = sbm_upgrade_url($shop, $host, $goalsRequiredPlan);
             </div>
             <div class="kpi-value" id="kpiAov">0</div>
             <div id="trendAov"></div>
+            <button class="sb-kpi-why" type="button" data-ai-metric="aov" data-ai-period="7">Why did this change?</button>
           </div>
+        </div>
+      </div>
+
+      <div class="sb-modal" id="aiExplainModal" aria-hidden="true">
+        <div class="sb-modal__panel" role="dialog" aria-modal="true">
+          <div class="sb-modal__head">
+            <div>
+              <div class="sb-modal__title" id="aiExplainTitle">AI explanation</div>
+              <div class="hero-subtitle" id="aiExplainSubtitle" style="margin-top:2px;">2-sentence explanation based on your store data.</div>
+            </div>
+            <button class="sb-modal__close" type="button" id="aiExplainClose">Close</button>
+          </div>
+          <div class="sb-modal__body" id="aiExplainBody">—</div>
+          <div class="sb-modal__meta" id="aiExplainMeta"></div>
         </div>
       </div>
 

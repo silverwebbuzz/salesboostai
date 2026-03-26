@@ -243,6 +243,17 @@
     return data;
   }
 
+  async function fetchWeeklyDigest() {
+    var shop = getParam('shop');
+    if (!shop) throw new Error('Missing shop.');
+    var url = '/app/api/ai/weekly_digest.php?shop=' + encodeURIComponent(shop);
+    var doFetch = window.authFetch || fetch;
+    var res = await doFetch(url, { headers: { Accept: 'application/json' } });
+    var data = await res.json();
+    if (!res.ok || !data || data.ok !== true) return null;
+    return data;
+  }
+
   async function fetchActionList(status, limit) {
     var shop = getParam('shop');
     if (!shop) throw new Error('Missing shop.');
@@ -266,13 +277,20 @@
       var impact = Math.round(Number(it.impact_score || 0));
       var conf = Math.round(Number(it.confidence_score || 0) * 100);
       var key = String(it.key || '');
+      var aiBadge = '';
+      try {
+        var src = it.why ? JSON.parse(String(it.why)) : null;
+        if (src && String(src.type || '') === 'ai_dynamic_actions') {
+          aiBadge = '<span class="sb-meta-badge">AI generated</span>';
+        }
+      } catch (e) {}
       return (
         '<div class="critical-item ' + toSeverityClass(sev) + '">' +
           '<div class="critical-item-main">' +
             '<div class="critical-item-left">' +
               '<span class="' + toPriorityBadge(sev) + '">' + esc(sev.toUpperCase()) + '</span>' +
               '<div class="critical-item-text">' +
-                '<div class="critical-item-title">' + esc(it.title || 'Action') + '</div>' +
+                '<div class="critical-item-title">' + esc(it.title || 'Action') + ' ' + aiBadge + '</div>' +
                 (it.description ? '<div class="critical-item-desc">' + esc(it.description) + '</div>' : '') +
                 '<div class="critical-item-desc">Impact ' + impact + '/100 · Confidence ' + conf + '%</div>' +
               '</div>' +
@@ -425,6 +443,19 @@
     setBullets('acReportsCustomers', cust, 'Customers summary not available.');
     setBullets('acReportsInventory', inv, 'Inventory summary not available.');
 
+    // Weekly digest paragraph (Growth+ gated server-side)
+    try {
+      var digest = await fetchWeeklyDigest();
+      if (digest && digest.text) {
+        var ts = digest.generated_at ? (' · Generated ' + String(digest.generated_at)) : '';
+        setHTML('acWeeklyDigest', '<div>' + esc(String(digest.text)) + '</div><div class="sb-muted" style="margin-top:6px;">' + esc((digest.cache && digest.cache.hit) ? 'cache' : 'fresh') + ts + '</div>');
+      } else {
+        setHTML('acWeeklyDigest', '<div class="sb-muted">Weekly digest is not available for your plan.</div>');
+      }
+    } catch (e) {
+      setHTML('acWeeklyDigest', '<div class="sb-muted">Unable to load weekly digest.</div>');
+    }
+
     // Weekly plan: simple synthesis from available summaries
     var plan = [];
     if (inv && inv.recommendations && inv.recommendations[0]) plan.push('Inventory: ' + (inv.recommendations[0].title || 'Restock high-risk SKUs'));
@@ -525,6 +556,71 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    // AI anomaly explanation modal (Growth+ gated server-side).
+    var modal = document.getElementById('aiExplainModal');
+    var closeBtn = document.getElementById('aiExplainClose');
+    var bodyEl = document.getElementById('aiExplainBody');
+    var titleEl = document.getElementById('aiExplainTitle');
+    var metaEl = document.getElementById('aiExplainMeta');
+
+    function openModal(title, text, meta) {
+      if (titleEl) titleEl.textContent = title || 'AI explanation';
+      if (bodyEl) bodyEl.textContent = text || '—';
+      if (metaEl) metaEl.textContent = meta || '';
+      if (modal) {
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+    }
+
+    function closeModal() {
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (modal) {
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    var btnExplain = document.getElementById('btnAcExplainRevenue');
+    if (btnExplain) {
+      btnExplain.addEventListener('click', function () {
+        var metric = btnExplain.getAttribute('data-ai-metric') || 'revenue';
+        var range = getActiveRange();
+        // Map Action Center ranges → anomaly windows (7 or 30).
+        var period = (range === 90) ? 30 : range;
+        btnExplain.disabled = true;
+        var original = btnExplain.textContent || 'Why did revenue change?';
+        btnExplain.textContent = 'Explaining...';
+
+        var shop = getParam('shop');
+        var url = '/app/api/ai/anomaly_explain.php?shop=' + encodeURIComponent(shop) +
+          '&metric=' + encodeURIComponent(metric) +
+          '&period_days=' + encodeURIComponent(String(period));
+        var doFetch = window.authFetch || fetch;
+        doFetch(url, { headers: { Accept: 'application/json' } })
+          .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+          .then(function (x) {
+            if (!x.r.ok || !x.j || x.j.ok !== true) {
+              throw new Error((x.j && x.j.error) ? x.j.error : 'AI explanation failed');
+            }
+            var cache = (x.j.cache && x.j.cache.hit) ? 'cache hit' : 'fresh';
+            openModal('Why did REVENUE change?', String(x.j.text || ''), 'Source: ' + cache);
+          })
+          .catch(function (e) {
+            openModal('AI explanation unavailable', (e && e.message) ? e.message : 'Request failed.', '');
+          })
+          .finally(function () {
+            btnExplain.disabled = false;
+            btnExplain.textContent = original;
+          });
+      });
+    }
+
     // Tabs
     document.querySelectorAll('#acTabs .tab').forEach(function (tab) {
       tab.addEventListener('click', function () {

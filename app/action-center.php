@@ -51,10 +51,25 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
             <button type="button" class="btn btn-primary btn-sm ac-range" data-range="30">30 days</button>
             <button type="button" class="btn btn-primary btn-sm ac-range" data-range="90">90 days</button>
           </div>
+          <button class="sb-kpi-why" type="button" id="btnAcExplainRevenue" data-ai-metric="revenue">Why did revenue change?</button>
           <a class="btn btn-primary btn-sm" href="<?php echo e($reportsUrl); ?>">Open Reports →</a>
         </div>
       </div>
       <div class="hero-subtitle"><?php echo e($storeName !== '' ? $storeName : $shop); ?> · Plan: <?php echo e(ucfirst($planKey)); ?></div>
+    </div>
+
+    <div class="sb-modal" id="aiExplainModal" aria-hidden="true">
+      <div class="sb-modal__panel" role="dialog" aria-modal="true">
+        <div class="sb-modal__head">
+          <div>
+            <div class="sb-modal__title" id="aiExplainTitle">AI explanation</div>
+            <div class="hero-subtitle" id="aiExplainSubtitle" style="margin-top:2px;">2-sentence explanation based on your store data.</div>
+          </div>
+          <button class="sb-modal__close" type="button" id="aiExplainClose">Close</button>
+        </div>
+        <div class="sb-modal__body" id="aiExplainBody">—</div>
+        <div class="sb-modal__meta" id="aiExplainMeta"></div>
+      </div>
     </div>
 
     <div class="section action-center-focus">
@@ -208,6 +223,9 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
         </div>
         <div class="card">
           <div class="kpi-title">Weekly Plan</div>
+          <div class="hero-subtitle" style="margin-top:6px;">AI-generated weekly digest (cached).</div>
+          <div id="acWeeklyDigest" style="margin-top:10px;"></div>
+          <div style="height:12px;"></div>
           <div id="acWeeklyPlan"></div>
         </div>
       </div>

@@ -941,5 +941,65 @@ async function loadDashboard(opts = {}) {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
+
+  // AI anomaly explanation modal (Growth+ gated server-side).
+  const modal = document.getElementById('aiExplainModal');
+  const closeBtn = document.getElementById('aiExplainClose');
+  const bodyEl = document.getElementById('aiExplainBody');
+  const titleEl = document.getElementById('aiExplainTitle');
+  const metaEl = document.getElementById('aiExplainMeta');
+
+  function openModal(title, text, meta) {
+    if (titleEl) titleEl.textContent = title || 'AI explanation';
+    if (bodyEl) bodyEl.textContent = text || '—';
+    if (metaEl) metaEl.textContent = meta || '';
+    if (modal) {
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function closeModal() {
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  document.querySelectorAll('button.sb-kpi-why').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const metric = btn.getAttribute('data-ai-metric') || 'revenue';
+      const period = Number(btn.getAttribute('data-ai-period') || 7);
+      const shop = getQueryParam('shop');
+      const url = `/app/api/ai/anomaly_explain.php?shop=${encodeURIComponent(shop)}&metric=${encodeURIComponent(metric)}&period_days=${encodeURIComponent(String(period))}`;
+      btn.disabled = true;
+      btn.textContent = 'Explaining...';
+      try {
+        const doFetch = window.authFetch || fetch;
+        const res = await doFetch(url, { headers: { Accept: 'application/json' } });
+        const data = await res.json();
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.error || 'AI explanation failed');
+        }
+        const cache = data?.cache?.hit ? 'cache hit' : 'fresh';
+        openModal(
+          `Why did ${metric.toUpperCase()} change?`,
+          String(data?.text || ''),
+          `Source: ${cache}`
+        );
+      } catch (e) {
+        openModal('AI explanation unavailable', e?.message || 'Request failed.', '');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Why did this change?';
+      }
+    });
+  });
 });
 
