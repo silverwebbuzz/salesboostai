@@ -916,6 +916,7 @@ function registerWebhooks(string $shop, string $token): void
         ['topic' => 'customers/create', 'address' => $base . '/webhooks/handler'],
         ['topic' => 'customers/update', 'address' => $base . '/webhooks/handler'],
         ['topic' => 'customers/delete', 'address' => $base . '/webhooks/handler'],
+        ['topic' => 'app_subscriptions/update', 'address' => $base . '/webhooks/handler'],
 
         // App lifecycle webhook via Admin API.
         ['topic' => 'app/uninstalled', 'address' => $base . '/webhooks/app_uninstalled'],
@@ -983,12 +984,45 @@ function registerWebhooks(string $shop, string $token): void
 function applyWebhookToStoreTables(string $shop, string $topic, string $rawJson): void
 {
     $mysqli = db();
-    $tables = ensurePerStoreTables($shop);
-
     $payload = json_decode($rawJson, true);
     if (!is_array($payload)) {
         return;
     }
+
+    if ($topic === 'app_subscriptions/update') {
+        $sub = isset($payload['app_subscription']) && is_array($payload['app_subscription'])
+            ? $payload['app_subscription']
+            : $payload;
+
+        $gqlId = (string)($sub['admin_graphql_api_id'] ?? '');
+        $statusRaw = strtolower(trim((string)($sub['status'] ?? '')));
+        $name = (string)($sub['name'] ?? '');
+        $currentPeriodEndRaw = (string)($sub['current_period_end'] ?? ($sub['currentPeriodEnd'] ?? ''));
+        $chargeId = sbm_extract_gql_numeric_id($gqlId);
+        $resolvedPlan = sbm_resolve_plan_from_text($name);
+        $currentPeriodEndsAt = $currentPeriodEndRaw !== '' ? date('Y-m-d H:i:s', strtotime($currentPeriodEndRaw)) : null;
+
+        // Keep DB aligned with Shopify subscription lifecycle.
+        if (in_array($statusRaw, ['active', 'accepted'], true)) {
+            setSubscriptionPlan($shop, $resolvedPlan, 'active', $chargeId, $currentPeriodEndsAt);
+            return;
+        }
+        if (in_array($statusRaw, ['pending', 'pending_active'], true)) {
+            setSubscriptionPlan($shop, $resolvedPlan, 'pending', $chargeId, $currentPeriodEndsAt);
+            return;
+        }
+        if (in_array($statusRaw, ['cancelled', 'expired', 'frozen', 'declined'], true)) {
+            setSubscriptionPlan($shop, 'free', 'free', null, null);
+            return;
+        }
+
+        // Unknown status: do not destructively downgrade.
+        $fallbackPlan = getCurrentPlanKey($shop);
+        setSubscriptionPlan($shop, $fallbackPlan, $statusRaw !== '' ? $statusRaw : 'active', $chargeId, $currentPeriodEndsAt);
+        return;
+    }
+
+    $tables = ensurePerStoreTables($shop);
 
     if (str_starts_with($topic, 'orders/')) {
         if (!isset($payload['id'])) {
@@ -1125,6 +1159,38 @@ function applyWebhookToStoreTables(string $shop, string $topic, string $rawJson)
         // handled in webhook handler (stores.status = uninstalled)
         return;
     }
+}
+
+function sbm_extract_gql_numeric_id(string $gqlId): ?string
+{
+    if ($gqlId === '') {
+        return null;
+    }
+    if (preg_match('~/(\d+)$~', $gqlId, $m) !== 1) {
+        return null;
+    }
+    return (string)$m[1];
+}
+
+function sbm_resolve_plan_from_text(string $source): string
+{
+    $s = strtolower(trim($source));
+    if ($s === '') {
+        return 'free';
+    }
+    if (strpos($s, 'premium') !== false) {
+        return 'premium';
+    }
+    if (strpos($s, 'growth') !== false) {
+        return 'growth';
+    }
+    if (strpos($s, 'starter') !== false) {
+        return 'starter';
+    }
+    if (strpos($s, 'free') !== false) {
+        return 'free';
+    }
+    return 'free';
 }
 
 /**
