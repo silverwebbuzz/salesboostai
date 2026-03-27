@@ -35,6 +35,41 @@ function sbm_bootstrap_embedded(array $options = []): array
         exit;
     }
 
+    // Managed Shopify pricing page can redirect directly back to app URL with charge_id.
+    // Finalize billing here so subscription is updated even if /billing/confirm is skipped.
+    $chargeId = isset($_GET['charge_id']) && is_string($_GET['charge_id']) ? trim($_GET['charge_id']) : '';
+    if ($chargeId !== '' && function_exists('sbm_finalize_billing_charge')) {
+        try {
+            $result = sbm_finalize_billing_charge($shop, $chargeId);
+            if (function_exists('sbm_log_write')) {
+                sbm_log_write('billing', '[embedded_bootstrap] finalized_charge', [
+                    'shop' => $shop,
+                    'charge_id' => $chargeId,
+                    'result' => $result,
+                ]);
+            }
+        } catch (Throwable $e) {
+            if (function_exists('sbm_log_write')) {
+                sbm_log_write('billing', '[embedded_bootstrap] finalize_failed', [
+                    'shop' => $shop,
+                    'charge_id' => $chargeId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Clean URL to avoid re-processing on refresh.
+        $clean = $_GET;
+        unset($clean['charge_id'], $clean['hmac'], $clean['signature']);
+        $path = parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
+            $path = '/dashboard';
+        }
+        $cleanQs = http_build_query($clean);
+        header('Location: ' . $path . ($cleanQs !== '' ? ('?' . $cleanQs) : ''));
+        exit;
+    }
+
     if (!$includeEntitlements) {
         return [$shop, $host, $shopRecord];
     }

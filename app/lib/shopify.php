@@ -1283,6 +1283,67 @@ function activateRecurringApplicationCharge(string $shop, string $token, string 
     return is_array($rac) ? $rac : null;
 }
 
+/**
+ * Finalize billing for managed pricing page callbacks that return directly
+ * to the embedded app URL with ?charge_id=... (without hitting billing/confirm).
+ *
+ * @return array{ok:bool,status:string,plan_key:string,charge_id:string}
+ */
+function sbm_finalize_billing_charge(string $shop, string $chargeId): array
+{
+    $shop = sanitizeShopDomain($shop);
+    if ($shop === null || $chargeId === '') {
+        throw new Exception('Invalid billing finalize parameters.');
+    }
+
+    $store = getShopByDomain($shop);
+    $token = is_array($store) ? ($store['access_token'] ?? null) : null;
+    if (!is_string($token) || $token === '') {
+        throw new Exception('Missing access token for shop during billing finalize.');
+    }
+
+    $charge = getRecurringApplicationCharge($shop, $token, $chargeId);
+    if (!is_array($charge)) {
+        throw new Exception('Unable to fetch recurring charge for billing finalize.');
+    }
+
+    $status = (string)($charge['status'] ?? '');
+    $chargeName = strtolower(trim((string)($charge['name'] ?? '')));
+    $sub = getSubscriptionByShop($shop);
+    $fallbackPlanKey = is_array($sub) ? normalizePlanKey((string)($sub['plan_key'] ?? 'free')) : 'free';
+
+    $planKeyFromCharge = 'free';
+    if (strpos($chargeName, 'premium') !== false) {
+        $planKeyFromCharge = 'premium';
+    } elseif (strpos($chargeName, 'growth') !== false) {
+        $planKeyFromCharge = 'growth';
+    } elseif (strpos($chargeName, 'starter') !== false) {
+        $planKeyFromCharge = 'starter';
+    }
+    $resolvedPlanKey = ($planKeyFromCharge !== 'free') ? $planKeyFromCharge : $fallbackPlanKey;
+
+    if ($status === 'accepted') {
+        $activated = activateRecurringApplicationCharge($shop, $token, $chargeId);
+        if (!is_array($activated)) {
+            throw new Exception('Unable to activate recurring charge during billing finalize.');
+        }
+        $billingOn = isset($activated['billing_on']) ? (string)$activated['billing_on'] : null;
+        $currentPeriodEndsAt = $billingOn ? date('Y-m-d H:i:s', strtotime($billingOn)) : null;
+        setSubscriptionPlan($shop, $resolvedPlanKey, 'active', (string)$chargeId, $currentPeriodEndsAt);
+        return ['ok' => true, 'status' => 'active', 'plan_key' => $resolvedPlanKey, 'charge_id' => (string)$chargeId];
+    }
+
+    if ($status === 'active') {
+        $billingOn = isset($charge['billing_on']) ? (string)$charge['billing_on'] : null;
+        $currentPeriodEndsAt = $billingOn ? date('Y-m-d H:i:s', strtotime($billingOn)) : null;
+        setSubscriptionPlan($shop, $resolvedPlanKey, 'active', (string)$chargeId, $currentPeriodEndsAt);
+        return ['ok' => true, 'status' => 'active', 'plan_key' => $resolvedPlanKey, 'charge_id' => (string)$chargeId];
+    }
+
+    setSubscriptionPlan($shop, 'free', 'free', null, null);
+    return ['ok' => true, 'status' => $status !== '' ? $status : 'free', 'plan_key' => 'free', 'charge_id' => (string)$chargeId];
+}
+
 function maybeThrottleFromHeaders(array $headers): void
 {
     $limit = $headers['x-shopify-shop-api-call-limit'] ?? null;
