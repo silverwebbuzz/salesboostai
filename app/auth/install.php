@@ -53,7 +53,14 @@ debugLog('[install] redirect', [
     'installUrl' => $installUrl,
 ]);
 
-// Embedded-safe: break out to top-level for OAuth.
+// Clean flow:
+// - If we have `host` (embedded context), use App Bridge redirect.
+// - Otherwise, do a normal server redirect (matches your previous flow).
+if (!$host) {
+    header('Location: ' . $installUrl);
+    exit;
+}
+
 header('Content-Type: text/html; charset=UTF-8');
 ?>
 <!doctype html>
@@ -62,54 +69,38 @@ header('Content-Type: text/html; charset=UTF-8');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Redirecting…</title>
-    <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 24px; color: #111827; }
-      .btn { display:inline-block; padding:12px 16px; border-radius:10px; background:#111827; color:#fff; text-decoration:none; font-weight:600; }
-      .muted { color:#6b7280; margin-top:10px; font-size:13px; }
-    </style>
     <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
   </head>
   <body>
     <p>Redirecting to Shopify…</p>
-    <p><a id="btnContinue" class="btn" href="<?php echo htmlspecialchars($installUrl, ENT_QUOTES); ?>">Continue</a></p>
-    <p class="muted">If the redirect is blocked by the embedded frame, click Continue.</p>
     <script>
       (function () {
         var url = <?php echo json_encode($installUrl); ?>;
         var host = <?php echo json_encode((string)$host); ?>;
-        // Avoid multiple redirects firing in embedded contexts.
+
         try {
           if (window.__sbInstallRedirected) return;
           window.__sbInstallRedirected = true;
         } catch (e0) {}
 
-        function go() {
-          try {
-            // Prefer App Bridge when embedded (avoids sandbox top-nav restrictions)
-            var AppBridge = window['app-bridge'];
-            if (AppBridge && host && window.top && window.top !== window) {
-              var app = AppBridge.createApp({ apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>, host: host, forceRedirect: true });
-              if (AppBridge.actions && AppBridge.actions.Redirect) {
-                var Redirect = AppBridge.actions.Redirect;
-                Redirect.create(app).dispatch(Redirect.Action.REMOTE, url);
-                return;
-              }
+        try {
+          var AppBridge = window['app-bridge'];
+          if (AppBridge && host) {
+            var app = AppBridge.createApp({
+              apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
+              host: host,
+              forceRedirect: true
+            });
+            if (AppBridge.actions && AppBridge.actions.Redirect) {
+              var Redirect = AppBridge.actions.Redirect;
+              Redirect.create(app).dispatch(Redirect.Action.REMOTE, url);
+              return;
             }
-          } catch (e1) {}
-
-          // Fallback: top-level navigation (may require user activation).
-          try {
-            if (window.top && window.top !== window) window.top.location.href = url;
-            else window.location.href = url;
-          } catch (e2) {
-            window.location.href = url;
           }
-        }
+        } catch (e1) {}
 
-        // Attempt automatic redirect; if blocked, the user can click Continue.
-        go();
-        var btn = document.getElementById('btnContinue');
-        if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); go(); });
+        // If App Bridge isn't available for some reason, fall back.
+        window.location.href = url;
       })();
     </script>
   </body>
