@@ -51,9 +51,41 @@ if ($codeWasUsed) {
     }
 }
 
+// Process-level lock to avoid double code exchange when callback is hit twice.
+$codeLock = rtrim((string)sys_get_temp_dir(), DIRECTORY_SEPARATOR)
+    . DIRECTORY_SEPARATOR
+    . 'sbm_oauth_code_'
+    . hash('sha256', $shop . '|' . $code)
+    . '.lock';
+$lockAcquired = false;
+
 if (!is_string($accessToken) || $accessToken === '') {
-    // Shopify code for access token
-    $accessToken = exchangeCodeForAccessToken($shop, $code);
+    $lockHandle = @fopen($codeLock, 'x');
+    if (is_resource($lockHandle)) {
+        $lockAcquired = true;
+        fclose($lockHandle);
+    } else {
+        // Another request is already processing this code. Wait briefly and reuse token.
+        for ($i = 0; $i < 30; $i++) {
+            usleep(100000); // 100ms, total max wait ~3s
+            $existingStore = getShopByDomain($shop);
+            $existingToken = is_array($existingStore) ? ($existingStore['access_token'] ?? null) : null;
+            if (is_string($existingToken) && $existingToken !== '') {
+                $accessToken = $existingToken;
+                if (function_exists('sbm_log_write')) {
+                    sbm_log_write('auth', 'oauth_duplicate_callback_wait_reused_token', [
+                        'shop' => $shop,
+                    ]);
+                }
+                break;
+            }
+        }
+    }
+
+    if (!is_string($accessToken) || $accessToken === '') {
+        // Shopify code for access token
+        $accessToken = exchangeCodeForAccessToken($shop, $code);
+    }
 }
 if (!is_string($accessToken) || $accessToken === '') {
     http_response_code(400);
@@ -77,6 +109,9 @@ if (!is_string($accessToken) || $accessToken === '') {
     );
 }
 $_SESSION[$codeKey] = 1;
+if ($lockAcquired && is_file($codeLock)) {
+    @unlink($codeLock);
+}
 
 try {
     /*
