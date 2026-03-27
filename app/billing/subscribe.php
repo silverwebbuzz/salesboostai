@@ -66,7 +66,10 @@ if ($plan === 'free') {
     exit;
 }
 
-$returnUrl = rtrim(SHOPIFY_APP_URL, '/') . '/billing/confirm';
+// Prefer app base URL callback and include shop explicitly.
+// This makes the confirm step resilient in embedded admin flows.
+$returnBase = rtrim((string)(defined('BASE_URL') ? BASE_URL : SHOPIFY_APP_URL), '/');
+$returnUrl = $returnBase . '/billing/confirm?shop=' . urlencode($shop);
 
 $charge = createRecurringApplicationCharge($shop, $token, [
     'name' => $plans[$plan]['name'],
