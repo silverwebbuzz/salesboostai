@@ -26,13 +26,33 @@ if (!function_exists('sbm_plan_label')) {
 }
 
 if (!function_exists('sbm_upgrade_url')) {
+    function sbm_shop_admin_handle(string $shop): string
+    {
+        $s = strtolower(trim($shop));
+        if ($s === '') {
+            return '';
+        }
+        $parts = explode('.', $s);
+        return trim((string)($parts[0] ?? ''));
+    }
+
     function sbm_upgrade_url(string $shop = '', string $host = '', string $toPlan = 'starter'): string
     {
         $toPlan = strtolower(trim($toPlan));
         if (!in_array($toPlan, ['starter', 'growth', 'premium'], true)) {
             $toPlan = 'starter';
         }
-        // Embedded-safe billing route inside app.
+        $adminHandle = sbm_shop_admin_handle($shop);
+        $appHandle = defined('SHOPIFY_APP_HANDLE') ? trim((string)SHOPIFY_APP_HANDLE) : '';
+
+        // Preferred: managed pricing page in Shopify admin (store-aware).
+        if ($adminHandle !== '' && $appHandle !== '') {
+            return 'https://admin.shopify.com/store/' . rawurlencode($adminHandle)
+                . '/charges/' . rawurlencode($appHandle)
+                . '/pricing_plans';
+        }
+
+        // Fallback: app billing subscribe endpoint.
         $url = rtrim((string)(defined('BASE_URL') ? BASE_URL : ''), '/') . '/billing/subscribe?plan=' . urlencode($toPlan);
         if ($shop !== '') $url .= '&shop=' . urlencode($shop);
         if ($host !== '') $url .= '&host=' . urlencode($host);

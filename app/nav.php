@@ -128,21 +128,27 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
     if (agentsLink) agentsLink.href = "ai-agents.php" + query;
     if (upgradeLink && !upgradeLink.getAttribute('href')) upgradeLink.href = "billing/subscribe.php" + query + "&plan=starter";
-    if (upgradeLink) {
-      upgradeLink.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        window.sbmOpenRemote(upgradeLink.getAttribute('href') || '');
-      });
-    }
 
-    // Ensure all in-page upgrade/change-plan links use embedded-safe redirect.
-    var lockedCtas = document.querySelectorAll('.feature-lock-cta');
-    lockedCtas.forEach(function (a) {
-      a.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        window.sbmOpenRemote(a.getAttribute('href') || '');
-      });
-    });
+    // Ensure all upgrade/change-plan links use embedded-safe redirect.
+    // Works for nav CTA, lock overlays, reports page buttons, AI agents page buttons, etc.
+    document.addEventListener('click', function (ev) {
+      var target = ev.target;
+      if (!target || typeof target.closest !== 'function') return;
+      var anchor = target.closest('a[href]');
+      if (!anchor) return;
+      var href = String(anchor.getAttribute('href') || '');
+      if (!href) return;
+      var isPlanLink =
+        anchor.id === 'nav-upgrade-plan' ||
+        anchor.classList.contains('feature-lock-cta') ||
+        href.indexOf('/billing/subscribe') !== -1 ||
+        href.indexOf('billing/subscribe') !== -1 ||
+        href.indexOf('/pricing_plans') !== -1 ||
+        href.indexOf('pricing_plans') !== -1;
+      if (!isPlanLink) return;
+      ev.preventDefault();
+      window.sbmOpenRemote(href);
+    }, false);
 
     // Active state
     var path = window.location.pathname.toLowerCase();
