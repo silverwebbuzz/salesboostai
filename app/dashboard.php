@@ -427,10 +427,16 @@ $goalsUpgradeUrl = sbm_upgrade_url($shop, $host, $goalsRequiredPlan);
       var host = params.get('host');
 
       if (!host) {
-        // If host is missing, bounce to auth/install to get a fresh embedded context.
+        // Do not send user to OAuth from an embedded frame.
+        // Bounce to Shopify app URL top-level so host can be restored safely.
         var shop = params.get('shop') || <?php echo json_encode($shop); ?>;
         if (shop) {
-          window.location.href = <?php echo json_encode(BASE_URL . '/auth/install?shop='); ?> + encodeURIComponent(shop);
+          var adminUrl = 'https://' + shop + '/admin/apps/' + <?php echo json_encode(SHOPIFY_APP_HANDLE); ?> + '?shop=' + encodeURIComponent(shop);
+          if (window.top && window.top !== window) {
+            window.top.location.href = adminUrl;
+          } else {
+            window.location.href = adminUrl;
+          }
         }
         return;
       }

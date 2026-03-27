@@ -73,7 +73,10 @@ if (!isset($plans[$plan])) {
 if ($plan === 'free') {
     // If you want to downgrade to free, you typically cancel the active charge (optional).
     setSubscriptionPlan($shop, 'free', 'free', null, null);
-    $redirectUrl = "https://{$shop}/admin/apps/" . SHOPIFY_APP_HANDLE;
+    $storedHost = is_array($store) ? (string)($store['host'] ?? '') : '';
+    $redirectUrl = "https://{$shop}/admin/apps/" . SHOPIFY_APP_HANDLE
+        . '?shop=' . urlencode((string)$shop)
+        . ($storedHost !== '' ? ('&host=' . urlencode($storedHost)) : '');
     sbm_billing_subscribe_debug('downgrade_to_free', ['shop' => $shop]);
     header('Location: ' . $redirectUrl);
     exit;

@@ -190,8 +190,11 @@ sbm_billing_debug('db_after_write', [
     'subscription' => $subAfter,
 ]);
 
-// Redirect back into the embedded app.
-$redirectUrl = "https://{$shop}/admin/apps/" . SHOPIFY_APP_HANDLE;
+// Redirect back into the embedded app with shop/host for stable App Bridge init.
+$storeHost = is_array($store) ? (string)($store['host'] ?? '') : '';
+$redirectUrl = "https://{$shop}/admin/apps/" . SHOPIFY_APP_HANDLE
+    . '?shop=' . urlencode((string)$shop)
+    . ($storeHost !== '' ? ('&host=' . urlencode($storeHost)) : '');
 sbm_billing_debug('redirect_back_to_app', [
     'shop' => $shop,
     'redirect_url' => $redirectUrl,
