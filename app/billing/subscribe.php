@@ -9,19 +9,14 @@
  */
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../lib/logger.php';
 
 sendEmbeddedAppHeaders();
 
 if (!function_exists('sbm_billing_subscribe_debug')) {
     function sbm_billing_subscribe_debug(string $event, array $ctx = []): void
     {
-        if (function_exists('debugLog')) {
-            debugLog('[billing/subscribe] ' . $event, $ctx);
-        }
-        error_log('[salesboost-billing-subscribe] ' . json_encode([
-            'event' => $event,
-            'ctx' => $ctx,
-        ]));
+        sbm_log_write('billing', '[subscribe] ' . $event, $ctx);
     }
 }
 

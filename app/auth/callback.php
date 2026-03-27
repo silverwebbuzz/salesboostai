@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../lib/logger.php';
 
 sendEmbeddedAppHeaders();
 startEmbeddedSession();
@@ -69,7 +70,7 @@ try {
     // Register operational webhooks during callback (as requested).
     registerWebhooks($shop, $accessToken);
 } catch (Throwable $e) {
-    error_log('[shopify_callback] ' . $e->getMessage());
+    sbm_log_write('app', '[shopify_callback] setup_failed', ['error' => $e->getMessage()]);
     http_response_code(500);
     echo $debug ? ('ERROR: ' . $e->getMessage()) : 'Server setup failed.';
     exit;

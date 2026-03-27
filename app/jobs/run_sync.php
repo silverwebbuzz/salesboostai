@@ -15,6 +15,7 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/metrics.php';
+require_once __DIR__ . '/../lib/logger.php';
 
 // Allow CLI always. Browser allowed only with ?key= that matches CRON_KEY.
 $isCli = (PHP_SAPI === 'cli');
@@ -45,7 +46,7 @@ try {
     header('Content-Type: application/json');
     echo json_encode(['ok' => true, 'result' => $result], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
-    error_log('[run_sync] ' . $e->getMessage());
+    sbm_log_write('app', '[run_sync] exception', ['error' => $e->getMessage()]);
     http_response_code(500);
     header('Content-Type: application/json');
     echo json_encode(['ok' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);

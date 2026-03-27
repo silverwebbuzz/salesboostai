@@ -3,24 +3,16 @@
 /**
  * Shared Shopify webhook utilities.
  */
+require_once __DIR__ . '/logger.php';
 
 if (!function_exists('webhookLog')) {
     function webhookLog($message): void
     {
-        $dir = __DIR__ . '/../logs';
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0775, true);
-        }
-
-        $line = '[' . date('Y-m-d H:i:s') . '] ';
         if (is_array($message)) {
-            $line .= json_encode($message, JSON_UNESCAPED_UNICODE);
-        } else {
-            $line .= (string)$message;
+            sbm_log_write('webhooks', 'webhook', $message);
+            return;
         }
-        $line .= PHP_EOL;
-
-        @file_put_contents($dir . '/webhooks.log', $line, FILE_APPEND | LOCK_EX);
+        sbm_log_write('webhooks', (string)$message);
     }
 }
 
