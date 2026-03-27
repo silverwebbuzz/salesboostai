@@ -25,6 +25,17 @@ function lastNDaysLabels(int $days, string $tz = 'UTC'): array {
     return $out;
 }
 
+/** Check table existence safely before querying it. */
+function dashboardTableExists(mysqli $mysqli, string $table): bool {
+    try {
+        $safe = $mysqli->real_escape_string($table);
+        $res = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+        return (bool)($res && $res->num_rows > 0);
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
 /**
  * Minimal dashboard JSON when sync is not finished — avoids heavy per-store queries and stale cache.
  *
@@ -171,6 +182,27 @@ try {
 $tz = (string)($store['iana_timezone'] ?? '');
 if ($tz === '') {
     $tz = 'UTC';
+}
+
+// If per-store tables are not ready yet, keep first-load safe with sync shell.
+// This prevents non-JSON fatal responses when install/sync is incomplete.
+$requiredTablesReady =
+    dashboardTableExists($mysqli, $ordersTable) &&
+    dashboardTableExists($mysqli, $customersTable) &&
+    dashboardTableExists($mysqli, $inventoryTable) &&
+    dashboardTableExists($mysqli, $analyticsTable);
+if (!$requiredTablesReady) {
+    $syncStatus['state'] = 'needs_sync';
+    $shell = dashboardShellPayload($tz, $syncStatus);
+    $shell['locks'] = $locks;
+    $shell['entitlements'] = [
+        'plan_key' => (string)($entitlements['plan_key'] ?? 'free'),
+        'plan_label' => (string)($entitlements['plan_label'] ?? 'Free'),
+        'limits' => $planLimits,
+    ];
+    $shell['meta']['note'] = 'Required per-store tables are not ready yet.';
+    echo json_encode($shell, JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 // First open / sync not complete: skip cache + skip heavy queries — UI shows sync gate only.
