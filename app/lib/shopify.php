@@ -22,20 +22,6 @@ function sanitizeShopDomain(?string $shop): ?string
 }
 
 /**
- * Build Shopify embedded host param from shop domain.
- * host = base64url("{shop}/admin")
- */
-function sbm_embedded_host_from_shop(string $shop): string
-{
-    $shop = (string)(sanitizeShopDomain($shop) ?? '');
-    if ($shop === '') {
-        return '';
-    }
-    $raw = $shop . '/admin';
-    return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
-}
-
-/**
  * Build canonical admin app URL with shop + host params.
  */
 function sbm_embedded_app_admin_url(string $shop, string $host = ''): string
@@ -44,7 +30,7 @@ function sbm_embedded_app_admin_url(string $shop, string $host = ''): string
     if ($shop === '') {
         return '';
     }
-    $resolvedHost = trim($host) !== '' ? trim($host) : sbm_embedded_host_from_shop($shop);
+    $resolvedHost = trim($host) !== '' ? trim($host) : '';
     $url = "https://{$shop}/admin/apps/" . SHOPIFY_APP_HANDLE . '?shop=' . urlencode($shop);
     if ($resolvedHost !== '') {
         $url .= '&host=' . urlencode($resolvedHost);

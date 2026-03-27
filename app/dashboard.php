@@ -28,9 +28,6 @@ $hostForBootstrap = (string)$host;
 if ($hostForBootstrap === '') {
   $hostForBootstrap = (string)($shopRecord['host'] ?? '');
 }
-if ($hostForBootstrap === '' && function_exists('sbm_embedded_host_from_shop')) {
-  $hostForBootstrap = sbm_embedded_host_from_shop((string)$shop);
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -434,15 +431,11 @@ if ($hostForBootstrap === '' && function_exists('sbm_embedded_host_from_shop')) 
       var host = params.get('host');
 
       if (!host) {
-        // Do not send user to OAuth from an embedded frame.
-        // Bounce to Shopify app URL top-level so host can be restored safely.
+        // Missing host means embedded context is incomplete.
+        // Re-run install entry top-level to restore valid embedded params.
         var shop = params.get('shop') || <?php echo json_encode($shop); ?>;
-        var hostFallback = <?php echo json_encode($hostForBootstrap); ?>;
         if (shop) {
-          var adminUrl = 'https://' + shop + '/admin/apps/' + <?php echo json_encode(SHOPIFY_APP_HANDLE); ?> + '?shop=' + encodeURIComponent(shop);
-          if (hostFallback) {
-            adminUrl += '&host=' + encodeURIComponent(hostFallback);
-          }
+          var adminUrl = <?php echo json_encode(BASE_URL . '/auth/install?shop='); ?> + encodeURIComponent(shop);
           if (window.top && window.top !== window) {
             window.top.location.href = adminUrl;
           } else {

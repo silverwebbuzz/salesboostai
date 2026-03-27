@@ -12,7 +12,7 @@ startEmbeddedSession();
 $debug = SHOPIFY_DEBUG || (($_GET['debug'] ?? '') === '1');
 
 $params = $_GET;
-if (!verifyHmac($params, SHOPIFY_API_SECRET)) die('Invalid HMAC');
+if (!verifyHmac($params)) die('Invalid HMAC');
 
 // Validate nonce/state
 /*$sessionNonce = $_SESSION['nonce'] ?? null;
