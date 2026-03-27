@@ -50,6 +50,7 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
           forceRedirect: true
         });
       }
+      window.__sbmApp = app;
 
       window.getToken = async function getToken() {
         if (!app) return '';
@@ -86,6 +87,28 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
         opts.headers = headers;
         return fetch(url, opts);
       };
+
+      // Embedded-safe redirect helper for plan upgrades and external flows.
+      window.sbmOpenRemote = function sbmOpenRemote(url) {
+        try {
+          var target = String(url || '');
+          if (!target) return;
+          var AppBridgeNow = window['app-bridge'];
+          var appNow = window.__sbmApp || null;
+          if (AppBridgeNow && appNow && AppBridgeNow.actions && AppBridgeNow.actions.Redirect) {
+            var Redirect = AppBridgeNow.actions.Redirect;
+            Redirect.create(appNow).dispatch(Redirect.Action.REMOTE, target);
+            return;
+          }
+          if (window.top && window.top !== window) {
+            window.top.location.href = target;
+            return;
+          }
+          window.location.href = target;
+        } catch (e) {
+          window.location.href = String(url || '');
+        }
+      };
     }
 
     var params = new URLSearchParams(window.location.search);
@@ -105,6 +128,21 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
     if (agentsLink) agentsLink.href = "ai-agents.php" + query;
     if (upgradeLink && !upgradeLink.getAttribute('href')) upgradeLink.href = "billing/subscribe.php" + query + "&plan=starter";
+    if (upgradeLink) {
+      upgradeLink.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        window.sbmOpenRemote(upgradeLink.getAttribute('href') || '');
+      });
+    }
+
+    // Ensure all in-page upgrade/change-plan links use embedded-safe redirect.
+    var lockedCtas = document.querySelectorAll('.feature-lock-cta');
+    lockedCtas.forEach(function (a) {
+      a.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        window.sbmOpenRemote(a.getAttribute('href') || '');
+      });
+    });
 
     // Active state
     var path = window.location.pathname.toLowerCase();
