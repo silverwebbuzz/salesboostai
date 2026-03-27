@@ -12,12 +12,62 @@ function sbm_bootstrap_embedded(array $options = []): array
 
     // Standard embedded header so Shopify App Bridge works in all surfaces.
     sendEmbeddedAppHeaders();
+    require_once __DIR__ . '/logger.php';
     require_once __DIR__ . '/entitlements.php';
 
     $shop = sanitizeShopDomain($_GET['shop'] ?? null);
     $host = $_GET['host'] ?? '';
+    $chargeId = isset($_GET['charge_id']) && is_string($_GET['charge_id']) ? trim($_GET['charge_id']) : '';
+
+    // If Shopify returns with only charge_id, try best-effort shop recovery.
+    if ($shop === null && $chargeId !== '') {
+        try {
+            $stmt = db()->prepare("SELECT shop FROM store_subscription WHERE shopify_charge_id = ? ORDER BY id DESC LIMIT 1");
+            if ($stmt) {
+                $stmt->bind_param('s', $chargeId);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                $row = $res ? $res->fetch_assoc() : null;
+                $stmt->close();
+                $shop = sanitizeShopDomain(is_array($row) ? ($row['shop'] ?? null) : null);
+            }
+        } catch (Throwable $e) {
+            sbm_log_write('billing', '[embedded_bootstrap] recover_shop_by_charge_failed', [
+                'charge_id' => $chargeId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+        if ($shop === null) {
+            try {
+                // Fallback for single-store environments.
+                $resOne = db()->query("SELECT shop FROM stores WHERE status = 'installed' ORDER BY updated_at DESC LIMIT 2");
+                if ($resOne) {
+                    $rows = [];
+                    while ($r = $resOne->fetch_assoc()) {
+                        $rows[] = $r;
+                    }
+                    if (count($rows) === 1) {
+                        $shop = sanitizeShopDomain((string)($rows[0]['shop'] ?? ''));
+                        sbm_log_write('billing', '[embedded_bootstrap] recovered_shop_single_store', [
+                            'charge_id' => $chargeId,
+                            'shop' => $shop,
+                        ]);
+                    }
+                }
+            } catch (Throwable $e) {
+                sbm_log_write('billing', '[embedded_bootstrap] recover_shop_single_store_failed', [
+                    'charge_id' => $chargeId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
 
     if ($shop === null) {
+        sbm_log_write('billing', '[embedded_bootstrap] missing_shop', [
+            'query' => $_GET,
+            'charge_id' => $chargeId,
+        ]);
         http_response_code(400);
         echo $shopInvalidMessage;
         exit;
@@ -37,25 +87,25 @@ function sbm_bootstrap_embedded(array $options = []): array
 
     // Managed Shopify pricing page can redirect directly back to app URL with charge_id.
     // Finalize billing here so subscription is updated even if /billing/confirm is skipped.
-    $chargeId = isset($_GET['charge_id']) && is_string($_GET['charge_id']) ? trim($_GET['charge_id']) : '';
     if ($chargeId !== '' && function_exists('sbm_finalize_billing_charge')) {
+        sbm_log_write('billing', '[embedded_bootstrap] finalize_attempt', [
+            'shop' => $shop,
+            'charge_id' => $chargeId,
+            'host_present' => $host !== '',
+        ]);
         try {
             $result = sbm_finalize_billing_charge($shop, $chargeId);
-            if (function_exists('sbm_log_write')) {
-                sbm_log_write('billing', '[embedded_bootstrap] finalized_charge', [
-                    'shop' => $shop,
-                    'charge_id' => $chargeId,
-                    'result' => $result,
-                ]);
-            }
+            sbm_log_write('billing', '[embedded_bootstrap] finalized_charge', [
+                'shop' => $shop,
+                'charge_id' => $chargeId,
+                'result' => $result,
+            ]);
         } catch (Throwable $e) {
-            if (function_exists('sbm_log_write')) {
-                sbm_log_write('billing', '[embedded_bootstrap] finalize_failed', [
-                    'shop' => $shop,
-                    'charge_id' => $chargeId,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            sbm_log_write('billing', '[embedded_bootstrap] finalize_failed', [
+                'shop' => $shop,
+                'charge_id' => $chargeId,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         // Clean URL to avoid re-processing on refresh.

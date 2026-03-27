@@ -34,6 +34,9 @@ if (!function_exists('sbm_log_write')) {
 
         $file = rtrim(sbm_log_dir(), '/') . '/' . $safeChannel . '.log';
         @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
+        // Unified master log file for quick server-side inspection.
+        $master = rtrim(sbm_log_dir(), '/') . '/shopify.log';
+        @file_put_contents($master, '[' . $safeChannel . '] ' . $line, FILE_APPEND | LOCK_EX);
     }
 }
 
