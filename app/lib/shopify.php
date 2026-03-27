@@ -110,13 +110,17 @@ function exchangeCodeForAccessToken(string $shop, string $code): ?string
     curl_close($ch);
 
     if ($errno || !$response || $httpCode < 200 || $httpCode >= 300) {
-        debugLog('[oauth] access_token exchange failed', [
+        $ctx = [
             'shop' => $shop,
             'curl_errno' => $errno,
             'curl_error' => $err,
             'http_code' => $httpCode,
             'response' => is_string($response) ? $response : null,
-        ]);
+        ];
+        debugLog('[oauth] access_token exchange failed', $ctx);
+        if (function_exists('sbm_log_write')) {
+            sbm_log_write('auth', 'oauth_access_token_exchange_failed', $ctx);
+        }
         return null;
     }
 

@@ -36,7 +36,13 @@ if (!is_string($host) || $host === '') {
 $accessToken = exchangeCodeForAccessToken($shop, $code);
 if (!is_string($accessToken) || $accessToken === '') {
     http_response_code(400);
-    die('Failed to obtain access token.');
+    if (function_exists('sbm_log_write')) {
+        sbm_log_write('auth', 'oauth_failed_to_obtain_access_token', [
+            'shop' => $shop,
+            'host_present' => is_string($host) && $host !== '',
+        ]);
+    }
+    die('Failed to obtain access token. Check SHOPIFY_API_KEY/SHOPIFY_API_SECRET and redirect URL in Partner Dashboard.');
 }
 
 try {
