@@ -52,6 +52,30 @@ debugLog('[install] redirect', [
     'installUrl' => $installUrl,
 ]);
 
-header('Location: ' . $installUrl);
+// Embedded-safe: break out to top-level for OAuth.
+header('Content-Type: text/html; charset=UTF-8');
+?>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <p>Redirecting to Shopify…</p>
+    <script>
+      (function () {
+        var url = <?php echo json_encode($installUrl); ?>;
+        if (window.top && window.top !== window) {
+          window.top.location.href = url;
+        } else {
+          window.location.href = url;
+        }
+      })();
+    </script>
+  </body>
+</html>
+<?php
 exit;
 
