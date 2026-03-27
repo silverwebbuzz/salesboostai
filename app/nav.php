@@ -5,20 +5,9 @@ $hostForPlan = isset($_GET['host']) && is_string($_GET['host']) ? $_GET['host'] 
 $planKey = $shopForPlan ? getCurrentPlanKey($shopForPlan) : 'free';
 $planLabel = function_exists('sbm_plan_label') ? sbm_plan_label($planKey) : ucfirst($planKey);
 $isPremiumPlan = ($planKey === 'premium');
-$freePlanUrl = BASE_URL . '/billing/subscribe?plan=free'
-  . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '')
-  . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : '');
-$planUrls = [
-  'starter' => function_exists('sbm_upgrade_url')
-    ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, 'starter')
-    : (BASE_URL . '/billing/subscribe?plan=starter' . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : '')),
-  'growth' => function_exists('sbm_upgrade_url')
-    ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, 'growth')
-    : (BASE_URL . '/billing/subscribe?plan=growth' . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : '')),
-  'premium' => function_exists('sbm_upgrade_url')
-    ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, 'premium')
-    : (BASE_URL . '/billing/subscribe?plan=premium' . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : '')),
-];
+$managePlansUrl = function_exists('sbm_upgrade_url')
+  ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, 'starter')
+  : (BASE_URL . '/billing/subscribe?plan=starter' . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : ''));
 ?>
 
 <nav class="top-nav" aria-label="Primary">
@@ -62,7 +51,7 @@ $planUrls = [
             <?php if ($planKey === 'free'): ?>
               <span class="btn btn-ghost btn-sm is-current">Current plan</span>
             <?php else: ?>
-              <a class="btn btn-primary btn-sm plan-change-cta" href="<?php echo htmlspecialchars($freePlanUrl, ENT_QUOTES, 'UTF-8'); ?>">
+              <a class="btn btn-primary btn-sm plan-change-cta" href="<?php echo htmlspecialchars($managePlansUrl, ENT_QUOTES, 'UTF-8'); ?>">
                 Change to Free
               </a>
             <?php endif; ?>
@@ -78,7 +67,7 @@ $planUrls = [
             <li>Inventory forecasting basics</li>
           </ul>
           <div class="sb-plan-action">
-            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $planKey === 'starter' ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['starter'], ENT_QUOTES, 'UTF-8'); ?>">
+            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $planKey === 'starter' ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($managePlansUrl, ENT_QUOTES, 'UTF-8'); ?>">
               <?php echo $planKey === 'starter' ? 'Current plan' : 'Change to Starter'; ?>
             </a>
           </div>
@@ -93,7 +82,7 @@ $planUrls = [
             <li>Higher limits across dashboards and reports</li>
           </ul>
           <div class="sb-plan-action">
-            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $planKey === 'growth' ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['growth'], ENT_QUOTES, 'UTF-8'); ?>">
+            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $planKey === 'growth' ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($managePlansUrl, ENT_QUOTES, 'UTF-8'); ?>">
               <?php echo $planKey === 'growth' ? 'Current plan' : 'Change to Growth'; ?>
             </a>
           </div>
@@ -108,7 +97,7 @@ $planUrls = [
             <li>Highest usage limits and plan capacity</li>
           </ul>
           <div class="sb-plan-action">
-            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $isPremiumPlan ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['premium'], ENT_QUOTES, 'UTF-8'); ?>">
+            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $isPremiumPlan ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($managePlansUrl, ENT_QUOTES, 'UTF-8'); ?>">
               <?php echo $isPremiumPlan ? 'Current plan' : 'Change to Premium'; ?>
             </a>
           </div>
