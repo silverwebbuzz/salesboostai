@@ -935,6 +935,20 @@ body {
   white-space: nowrap;
 }
 
+.top-nav__plan-badge--clickable {
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.top-nav__plan-badge--clickable:hover,
+.top-nav__plan-badge--clickable:focus-visible {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+  color: #1e40af;
+  outline: none;
+}
+
 .top-nav__upgrade {
   display: inline-flex;
   align-items: center;
@@ -1020,6 +1034,10 @@ body {
   .top-nav__plan-badge {
     font-size: 11px;
     padding: 6px 8px;
+  }
+
+  .top-nav__plan-badge--clickable {
+    min-height: 30px;
   }
 
   .top-nav__upgrade {
@@ -1759,6 +1777,53 @@ body {
   margin-top: 10px;
   color: #6b7280;
   font-size: 12px;
+}
+
+.sb-plan-modal {
+  width: min(860px, 100%);
+}
+
+.sb-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sb-plan-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sb-plan-card.is-current {
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+.sb-plan-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sb-plan-copy {
+  font-size: 13px;
+  color: #4b5563;
+  min-height: 36px;
+}
+
+.sb-plan-action {
+  margin-top: auto;
+}
+
+@media (max-width: 760px) {
+  .sb-plan-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .sb-kpi-why {

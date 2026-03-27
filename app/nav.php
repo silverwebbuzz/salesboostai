@@ -4,15 +4,18 @@ $shopForPlan = sanitizeShopDomain($rawShopForPlan);
 $hostForPlan = isset($_GET['host']) && is_string($_GET['host']) ? $_GET['host'] : '';
 $planKey = $shopForPlan ? getCurrentPlanKey($shopForPlan) : 'free';
 $planLabel = function_exists('sbm_plan_label') ? sbm_plan_label($planKey) : ucfirst($planKey);
-$nextPlan = 'starter';
-if ($planKey === 'starter') $nextPlan = 'growth';
-if ($planKey === 'growth') $nextPlan = 'premium';
 $isPremiumPlan = ($planKey === 'premium');
-$targetPlanForManage = $isPremiumPlan ? 'premium' : $nextPlan;
-$nextPlanLabel = function_exists('sbm_plan_label') ? sbm_plan_label($nextPlan) : ucfirst($nextPlan);
-$upgradeUrl = function_exists('sbm_upgrade_url')
-  ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, $targetPlanForManage)
-  : (BASE_URL . '/billing/subscribe?plan=' . urlencode($targetPlanForManage) . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : ''));
+$planUrls = [
+  'starter' => function_exists('sbm_upgrade_url')
+    ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, 'starter')
+    : (BASE_URL . '/billing/subscribe?plan=starter' . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : '')),
+  'growth' => function_exists('sbm_upgrade_url')
+    ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, 'growth')
+    : (BASE_URL . '/billing/subscribe?plan=growth' . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : '')),
+  'premium' => function_exists('sbm_upgrade_url')
+    ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, 'premium')
+    : (BASE_URL . '/billing/subscribe?plan=premium' . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '') . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : '')),
+];
 ?>
 
 <nav class="top-nav" aria-label="Primary">
@@ -25,13 +28,64 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
   </div>
 
   <div class="top-nav__right">
-    <span class="top-nav__plan-badge">Plan: <?php echo htmlspecialchars($planLabel, ENT_QUOTES, 'UTF-8'); ?></span>
-    <a id="nav-upgrade-plan" class="top-nav__upgrade" href="<?php echo htmlspecialchars($upgradeUrl, ENT_QUOTES, 'UTF-8'); ?>">
-      <?php echo $isPremiumPlan ? 'Change Plan' : ('Upgrade to ' . htmlspecialchars($nextPlanLabel, ENT_QUOTES, 'UTF-8')); ?>
-    </a>
+    <button id="nav-plan-trigger" class="top-nav__plan-badge top-nav__plan-badge--clickable" type="button">
+      Plan: <?php echo htmlspecialchars($planLabel, ENT_QUOTES, 'UTF-8'); ?>
+    </button>
     <a id="nav-ai-agents" class="top-nav__cta">✨ AI Agents</a>
   </div>
 </nav>
+
+<div class="sb-modal" id="planCompareModal" aria-hidden="true">
+  <div class="sb-modal__panel sb-plan-modal" role="dialog" aria-modal="true" aria-labelledby="planCompareTitle">
+    <div class="sb-modal__head">
+      <div>
+        <div class="sb-modal__title" id="planCompareTitle">Choose your SalesBoost AI plan</div>
+        <div class="sb-modal__meta">Compare plans and change anytime.</div>
+      </div>
+      <button class="sb-modal__close" type="button" id="planCompareClose">Close</button>
+    </div>
+    <div class="sb-modal__body">
+      <div class="sb-plan-grid">
+        <div class="sb-plan-card <?php echo $planKey === 'free' ? 'is-current' : ''; ?>">
+          <div class="sb-plan-name">Free</div>
+          <div class="sb-plan-copy">Dashboard basics and limited analytics preview.</div>
+          <div class="sb-plan-action">
+            <span class="btn btn-ghost btn-sm <?php echo $planKey === 'free' ? 'is-current' : 'feature-disabled'; ?>">
+              <?php echo $planKey === 'free' ? 'Current plan' : 'Contact support'; ?>
+            </span>
+          </div>
+        </div>
+        <div class="sb-plan-card <?php echo $planKey === 'starter' ? 'is-current' : ''; ?>">
+          <div class="sb-plan-name">Starter</div>
+          <div class="sb-plan-copy">Unlock core insights, inventory and action center.</div>
+          <div class="sb-plan-action">
+            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $planKey === 'starter' ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['starter'], ENT_QUOTES, 'UTF-8'); ?>">
+              <?php echo $planKey === 'starter' ? 'Current plan' : 'Change to Starter'; ?>
+            </a>
+          </div>
+        </div>
+        <div class="sb-plan-card <?php echo $planKey === 'growth' ? 'is-current' : ''; ?>">
+          <div class="sb-plan-name">Growth</div>
+          <div class="sb-plan-copy">Advanced analytics depth and AI insights expansion.</div>
+          <div class="sb-plan-action">
+            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $planKey === 'growth' ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['growth'], ENT_QUOTES, 'UTF-8'); ?>">
+              <?php echo $planKey === 'growth' ? 'Current plan' : 'Change to Growth'; ?>
+            </a>
+          </div>
+        </div>
+        <div class="sb-plan-card <?php echo $isPremiumPlan ? 'is-current' : ''; ?>">
+          <div class="sb-plan-name">Premium</div>
+          <div class="sb-plan-copy">All features, max limits, and full AI capability.</div>
+          <div class="sb-plan-action">
+            <a class="btn btn-primary btn-sm plan-change-cta <?php echo $isPremiumPlan ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['premium'], ENT_QUOTES, 'UTF-8'); ?>">
+              <?php echo $isPremiumPlan ? 'Current plan' : 'Change to Premium'; ?>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
 <script src="https://unpkg.com/@shopify/app-bridge-utils@3"></script>
@@ -123,13 +177,34 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
     var analyticsLink = document.getElementById("nav-analytics");
     var actionCenterLink = document.getElementById("nav-action-center");
     var agentsLink = document.getElementById("nav-ai-agents");
-    var upgradeLink = document.getElementById("nav-upgrade-plan");
+    var planTrigger = document.getElementById("nav-plan-trigger");
+    var planModal = document.getElementById("planCompareModal");
+    var planModalClose = document.getElementById("planCompareClose");
 
     if (dashboardLink) dashboardLink.href = "dashboard.php" + query;
     if (actionCenterLink) actionCenterLink.href = "action-center.php" + query;
     if (analyticsLink) analyticsLink.href = "analytics.php" + query;
     if (agentsLink) agentsLink.href = "ai-agents.php" + query;
-    if (upgradeLink && !upgradeLink.getAttribute('href')) upgradeLink.href = "billing/subscribe.php" + query + "&plan=starter";
+    if (planTrigger && planModal) {
+      var openPlanModal = function () {
+        planModal.classList.add('is-open');
+        planModal.setAttribute('aria-hidden', 'false');
+      };
+      var closePlanModal = function () {
+        planModal.classList.remove('is-open');
+        planModal.setAttribute('aria-hidden', 'true');
+      };
+      planTrigger.addEventListener('click', openPlanModal);
+      if (planModalClose) {
+        planModalClose.addEventListener('click', closePlanModal);
+      }
+      planModal.addEventListener('click', function (ev) {
+        if (ev.target === planModal) closePlanModal();
+      });
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && planModal.classList.contains('is-open')) closePlanModal();
+      });
+    }
 
     // Ensure all upgrade/change-plan links use embedded-safe redirect.
     // Works for nav CTA, lock overlays, reports page buttons, AI agents page buttons, etc.
@@ -141,7 +216,7 @@ $upgradeUrl = function_exists('sbm_upgrade_url')
       var href = String(anchor.getAttribute('href') || '');
       if (!href) return;
       var isPlanLink =
-        anchor.id === 'nav-upgrade-plan' ||
+        anchor.classList.contains('plan-change-cta') ||
         anchor.classList.contains('feature-lock-cta') ||
         href.indexOf('/billing/subscribe') !== -1 ||
         href.indexOf('billing/subscribe') !== -1 ||
