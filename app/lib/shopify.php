@@ -117,6 +117,7 @@ function exchangeCodeForAccessToken(string $shop, string $code): ?string
             'http_code' => $httpCode,
             'response' => is_string($response) ? $response : null,
         ];
+        $GLOBALS['sbm_oauth_last_error'] = $ctx;
         debugLog('[oauth] access_token exchange failed', $ctx);
         if (function_exists('sbm_log_write')) {
             sbm_log_write('auth', 'oauth_access_token_exchange_failed', $ctx);

@@ -22,7 +22,7 @@ if (!is_string($sessionNonce) || $sessionNonce === '' || !is_string($state) || $
     die('Invalid state');
 }*/
 
-$shop = $_GET['shop'] ?? null;
+$shop = sanitizeShopDomain($_GET['shop'] ?? null);
 $code = $_GET['code'] ?? null;
 $host = $_GET['host'] ?? null;
 if (!is_string($shop) || $shop === '' || !is_string($code) || $code === '') {
@@ -32,18 +32,51 @@ if (!is_string($shop) || $shop === '' || !is_string($code) || $code === '') {
 if (!is_string($host) || $host === '') {
     $host = null;
 }
-// Shopify code for access token
-$accessToken = exchangeCodeForAccessToken($shop, $code);
+
+// OAuth codes are single-use. Embedded flows can occasionally hit callback twice.
+// Cache code usage in session and reuse stored token on duplicate callback requests.
+$codeKey = 'oauth_code_used_' . hash('sha256', $shop . '|' . $code);
+$codeWasUsed = !empty($_SESSION[$codeKey]);
+$accessToken = null;
+if ($codeWasUsed) {
+    $existingStore = getShopByDomain($shop);
+    $existingToken = is_array($existingStore) ? ($existingStore['access_token'] ?? null) : null;
+    if (is_string($existingToken) && $existingToken !== '') {
+        $accessToken = $existingToken;
+        if (function_exists('sbm_log_write')) {
+            sbm_log_write('auth', 'oauth_duplicate_callback_reused_existing_token', [
+                'shop' => $shop,
+            ]);
+        }
+    }
+}
+
+if (!is_string($accessToken) || $accessToken === '') {
+    // Shopify code for access token
+    $accessToken = exchangeCodeForAccessToken($shop, $code);
+}
 if (!is_string($accessToken) || $accessToken === '') {
     http_response_code(400);
+    $oauthErr = isset($GLOBALS['sbm_oauth_last_error']) && is_array($GLOBALS['sbm_oauth_last_error'])
+        ? $GLOBALS['sbm_oauth_last_error']
+        : [];
     if (function_exists('sbm_log_write')) {
         sbm_log_write('auth', 'oauth_failed_to_obtain_access_token', [
             'shop' => $shop,
             'host_present' => is_string($host) && $host !== '',
+            'oauth_error' => $oauthErr,
         ]);
     }
-    die('Failed to obtain access token. Check SHOPIFY_API_KEY/SHOPIFY_API_SECRET and redirect URL in Partner Dashboard.');
+    $httpCode = (int)($oauthErr['http_code'] ?? 0);
+    $resp = (string)($oauthErr['response'] ?? '');
+    die(
+        'Failed to obtain access token. '
+        . 'HTTP=' . $httpCode
+        . ($resp !== '' ? (' Response=' . $resp) : '')
+        . ' | Check SHOPIFY_API_KEY/SHOPIFY_API_SECRET and callback URL in Partner Dashboard.'
+    );
 }
+$_SESSION[$codeKey] = 1;
 
 try {
     /*
