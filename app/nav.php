@@ -5,6 +5,9 @@ $hostForPlan = isset($_GET['host']) && is_string($_GET['host']) ? $_GET['host'] 
 $planKey = $shopForPlan ? getCurrentPlanKey($shopForPlan) : 'free';
 $planLabel = function_exists('sbm_plan_label') ? sbm_plan_label($planKey) : ucfirst($planKey);
 $isPremiumPlan = ($planKey === 'premium');
+$freePlanUrl = BASE_URL . '/billing/subscribe?plan=free'
+  . ($shopForPlan ? '&shop=' . urlencode((string)$shopForPlan) : '')
+  . ($hostForPlan !== '' ? '&host=' . urlencode($hostForPlan) : '');
 $planUrls = [
   'starter' => function_exists('sbm_upgrade_url')
     ? sbm_upgrade_url((string)$shopForPlan, $hostForPlan, 'starter')
@@ -48,16 +51,32 @@ $planUrls = [
       <div class="sb-plan-grid">
         <div class="sb-plan-card <?php echo $planKey === 'free' ? 'is-current' : ''; ?>">
           <div class="sb-plan-name">Free</div>
-          <div class="sb-plan-copy">Dashboard basics and limited analytics preview.</div>
+          <div class="sb-plan-copy">Best for trying core analytics and basic monitoring.</div>
+          <ul class="sb-plan-features">
+            <li>Dashboard KPIs and trend preview</li>
+            <li>Basic Action Center insights</li>
+            <li>Basic Alerts and Analytics preview</li>
+            <li>AI digest preview (limited)</li>
+          </ul>
           <div class="sb-plan-action">
-            <span class="btn btn-ghost btn-sm <?php echo $planKey === 'free' ? 'is-current' : 'feature-disabled'; ?>">
-              <?php echo $planKey === 'free' ? 'Current plan' : 'Contact support'; ?>
-            </span>
+            <?php if ($planKey === 'free'): ?>
+              <span class="btn btn-ghost btn-sm is-current">Current plan</span>
+            <?php else: ?>
+              <a class="btn btn-primary btn-sm plan-change-cta" href="<?php echo htmlspecialchars($freePlanUrl, ENT_QUOTES, 'UTF-8'); ?>">
+                Change to Free
+              </a>
+            <?php endif; ?>
           </div>
         </div>
         <div class="sb-plan-card <?php echo $planKey === 'starter' ? 'is-current' : ''; ?>">
           <div class="sb-plan-name">Starter</div>
-          <div class="sb-plan-copy">Unlock core insights, inventory and action center.</div>
+          <div class="sb-plan-copy">Core revenue analytics and operational actions.</div>
+          <ul class="sb-plan-features">
+            <li>Full dashboard with stronger insights</li>
+            <li>Action Center next-best actions</li>
+            <li>Analytics: products, customers, AOV</li>
+            <li>Inventory forecasting basics</li>
+          </ul>
           <div class="sb-plan-action">
             <a class="btn btn-primary btn-sm plan-change-cta <?php echo $planKey === 'starter' ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['starter'], ENT_QUOTES, 'UTF-8'); ?>">
               <?php echo $planKey === 'starter' ? 'Current plan' : 'Change to Starter'; ?>
@@ -66,7 +85,13 @@ $planUrls = [
         </div>
         <div class="sb-plan-card <?php echo $planKey === 'growth' ? 'is-current' : ''; ?>">
           <div class="sb-plan-name">Growth</div>
-          <div class="sb-plan-copy">Advanced analytics depth and AI insights expansion.</div>
+          <div class="sb-plan-copy">Advanced retention, funnel and more AI insights.</div>
+          <ul class="sb-plan-features">
+            <li>Everything in Starter</li>
+            <li>Funnel, attribution and deeper retention</li>
+            <li>Daily AI digest and anomaly explanation</li>
+            <li>Higher limits across dashboards and reports</li>
+          </ul>
           <div class="sb-plan-action">
             <a class="btn btn-primary btn-sm plan-change-cta <?php echo $planKey === 'growth' ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['growth'], ENT_QUOTES, 'UTF-8'); ?>">
               <?php echo $planKey === 'growth' ? 'Current plan' : 'Change to Growth'; ?>
@@ -75,7 +100,13 @@ $planUrls = [
         </div>
         <div class="sb-plan-card <?php echo $isPremiumPlan ? 'is-current' : ''; ?>">
           <div class="sb-plan-name">Premium</div>
-          <div class="sb-plan-copy">All features, max limits, and full AI capability.</div>
+          <div class="sb-plan-copy">Complete suite with highest limits and AI power.</div>
+          <ul class="sb-plan-features">
+            <li>Everything in Growth</li>
+            <li>Full reports suite and advanced alerts</li>
+            <li>Dynamic AI recommendations and summaries</li>
+            <li>Highest usage limits and plan capacity</li>
+          </ul>
           <div class="sb-plan-action">
             <a class="btn btn-primary btn-sm plan-change-cta <?php echo $isPremiumPlan ? 'feature-disabled' : ''; ?>" href="<?php echo htmlspecialchars($planUrls['premium'], ENT_QUOTES, 'UTF-8'); ?>">
               <?php echo $isPremiumPlan ? 'Current plan' : 'Change to Premium'; ?>
