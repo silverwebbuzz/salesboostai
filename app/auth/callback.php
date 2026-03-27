@@ -78,9 +78,7 @@ try {
 
 unset($_SESSION['nonce'], $_SESSION['shop']);
 
-// Redirect to embedded app in Shopify Admin (preserve shop/host for App Bridge bootstrap).
-$redirectUrl = "https://{$shop}/admin/apps/" . SHOPIFY_APP_HANDLE
-    . '?shop=' . urlencode((string)$shop)
-    . ($host ? ('&host=' . urlencode((string)$host)) : '');
+// Redirect to embedded app in Shopify Admin with guaranteed host.
+$redirectUrl = sbm_embedded_app_admin_url((string)$shop, (string)($host ?? ''));
 header('Location: ' . $redirectUrl);
 exit;

@@ -24,6 +24,13 @@ $criticalUpgradeUrl = sbm_upgrade_url($shop, $host, $criticalRequiredPlan);
 $topListsUpgradeUrl = sbm_upgrade_url($shop, $host, $topListsRequiredPlan);
 $actionCenterUpgradeUrl = sbm_upgrade_url($shop, $host, $actionCenterRequiredPlan);
 $goalsUpgradeUrl = sbm_upgrade_url($shop, $host, $goalsRequiredPlan);
+$hostForBootstrap = (string)$host;
+if ($hostForBootstrap === '') {
+  $hostForBootstrap = (string)($shopRecord['host'] ?? '');
+}
+if ($hostForBootstrap === '' && function_exists('sbm_embedded_host_from_shop')) {
+  $hostForBootstrap = sbm_embedded_host_from_shop((string)$shop);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -430,8 +437,12 @@ $goalsUpgradeUrl = sbm_upgrade_url($shop, $host, $goalsRequiredPlan);
         // Do not send user to OAuth from an embedded frame.
         // Bounce to Shopify app URL top-level so host can be restored safely.
         var shop = params.get('shop') || <?php echo json_encode($shop); ?>;
+        var hostFallback = <?php echo json_encode($hostForBootstrap); ?>;
         if (shop) {
           var adminUrl = 'https://' + shop + '/admin/apps/' + <?php echo json_encode(SHOPIFY_APP_HANDLE); ?> + '?shop=' + encodeURIComponent(shop);
+          if (hostFallback) {
+            adminUrl += '&host=' + encodeURIComponent(hostFallback);
+          }
           if (window.top && window.top !== window) {
             window.top.location.href = adminUrl;
           } else {

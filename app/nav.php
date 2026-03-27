@@ -2,6 +2,13 @@
 $rawShopForPlan = $_GET['shop'] ?? null;
 $shopForPlan = sanitizeShopDomain($rawShopForPlan);
 $hostForPlan = isset($_GET['host']) && is_string($_GET['host']) ? $_GET['host'] : '';
+if ($hostForPlan === '' && $shopForPlan) {
+  $rec = getShopByDomain((string)$shopForPlan);
+  $hostForPlan = is_array($rec) ? (string)($rec['host'] ?? '') : '';
+  if ($hostForPlan === '' && function_exists('sbm_embedded_host_from_shop')) {
+    $hostForPlan = sbm_embedded_host_from_shop((string)$shopForPlan);
+  }
+}
 $planKey = $shopForPlan ? getCurrentPlanKey($shopForPlan) : 'free';
 $planLabel = function_exists('sbm_plan_label') ? sbm_plan_label($planKey) : ucfirst($planKey);
 $isPremiumPlan = ($planKey === 'premium');
