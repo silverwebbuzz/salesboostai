@@ -16,6 +16,7 @@ $debug = SHOPIFY_DEBUG || (($_GET['debug'] ?? '') === '1');
 
 $rawShop = $_GET['shop'] ?? null;
 $shop    = sanitizeShopDomain($rawShop);
+$host    = isset($_GET['host']) && is_string($_GET['host']) ? $_GET['host'] : '';
 
 if ($shop === null) {
     http_response_code(400);
@@ -61,15 +62,38 @@ header('Content-Type: text/html; charset=UTF-8');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Redirecting…</title>
+    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
   </head>
   <body>
     <p>Redirecting to Shopify…</p>
     <script>
       (function () {
         var url = <?php echo json_encode($installUrl); ?>;
-        if (window.top && window.top !== window) {
-          window.top.location.href = url;
-        } else {
+        var host = <?php echo json_encode((string)$host); ?>;
+        var AppBridge = window['app-bridge'];
+        try {
+          if (AppBridge && host) {
+            var app = AppBridge.createApp({
+              apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
+              host: host,
+              forceRedirect: true
+            });
+            if (AppBridge.actions && AppBridge.actions.Redirect) {
+              var Redirect = AppBridge.actions.Redirect;
+              Redirect.create(app).dispatch(Redirect.Action.REMOTE, url);
+              return;
+            }
+          }
+        } catch (e) {}
+
+        // Fallback: try top-level navigation (may be blocked in some sandboxed iframes).
+        try {
+          if (window.top && window.top !== window) {
+            window.top.location.href = url;
+          } else {
+            window.location.href = url;
+          }
+        } catch (e2) {
           window.location.href = url;
         }
       })();
