@@ -62,31 +62,19 @@ header('Content-Type: text/html; charset=UTF-8');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Redirecting…</title>
-    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
   </head>
   <body>
     <p>Redirecting to Shopify…</p>
     <script>
       (function () {
         var url = <?php echo json_encode($installUrl); ?>;
-        var host = <?php echo json_encode((string)$host); ?>;
-        var AppBridge = window['app-bridge'];
+        // Avoid multiple redirects firing in embedded contexts.
         try {
-          if (AppBridge && host) {
-            var app = AppBridge.createApp({
-              apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
-              host: host,
-              forceRedirect: true
-            });
-            if (AppBridge.actions && AppBridge.actions.Redirect) {
-              var Redirect = AppBridge.actions.Redirect;
-              Redirect.create(app).dispatch(Redirect.Action.REMOTE, url);
-              return;
-            }
-          }
-        } catch (e) {}
+          if (window.__sbInstallRedirected) return;
+          window.__sbInstallRedirected = true;
+        } catch (e0) {}
 
-        // Fallback: try top-level navigation (may be blocked in some sandboxed iframes).
+        // Top-level navigation for OAuth (works in Shopify admin iframe).
         try {
           if (window.top && window.top !== window) {
             window.top.location.href = url;

@@ -85,6 +85,20 @@ if (!is_string($accessToken) || $accessToken === '') {
     if (!is_string($accessToken) || $accessToken === '') {
         // Shopify code for access token
         $accessToken = exchangeCodeForAccessToken($shop, $code);
+        // If Shopify says "code already used", it usually means another callback already
+        // exchanged successfully. Reuse token from DB instead of failing install.
+        if (!is_string($accessToken) || $accessToken === '') {
+            $existingStore = getShopByDomain($shop);
+            $existingToken = is_array($existingStore) ? ($existingStore['access_token'] ?? null) : null;
+            if (is_string($existingToken) && $existingToken !== '') {
+                $accessToken = $existingToken;
+                if (function_exists('sbm_log_write')) {
+                    sbm_log_write('auth', 'oauth_exchange_failed_reused_existing_token', [
+                        'shop' => $shop,
+                    ]);
+                }
+            }
+        }
     }
 }
 if (!is_string($accessToken) || $accessToken === '') {
@@ -170,29 +184,17 @@ header('Content-Type: text/html; charset=UTF-8');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Redirecting…</title>
-    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
   </head>
   <body>
     <p>Redirecting back to Shopify…</p>
     <script>
       (function () {
-        var host = <?php echo json_encode((string)($host ?? '')); ?>;
         var adminUrl = <?php echo json_encode($adminUrl); ?>;
-        var AppBridge = window['app-bridge'];
+        // Avoid multiple redirects firing.
         try {
-          if (AppBridge && host) {
-            var app = AppBridge.createApp({
-              apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
-              host: host,
-              forceRedirect: true
-            });
-            if (AppBridge.actions && AppBridge.actions.Redirect) {
-              var Redirect = AppBridge.actions.Redirect;
-              Redirect.create(app).dispatch(Redirect.Action.REMOTE, adminUrl);
-              return;
-            }
-          }
-        } catch (e) {}
+          if (window.__sbCallbackRedirected) return;
+          window.__sbCallbackRedirected = true;
+        } catch (e0) {}
         // Fallback: top-level navigation.
         if (window.top && window.top !== window) {
           window.top.location.href = adminUrl;
