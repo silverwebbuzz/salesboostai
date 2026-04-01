@@ -355,6 +355,43 @@ if ($tab === 'goals') {
         }
     } catch (Throwable $e) {}
 
+    if (empty($items)) {
+        // Fallback goals so the Goals tab is never empty on first use.
+        $rev = 0.0;
+        $orders = 0;
+        $customers = 0;
+        try {
+            $stmtRO = $mysqli->prepare(
+                "SELECT
+                    COUNT(*) AS c,
+                    SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.total_price')) AS DECIMAL(12,2))) AS s
+                 FROM `{$ordersTable}`"
+            );
+            if ($stmtRO) {
+                $stmtRO->execute();
+                $resRO = $stmtRO->get_result();
+                $rowRO = $resRO ? ($resRO->fetch_assoc() ?: null) : null;
+                $stmtRO->close();
+                $orders = (int)($rowRO['c'] ?? 0);
+                $rev = (float)($rowRO['s'] ?? 0);
+            }
+            $resC = $mysqli->query("SELECT COUNT(*) AS c FROM `{$customersTable}`");
+            if ($resC) {
+                $customers = (int)($resC->fetch_assoc()['c'] ?? 0);
+            }
+        } catch (Throwable $e) {
+            // keep defaults
+        }
+
+        $aov = $orders > 0 ? ($rev / max(1, $orders)) : 0.0;
+        $repeatRate = $customers > 0 ? max(0.0, min(100.0, (($orders - $customers) / max(1, $customers)) * 100.0)) : 0.0;
+        $items = [
+            ['label' => 'Revenue (30d)', 'target' => 5000, 'actual' => round($rev, 2)],
+            ['label' => 'AOV', 'target' => 120, 'actual' => round($aov, 2)],
+            ['label' => 'Repeat rate', 'target' => 30, 'actual' => round($repeatRate, 2)],
+        ];
+    }
+
     $rows = [];
     foreach ($items as $g) {
         $label = (string)($g['label'] ?? 'Goal');
@@ -389,17 +426,85 @@ if ($tab === 'ai') {
     }
 
     $payload['summary_bullets'] = [
-        'AI Summary highlights the top opportunities and risks detected this week.',
-        'Use Action Center items to execute quickly.',
+        'AI Summary shows the latest generated output from each active agent.',
+        'Use "Read full report" to open the full generated report for that agent.',
     ];
+
+    $agentPreview = [];
+    try {
+        $resAgents = $mysqli->query("SELECT id, name, agent_key, is_active FROM ai_agents WHERE is_active = 1 ORDER BY id ASC LIMIT 12");
+        if ($resAgents) {
+            while ($a = $resAgents->fetch_assoc()) {
+                $aid = (int)($a['id'] ?? 0);
+                $name = (string)($a['name'] ?? ('Agent #' . $aid));
+                $akey = (string)($a['agent_key'] ?? '');
+
+                $summary = '';
+                $createdAt = '';
+                $hasReport = false;
+
+                $stmtRep = $mysqli->prepare(
+                    "SELECT report_json, created_at
+                     FROM ai_reports
+                     WHERE shop = ? AND agent_id = ? AND status = 'completed'
+                     ORDER BY created_at DESC
+                     LIMIT 1"
+                );
+                if ($stmtRep) {
+                    $stmtRep->bind_param('si', $shop, $aid);
+                    $stmtRep->execute();
+                    $resRep = $stmtRep->get_result();
+                    $rowRep = $resRep ? ($resRep->fetch_assoc() ?: null) : null;
+                    $stmtRep->close();
+                    if (is_array($rowRep)) {
+                        $hasReport = true;
+                        $createdAt = (string)($rowRep['created_at'] ?? '');
+                        $decoded = json_decode((string)($rowRep['report_json'] ?? ''), true);
+                        if (is_array($decoded)) {
+                            $summary = (string)($decoded['summary'] ?? '');
+                            // Backward compatibility: nested JSON can be placed in summary.
+                            if ($summary !== '' && strpos($summary, '{') !== false && strpos($summary, 'key_points') !== false) {
+                                $nested = preg_replace('/^\s*```(?:json)?\s*/i', '', $summary);
+                                $nested = preg_replace('/\s*```\s*$/', '', (string)$nested);
+                                $nestedDecoded = json_decode((string)$nested, true);
+                                if (is_array($nestedDecoded) && is_string($nestedDecoded['summary'] ?? null)) {
+                                    $summary = (string)$nestedDecoded['summary'];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if ($summary === '') {
+                    $summary = $hasReport
+                        ? 'AI report generated. Open full report for details.'
+                        : 'No report generated yet.';
+                }
+
+                $agentPreview[] = [
+                    'agent_id' => $aid,
+                    'agent_key' => $akey,
+                    'name' => $name,
+                    'has_report' => $hasReport,
+                    'summary' => $summary,
+                    'created_at' => $createdAt,
+                ];
+            }
+        }
+    } catch (Throwable $e) {
+        // Keep payload usable even if preview aggregation fails.
+        $agentPreview = [];
+    }
+
     $payload['critical_insights'] = [
-        ['title' => 'AI summary is ready', 'description' => 'This section will be enhanced with saved report snapshots in future.', 'severity' => 'low'],
+        ['title' => 'AI report previews ready', 'description' => 'Each card shows the latest generated summary per agent.', 'severity' => 'low'],
     ];
     $payload['recommendations'] = [
-        ['title' => 'Generate latest AI agent report', 'impact' => 'Get prioritized actions based on newest orders and inventory.' ],
+        ['title' => 'Open full report for each agent', 'impact' => 'Review complete key points, issues, and action plan.'],
     ];
     $payload['supporting'] = [
         'ai_usage' => $aiUsage,
+        'ai_reports_preview' => $agentPreview,
     ];
 }
 

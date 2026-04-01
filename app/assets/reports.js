@@ -68,6 +68,20 @@
     }).join('');
   }
 
+  function fmtTimeAgo(ts) {
+    if (!ts) return 'Not generated yet';
+    var d = new Date(ts.replace(' ', 'T'));
+    if (isNaN(d.getTime())) return 'Not generated yet';
+    var diff = Math.max(0, Date.now() - d.getTime());
+    var m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + ' min ago';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + ' hour' + (h === 1 ? '' : 's') + ' ago';
+    var days = Math.floor(h / 24);
+    return days + ' day' + (days === 1 ? '' : 's') + ' ago';
+  }
+
   async function fetchSummary(tab, range) {
     var shop = getParam('shop');
     if (!shop) throw new Error('Missing shop.');
@@ -122,7 +136,35 @@
       return;
     }
     if (tabName === 'ai') {
-      setHTML('reportsAiSummary', '<div class="sb-muted">AI summary loaded. Usage week: ' + esc((data.supporting && data.supporting.ai_usage && data.supporting.ai_usage.week_key) || '') + '</div>');
+      var usageWeek = esc((data.supporting && data.supporting.ai_usage && data.supporting.ai_usage.week_key) || '');
+      var list = (data.supporting && data.supporting.ai_reports_preview) || [];
+      var shop = getParam('shop');
+      var host = getParam('host');
+      if (!list.length) {
+        setHTML('reportsAiSummary', '<div class="sb-muted">No AI report previews available yet. Usage week: ' + usageWeek + '</div>');
+        return;
+      }
+      var cards = list.map(function (it) {
+        var aid = Number(it.agent_id || 0);
+        var has = !!it.has_report;
+        var url = '/app/agent-report.php?shop=' + encodeURIComponent(shop);
+        if (aid > 0) url += '&agent_id=' + encodeURIComponent(String(aid));
+        else if (it.agent_key) url += '&agent_key=' + encodeURIComponent(String(it.agent_key));
+        if (host) url += '&host=' + encodeURIComponent(host);
+        var btnLabel = has ? 'Read full report' : 'Generate report';
+        return (
+          '<div class="card" style="margin-bottom:10px;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+              '<div style="font-weight:700;">' + esc(it.name || 'AI Agent') + '</div>' +
+              '<span class="status-badge ' + (has ? 'status-positive' : 'status-medium') + '">' + (has ? 'Generated' : 'Not generated') + '</span>' +
+            '</div>' +
+            '<div class="sb-muted" style="margin-top:6px;">' + esc(it.summary || '') + '</div>' +
+            '<div class="sb-muted" style="margin-top:6px;">Last updated: ' + esc(fmtTimeAgo(it.created_at || '')) + '</div>' +
+            '<div style="margin-top:10px;"><a class="btn btn-primary btn-sm" href="' + esc(url) + '">' + esc(btnLabel) + '</a></div>' +
+          '</div>'
+        );
+      }).join('');
+      setHTML('reportsAiSummary', '<div class="sb-muted" style="margin-bottom:10px;">Usage week: ' + usageWeek + '</div>' + cards);
       return;
     }
   }
