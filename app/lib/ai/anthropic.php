@@ -6,6 +6,8 @@
  * Docs: https://docs.anthropic.com/
  */
 
+require_once __DIR__ . '/../logger.php';
+
 if (!function_exists('sbm_anthropic_api_key')) {
     function sbm_anthropic_api_key(): string
     {
@@ -22,6 +24,9 @@ if (!function_exists('sbm_anthropic_post_json')) {
     {
         $key = sbm_anthropic_api_key();
         if ($key === '') {
+            if (function_exists('sbm_log_write')) {
+                sbm_log_write('ai', 'anthropic_missing_api_key', ['url' => $url]);
+            }
             return ['ok' => false, 'status' => 0, 'body' => null, 'error' => 'Missing ANTHROPIC_API_KEY'];
         }
 
@@ -55,11 +60,24 @@ if (!function_exists('sbm_anthropic_post_json')) {
         curl_close($ch);
 
         if ($raw === false) {
+            if (function_exists('sbm_log_write')) {
+                sbm_log_write('ai', 'anthropic_network_error', [
+                    'url' => $url,
+                    'status' => $status,
+                    'error' => $curlErr !== '' ? $curlErr : 'Network error',
+                ]);
+            }
             return ['ok' => false, 'status' => $status, 'body' => null, 'error' => $curlErr !== '' ? $curlErr : 'Network error'];
         }
 
         $decoded = json_decode((string)$raw, true);
         if (!is_array($decoded)) {
+            if (function_exists('sbm_log_write')) {
+                sbm_log_write('ai', 'anthropic_invalid_json_response', [
+                    'url' => $url,
+                    'status' => $status,
+                ]);
+            }
             return ['ok' => false, 'status' => $status, 'body' => null, 'error' => 'Invalid JSON response'];
         }
 
@@ -68,8 +86,22 @@ if (!function_exists('sbm_anthropic_post_json')) {
             if (isset($decoded['error']) && is_array($decoded['error'])) {
                 $msg = (string)($decoded['error']['message'] ?? '');
             }
-            if ($msg === '') $msg = 'Anthropic request failed';
+            if ($msg === '') $msg = 'AI provider request failed';
+            if (function_exists('sbm_log_write')) {
+                sbm_log_write('ai', 'anthropic_http_error', [
+                    'url' => $url,
+                    'status' => $status,
+                    'error' => $msg,
+                ]);
+            }
             return ['ok' => false, 'status' => $status, 'body' => $decoded, 'error' => $msg];
+        }
+
+        if (function_exists('sbm_log_write')) {
+            sbm_log_write('ai', 'anthropic_http_ok', [
+                'url' => $url,
+                'status' => $status,
+            ]);
         }
 
         return ['ok' => true, 'status' => $status, 'body' => $decoded, 'error' => ''];

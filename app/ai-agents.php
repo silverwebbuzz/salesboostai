@@ -253,7 +253,6 @@ if (empty($agents)) {
                         $reportUrl .= '&agent_key=' . urlencode($aKey !== '' ? $aKey : 'sales');
                     }
                     if ($host !== '') $reportUrl .= '&host=' . urlencode($host);
-                    if (!$hasReport) $reportUrl .= '&demo=1';
                   ?>
                   <a class="btn btn-primary" href="<?php echo $reportUrl; ?>"><?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?></a>
                 <?php endif; ?>

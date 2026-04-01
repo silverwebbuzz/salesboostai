@@ -205,6 +205,13 @@ $issues = isset($report['issues']) && is_array($report['issues']) ? $report['iss
 $actions = isset($report['actions']) && is_array($report['actions']) ? $report['actions'] : [];
 
 $isInventoryAgent = strtolower((string)($agent['agent_key'] ?? '')) === 'inventory';
+$aiStatus = strtolower(trim((string)($_GET['ai_status'] ?? '')));
+$aiStatusMsg = trim((string)($_GET['ai_msg'] ?? ''));
+if (!in_array($aiStatus, ['ok', 'error'], true)) {
+    $aiStatus = '';
+}
+$aiStatusClass = $aiStatus === 'ok' ? 'status-positive' : 'status-high';
+$aiStatusTitle = $aiStatus === 'ok' ? 'AI call success' : 'AI call failed';
 $inventoryInsights = [
     'low_stock' => [],
     'out_of_stock' => [],
@@ -268,6 +275,17 @@ if ($isInventoryAgent) {
         <button class="btn btn-primary" type="button" id="generateAiBtn">Generate AI Report</button>
       </div>
     </div>
+
+    <?php if ($aiStatus !== ''): ?>
+      <div class="section">
+        <div class="card" style="border:1px solid <?php echo $aiStatus === 'ok' ? '#86efac' : '#fecaca'; ?>;background:<?php echo $aiStatus === 'ok' ? '#f0fdf4' : '#fef2f2'; ?>;">
+          <div class="agent-meta-row">
+            <span class="status-badge <?php echo e($aiStatusClass); ?>"><?php echo e($aiStatusTitle); ?></span>
+            <span><?php echo e($aiStatusMsg !== '' ? $aiStatusMsg : ($aiStatus === 'ok' ? 'Report generated successfully.' : 'Unable to generate report.')); ?></span>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <div class="section">
       <div class="card">
@@ -458,17 +476,65 @@ if ($isInventoryAgent) {
   </main>
   <script>
     (function () {
+      var inlineStatus = document.createElement('div');
+      inlineStatus.className = 'card';
+      inlineStatus.style.display = 'none';
+      inlineStatus.style.marginTop = '12px';
+      inlineStatus.style.border = '1px solid #fecaca';
+      inlineStatus.style.background = '#fef2f2';
+      inlineStatus.style.padding = '10px';
+      inlineStatus.id = 'aiCallInlineStatus';
+      var hero = document.querySelector('.hero');
+      if (hero && hero.parentNode) {
+        hero.parentNode.insertBefore(inlineStatus, hero.nextSibling);
+      }
+
+      function setInlineStatus(type, msg) {
+        var box = document.getElementById('aiCallInlineStatus');
+        if (!box) return;
+        var ok = type === 'ok';
+        box.style.display = '';
+        box.style.borderColor = ok ? '#86efac' : '#fecaca';
+        box.style.background = ok ? '#f0fdf4' : '#fef2f2';
+        box.innerHTML = '<strong>' + (ok ? 'AI call success:' : 'AI call failed:') + '</strong> ' + String(msg || '');
+      }
+
       function wireGenerateButton(id) {
         var btn = document.getElementById(id);
         if (!btn) return;
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', async function () {
+          if (btn.disabled) return;
           btn.disabled = true;
           btn.textContent = 'Analyzing your store...';
-          setTimeout(function () {
+          try {
+            var params = new URLSearchParams(window.location.search);
+            var shop = params.get('shop') || '';
+            var host = params.get('host') || '';
+            var agentId = params.get('agent_id') || '';
+            var agentKey = params.get('agent_key') || '';
+            var qs = 'shop=' + encodeURIComponent(shop);
+            if (host) qs += '&host=' + encodeURIComponent(host);
+            if (agentId) qs += '&agent_id=' + encodeURIComponent(agentId);
+            if (!agentId && agentKey) qs += '&agent_key=' + encodeURIComponent(agentKey);
+            var doFetch = window.authFetch || fetch;
+            var res = await doFetch('/app/api/ai/agent_run.php?' + qs, {
+              method: 'POST',
+              headers: { Accept: 'application/json' }
+            });
+            var data = await res.json();
+            if (!res.ok || !data || !data.ok) {
+              throw new Error((data && data.error) ? data.error : 'AI report generation failed');
+            }
             var url = new URL(window.location.href);
-            url.searchParams.set('demo', '1');
+            url.searchParams.delete('demo');
+            url.searchParams.set('ai_status', 'ok');
+            url.searchParams.set('ai_msg', 'AI report generated successfully.');
             window.location.href = url.toString();
-          }, 700);
+          } catch (e) {
+            setInlineStatus('error', (e && e.message) ? e.message : 'AI report generation failed');
+            btn.disabled = false;
+            btn.textContent = 'Generate AI Report';
+          }
         });
       }
       wireGenerateButton('generateAiBtn');
