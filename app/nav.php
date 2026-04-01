@@ -118,13 +118,14 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
       window.__sbAppBridgeInit = true;
 
       var AppBridge = window['app-bridge'];
+      var shopifyGlobal = window.shopify || null;
       var params0 = new URLSearchParams(window.location.search);
       var sbmDebug = params0.get('debug') === '1';
       var sbmConsole = (sbmDebug && window.console) ? window.console : null;
       var host0 = params0.get('host');
       var app = null;
 
-      if (AppBridge && typeof AppBridge.createApp === 'function' && host0) {
+      if (!shopifyGlobal && AppBridge && typeof AppBridge.createApp === 'function' && host0) {
         app = AppBridge.createApp({
           apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
           host: host0,
@@ -134,8 +135,12 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
       window.__sbmApp = app;
 
       window.getToken = async function getToken() {
-        if (!app) return '';
         try {
+          // Modern App Bridge runtime (Shopify CDN).
+          if (shopifyGlobal && typeof shopifyGlobal.idToken === 'function') {
+            return await shopifyGlobal.idToken();
+          }
+          if (!app) return '';
           // Compatibility: App Bridge utility location differs by build/version.
           if (AppBridge && typeof AppBridge.getSessionToken === 'function') {
             return await AppBridge.getSessionToken(app);

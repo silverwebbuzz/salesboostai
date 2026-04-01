@@ -11,7 +11,11 @@ function fmtNumber(n) {
 
 function getQueryParam(name) {
   const url = new URL(window.location.href);
-  return url.searchParams.get(name) || '';
+  const fromQuery = url.searchParams.get(name) || '';
+  if (fromQuery) return fromQuery;
+  const ctx = (window && window.__SB_CONTEXT && typeof window.__SB_CONTEXT === 'object') ? window.__SB_CONTEXT : null;
+  if (ctx && typeof ctx[name] === 'string') return ctx[name];
+  return '';
 }
 
 function setText(id, text) {

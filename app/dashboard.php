@@ -421,6 +421,12 @@ if ($hostForBootstrap === '') {
     </div>
   </main>
 
+  <script>
+    window.__SB_CONTEXT = {
+      shop: <?php echo json_encode((string)$shop); ?>,
+      host: <?php echo json_encode((string)$hostForBootstrap); ?>
+    };
+  </script>
   <script src="<?php echo e(BASE_URL); ?>/assets/dashboard.js?v=<?php echo (int)@filemtime(__DIR__ . '/assets/dashboard.js'); ?>"></script>
 
 </body>
