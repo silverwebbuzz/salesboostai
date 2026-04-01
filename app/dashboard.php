@@ -423,39 +423,6 @@ if ($hostForBootstrap === '') {
 
   <script src="<?php echo e(BASE_URL); ?>/assets/dashboard.js?v=<?php echo (int)@filemtime(__DIR__ . '/assets/dashboard.js'); ?>"></script>
 
-  <script>
-    // Shopify App Bridge init (no manual postMessage usage).
-    (function () {
-      var params = new URLSearchParams(window.location.search);
-      var host = params.get('host');
-
-      if (!host) {
-        // Missing host means embedded context is incomplete.
-        // Do NOT bounce to install; just reload the embedded app URL so Shopify can provide host.
-        var shop = params.get('shop') || <?php echo json_encode($shop); ?>;
-        if (shop) {
-          var adminUrl = 'https://' + encodeURIComponent(shop) + '/admin/apps/' + <?php echo json_encode((string)SHOPIFY_APP_HANDLE); ?> + '?shop=' + encodeURIComponent(shop);
-          if (window.top && window.top !== window) {
-            window.top.location.href = adminUrl;
-          } else {
-            window.location.href = adminUrl;
-          }
-        }
-        return;
-      }
-
-      var AppBridge = window['app-bridge'];
-      if (!AppBridge || typeof AppBridge.createApp !== 'function') {
-        return;
-      }
-
-      AppBridge.createApp({
-        apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
-        host: host,
-        forceRedirect: true
-      });
-    })();
-  </script>
 </body>
 </html>
 
