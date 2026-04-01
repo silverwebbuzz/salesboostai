@@ -111,6 +111,7 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
   </div>
 </div>
 
+<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
 <script>
   (function () {
     try {
@@ -196,10 +197,10 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     var planModal = document.getElementById("planCompareModal");
     var planModalClose = document.getElementById("planCompareClose");
 
-    if (dashboardLink) dashboardLink.href = "dashboard.php" + query;
-    if (actionCenterLink) actionCenterLink.href = "action-center.php" + query;
-    if (analyticsLink) analyticsLink.href = "analytics.php" + query;
-    if (agentsLink) agentsLink.href = "ai-agents.php" + query;
+    if (dashboardLink) dashboardLink.href = "dashboard" + query;
+    if (actionCenterLink) actionCenterLink.href = "action-center" + query;
+    if (analyticsLink) analyticsLink.href = "analytics" + query;
+    if (agentsLink) agentsLink.href = "ai-agents" + query;
     if (planTrigger && planModal) {
       var openPlanModal = function () {
         planModal.classList.add('is-open');
