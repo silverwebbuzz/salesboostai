@@ -113,6 +113,19 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
 
 <script>
   (function () {
+    try {
+      var u = new URL(window.location.href);
+      if (u.searchParams.has('charge_id')) {
+        u.searchParams.delete('charge_id');
+        u.searchParams.delete('hmac');
+        u.searchParams.delete('signature');
+        history.replaceState({}, '', u.pathname + u.search + u.hash);
+      }
+    } catch (e0) {}
+  })();
+</script>
+<script>
+  (function () {
     if (!window.__sbAppBridgeInit) {
       window.__sbAppBridgeInit = true;
 

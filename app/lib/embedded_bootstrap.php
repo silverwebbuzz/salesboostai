@@ -99,7 +99,9 @@ function sbm_bootstrap_embedded(array $options = []): array
             $clean['shop'] = $shop;
             $clean['host'] = $storedHost;
             $qs = http_build_query($clean);
-            header('Location: ' . $path . ($qs !== '' ? ('?' . $qs) : ''));
+            // Absolute URL: relative Location breaks many embedded iframe loads in Shopify Admin.
+            $base = rtrim((string)(defined('BASE_URL') ? BASE_URL : (defined('SHOPIFY_APP_URL') ? SHOPIFY_APP_URL : '')), '/');
+            header('Location: ' . $base . $path . ($qs !== '' ? ('?' . $qs) : ''));
             exit;
         }
         if ($host === '' && $storedHost !== '') {
@@ -130,16 +132,8 @@ function sbm_bootstrap_embedded(array $options = []): array
             ]);
         }
 
-        // Clean URL to avoid re-processing on refresh.
-        $clean = $_GET;
-        unset($clean['charge_id'], $clean['hmac'], $clean['signature']);
-        $path = parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
-        if (!is_string($path) || $path === '') {
-            $path = '/dashboard';
-        }
-        $cleanQs = http_build_query($clean);
-        header('Location: ' . $path . ($cleanQs !== '' ? ('?' . $cleanQs) : ''));
-        exit;
+        // Do NOT 302 after finalize: relative redirects often yield a blank iframe in Shopify Admin.
+        // URL is cleaned client-side (nav.php history.replaceState) so refresh does not re-run finalize.
     }
 
     if (!$includeEntitlements) {
