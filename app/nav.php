@@ -120,6 +120,8 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
 
       var AppBridge = window['app-bridge'];
       var params0 = new URLSearchParams(window.location.search);
+      var sbmDebug = params0.get('debug') === '1';
+      var sbmConsole = (sbmDebug && window.console) ? window.console : null;
       var host0 = params0.get('host');
       var app = null;
 
@@ -153,14 +155,14 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
           try {
             token = await window.getToken();
           } catch (e) {
-            if (i === 2) console.error("Token fetch failed", e);
+            if (i === 2 && sbmConsole) sbmConsole.error("Token fetch failed", e);
           }
           if (!token && i < 2) {
             await new Promise(function (resolve) { setTimeout(resolve, 150); });
           }
         }
         if (!token) {
-          console.warn("No session token available");
+          if (sbmConsole) sbmConsole.warn("No session token available");
         }
         var headers = Object.assign({}, opts.headers || {});
         if (token) headers.Authorization = 'Bearer ' + token;
@@ -283,7 +285,7 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     if (window.getToken) {
       try {
         const t = await window.getToken();
-        if (t) console.log("Session token OK");
+        // Intentionally silent in production to avoid console noise during Shopify review.
       } catch (e) {}
     }
   })();
