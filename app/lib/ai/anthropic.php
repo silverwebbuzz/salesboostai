@@ -11,8 +11,30 @@ require_once __DIR__ . '/../logger.php';
 if (!function_exists('sbm_anthropic_api_key')) {
     function sbm_anthropic_api_key(): string
     {
-        $k = getenv('ANTHROPIC_API_KEY');
-        return is_string($k) ? trim($k) : '';
+        $candidates = [];
+
+        // 1) Project config constant (preferred for this app setup).
+        if (defined('ANTHROPIC_API_KEY') && is_string(constant('ANTHROPIC_API_KEY'))) {
+            $candidates[] = (string)constant('ANTHROPIC_API_KEY');
+        }
+
+        // 2) Environment fallbacks.
+        $g = getenv('ANTHROPIC_API_KEY');
+        if (is_string($g) && trim($g) !== '') {
+            $candidates[] = $g;
+        }
+        if (isset($_ENV['ANTHROPIC_API_KEY']) && is_string($_ENV['ANTHROPIC_API_KEY'])) {
+            $candidates[] = (string)$_ENV['ANTHROPIC_API_KEY'];
+        }
+        if (isset($_SERVER['ANTHROPIC_API_KEY']) && is_string($_SERVER['ANTHROPIC_API_KEY'])) {
+            $candidates[] = (string)$_SERVER['ANTHROPIC_API_KEY'];
+        }
+
+        foreach ($candidates as $k) {
+            $v = trim((string)$k);
+            if ($v !== '' && stripos($v, 'your_') !== 0) return $v;
+        }
+        return '';
     }
 }
 

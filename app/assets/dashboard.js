@@ -124,38 +124,6 @@ function renderSyncGate(sync) {
   setText('sbSyncGateHint', 'Click "Sync Now" to run immediate background steps.');
 }
 
-let syncPollTimer = null;
-
-function stopSyncPolling() {
-  if (syncPollTimer) {
-    clearTimeout(syncPollTimer);
-    syncPollTimer = null;
-  }
-}
-
-function scheduleSyncPolling(attempt = 0) {
-  stopSyncPolling();
-  const maxAttempts = 30; // ~90s with 3s interval
-  if (attempt >= maxAttempts) {
-    setText('sbSyncGateHint', 'Sync may still be running. Click "Display dashboard" to check latest data.');
-    show('btnRefreshDashboard', true);
-    return;
-  }
-  syncPollTimer = setTimeout(() => {
-    loadDashboard({ nocache: true }).then(() => {
-      const gate = document.getElementById('sbSyncGate');
-      const gated = gate && gate.style.display !== 'none';
-      if (gated) {
-        scheduleSyncPolling(attempt + 1);
-      } else {
-        stopSyncPolling();
-      }
-    }).catch(() => {
-      scheduleSyncPolling(attempt + 1);
-    });
-  }, 3000);
-}
-
 async function runSyncNow() {
   const shop = getQueryParam('shop');
   const host = getQueryParam('host');
@@ -180,13 +148,17 @@ async function runSyncNow() {
 
     renderSyncGate(data.sync_status || null);
     if ((data?.sync_status?.state || 'ready') === 'ready') {
-      setText('sbSyncGateHint', 'Sync completed. Loading dashboard data...');
-      if (refreshBtn) show('btnRefreshDashboard', true);
-      await loadDashboard({ nocache: true });
+      setText('sbSyncGateHint', 'Sync completed. Click "Go to Dashboard" to load your data.');
+      if (refreshBtn) {
+        refreshBtn.textContent = 'Go to Dashboard';
+        show('btnRefreshDashboard', true);
+      }
     } else {
-      setText('sbSyncGateHint', 'Sync is still running. We will auto-check and load data when ready.');
-      if (refreshBtn) show('btnRefreshDashboard', true);
-      scheduleSyncPolling(0);
+      setText('sbSyncGateHint', 'Sync is still running. Click "Sync Now" again after a few moments to check progress.');
+      if (refreshBtn) {
+        refreshBtn.textContent = 'Go to Dashboard';
+        show('btnRefreshDashboard', true);
+      }
     }
   } catch (e) {
     setText('sbSyncGateHint', (e && e.message) ? e.message : 'Sync failed. Please try again.');
