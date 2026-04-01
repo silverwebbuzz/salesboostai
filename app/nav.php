@@ -118,14 +118,13 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
       window.__sbAppBridgeInit = true;
 
       var AppBridge = window['app-bridge'];
-      var shopifyGlobal = window.shopify || null;
       var params0 = new URLSearchParams(window.location.search);
       var sbmDebug = params0.get('debug') === '1';
       var sbmConsole = (sbmDebug && window.console) ? window.console : null;
-      var host0 = params0.get('host');
+      var host0 = params0.get('host') || <?php echo json_encode((string)$hostForPlan); ?>;
       var app = null;
 
-      if (!shopifyGlobal && AppBridge && typeof AppBridge.createApp === 'function' && host0) {
+      if (AppBridge && typeof AppBridge.createApp === 'function' && host0) {
         app = AppBridge.createApp({
           apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
           host: host0,
@@ -137,8 +136,17 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
       window.getToken = async function getToken() {
         try {
           // Modern App Bridge runtime (Shopify CDN).
-          if (shopifyGlobal && typeof shopifyGlobal.idToken === 'function') {
-            return await shopifyGlobal.idToken();
+          var shopifyNow = window.shopify || null;
+          if (shopifyNow && typeof shopifyNow.idToken === 'function') {
+            return await shopifyNow.idToken();
+          }
+          if (!app && AppBridge && typeof AppBridge.createApp === 'function' && host0) {
+            app = AppBridge.createApp({
+              apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
+              host: host0,
+              forceRedirect: true
+            });
+            window.__sbmApp = app;
           }
           if (!app) return '';
           // Compatibility: App Bridge utility location differs by build/version.
@@ -198,8 +206,8 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     }
 
     var params = new URLSearchParams(window.location.search);
-    var shop = params.get("shop");
-    var host = params.get("host");
+    var shop = params.get("shop") || <?php echo json_encode((string)($shopForPlan ?? '')); ?>;
+    var host = params.get("host") || <?php echo json_encode((string)$hostForPlan); ?>;
 
     var query = "?shop=" + encodeURIComponent(shop || "") + "&host=" + encodeURIComponent(host || "");
 
