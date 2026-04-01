@@ -432,7 +432,7 @@ if ($isInventoryAgent) {
         <div class="card">
           <div class="section-title">Inventory Insights</div>
 
-          <div class="inventory-insights-grid">
+          <div class="inventory-insights-grid inventory-insights-grid--two-col">
             <div class="card inventory-insight-card">
               <div class="section-title">Stock Alerts</div>
               <div class="inventory-block-title">Low stock (Top 5)</div>
