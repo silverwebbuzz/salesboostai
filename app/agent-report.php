@@ -68,6 +68,42 @@ function sbm_default_agent_by_key(string $key): ?array {
     return $map[$key] ?? null;
 }
 
+function sbm_normalize_loaded_report($report): array {
+    if (!is_array($report)) {
+        return [
+            'summary' => 'No report available.',
+            'key_points' => [],
+            'issues' => [],
+            'actions' => [],
+        ];
+    }
+    $summary = (string)($report['summary'] ?? '');
+    $keyPoints = is_array($report['key_points'] ?? null) ? array_values($report['key_points']) : [];
+    $issues = is_array($report['issues'] ?? null) ? array_values($report['issues']) : [];
+    $actions = is_array($report['actions'] ?? null) ? array_values($report['actions']) : [];
+
+    // Backward compatibility: summary may contain fenced/nested JSON.
+    if ($summary !== '' && empty($keyPoints) && empty($issues) && empty($actions)) {
+        $nested = trim($summary);
+        $nested = preg_replace('/^\s*```(?:json)?\s*/i', '', $nested);
+        $nested = preg_replace('/\s*```\s*$/', '', (string)$nested);
+        $nestedDecoded = json_decode((string)$nested, true);
+        if (is_array($nestedDecoded)) {
+            $summary = (string)($nestedDecoded['summary'] ?? $summary);
+            $keyPoints = is_array($nestedDecoded['key_points'] ?? null) ? array_values($nestedDecoded['key_points']) : [];
+            $issues = is_array($nestedDecoded['issues'] ?? null) ? array_values($nestedDecoded['issues']) : [];
+            $actions = is_array($nestedDecoded['actions'] ?? null) ? array_values($nestedDecoded['actions']) : [];
+        }
+    }
+
+    return [
+        'summary' => $summary !== '' ? $summary : 'AI generated report.',
+        'key_points' => $keyPoints,
+        'issues' => $issues,
+        'actions' => $actions,
+    ];
+}
+
 $agent = null;
 $report = null;
 $errorText = '';
@@ -199,10 +235,11 @@ if (!$report && $demoMode) {
 }
 
 $hasReport = is_array($report);
-$summary = (string)($report['summary'] ?? '');
-$keyPoints = isset($report['key_points']) && is_array($report['key_points']) ? $report['key_points'] : [];
-$issues = isset($report['issues']) && is_array($report['issues']) ? $report['issues'] : [];
-$actions = isset($report['actions']) && is_array($report['actions']) ? $report['actions'] : [];
+$reportNormalized = sbm_normalize_loaded_report($report);
+$summary = (string)($reportNormalized['summary'] ?? '');
+$keyPoints = is_array($reportNormalized['key_points'] ?? null) ? $reportNormalized['key_points'] : [];
+$issues = is_array($reportNormalized['issues'] ?? null) ? $reportNormalized['issues'] : [];
+$actions = is_array($reportNormalized['actions'] ?? null) ? $reportNormalized['actions'] : [];
 
 $isInventoryAgent = strtolower((string)($agent['agent_key'] ?? '')) === 'inventory';
 $aiStatus = strtolower(trim((string)($_GET['ai_status'] ?? '')));
@@ -528,7 +565,7 @@ if ($isInventoryAgent) {
             var url = new URL(window.location.href);
             url.searchParams.delete('demo');
             url.searchParams.set('ai_status', 'ok');
-            url.searchParams.set('ai_msg', 'AI report generated successfully.');
+            url.searchParams.set('ai_msg', (data && data.cached) ? 'Using latest report (no data changes detected).' : 'AI report generated successfully.');
             window.location.href = url.toString();
           } catch (e) {
             setInlineStatus('error', (e && e.message) ? e.message : 'AI report generation failed');

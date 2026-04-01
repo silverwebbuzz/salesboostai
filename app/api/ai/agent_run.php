@@ -6,8 +6,76 @@ require_once __DIR__ . '/../../lib/usage.php';
 require_once __DIR__ . '/../../lib/metrics.php';
 require_once __DIR__ . '/../../lib/logger.php';
 require_once __DIR__ . '/../../lib/ai/anthropic.php';
+require_once __DIR__ . '/../../lib/ai/cache.php';
 
 header('Content-Type: application/json');
+
+function sbm_normalize_ai_report_payload(string $text): array
+{
+    $clean = trim($text);
+    if ($clean === '') {
+        return [
+            'summary' => 'AI returned an empty response.',
+            'key_points' => [],
+            'issues' => [],
+            'actions' => [],
+        ];
+    }
+
+    // Remove fenced code wrapper if present.
+    $clean = preg_replace('/^\s*```(?:json)?\s*/i', '', $clean);
+    $clean = preg_replace('/\s*```\s*$/', '', (string)$clean);
+    $clean = trim((string)$clean);
+
+    $decoded = json_decode($clean, true);
+
+    // If full-string decode failed, try extracting the first JSON object.
+    if (!is_array($decoded)) {
+        $start = strpos($clean, '{');
+        $end = strrpos($clean, '}');
+        if ($start !== false && $end !== false && $end > $start) {
+            $chunk = substr($clean, $start, $end - $start + 1);
+            $decoded = json_decode($chunk, true);
+        }
+    }
+
+    // If model returned summary as a nested JSON string, parse and merge.
+    if (is_array($decoded) && isset($decoded['summary']) && is_string($decoded['summary'])) {
+        $nested = trim((string)$decoded['summary']);
+        $nested = preg_replace('/^\s*```(?:json)?\s*/i', '', $nested);
+        $nested = preg_replace('/\s*```\s*$/', '', (string)$nested);
+        $nestedDecoded = json_decode((string)$nested, true);
+        if (is_array($nestedDecoded)) {
+            foreach (['summary', 'key_points', 'issues', 'actions'] as $k) {
+                if (!isset($decoded[$k]) || (is_array($decoded[$k]) && count($decoded[$k]) === 0) || $k === 'summary') {
+                    if (isset($nestedDecoded[$k])) {
+                        $decoded[$k] = $nestedDecoded[$k];
+                    }
+                }
+            }
+        }
+    }
+
+    if (!is_array($decoded)) {
+        return [
+            'summary' => $clean,
+            'key_points' => [],
+            'issues' => [],
+            'actions' => [],
+        ];
+    }
+
+    $out = [
+        'summary' => (string)($decoded['summary'] ?? ''),
+        'key_points' => is_array($decoded['key_points'] ?? null) ? array_values($decoded['key_points']) : [],
+        'issues' => is_array($decoded['issues'] ?? null) ? array_values($decoded['issues']) : [],
+        'actions' => is_array($decoded['actions'] ?? null) ? array_values($decoded['actions']) : [],
+    ];
+    if ($out['summary'] === '') {
+        $out['summary'] = 'AI generated report.';
+    }
+    return $out;
+}
 
 if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
     http_response_code(405);
@@ -79,6 +147,7 @@ if (!is_array($agent)) {
 $agentId = (int)($agent['id'] ?? 0);
 $agentKey = (string)($agent['agent_key'] ?? '');
 $agentVersion = (int)($agent['version'] ?? 1);
+$currentFingerprint = function_exists('sbm_ai_data_fingerprint') ? sbm_ai_data_fingerprint($shop) : '';
 
 $tables = sbm_getShopTables($shop);
 $ordersTable = $tables['order'];
@@ -99,6 +168,50 @@ try {
 }
 
 $aov = $orders > 0 ? round($revenue / $orders, 2) : 0.0;
+
+// If data did not change since the last completed report for this agent, return cached report.
+try {
+    if ($agentId > 0 && $currentFingerprint !== '') {
+        $stmtPrev = $mysqli->prepare(
+            "SELECT report_json
+             FROM ai_reports
+             WHERE shop = ? AND agent_id = ? AND status = 'completed'
+             ORDER BY created_at DESC
+             LIMIT 1"
+        );
+        if ($stmtPrev) {
+            $stmtPrev->bind_param('si', $shop, $agentId);
+            $stmtPrev->execute();
+            $resPrev = $stmtPrev->get_result();
+            $rowPrev = $resPrev ? ($resPrev->fetch_assoc() ?: null) : null;
+            $stmtPrev->close();
+            $prev = is_array($rowPrev) ? json_decode((string)($rowPrev['report_json'] ?? ''), true) : null;
+            $prevFp = '';
+            if (is_array($prev) && isset($prev['_meta']) && is_array($prev['_meta'])) {
+                $prevFp = (string)($prev['_meta']['fingerprint'] ?? '');
+            }
+            if ($prevFp !== '' && hash_equals($prevFp, $currentFingerprint)) {
+                sbm_log_write('ai', 'agent_run_cache_hit_unchanged_fingerprint', [
+                    'shop' => $shop,
+                    'agent_id' => $agentId,
+                ]);
+                echo json_encode([
+                    'ok' => true,
+                    'cached' => true,
+                    'report' => is_array($prev) ? $prev : [],
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+    }
+} catch (Throwable $e) {
+    sbm_log_write('ai', 'agent_run_cache_check_failed', [
+        'shop' => $shop,
+        'agent_id' => $agentId,
+        'error' => $e->getMessage(),
+    ]);
+}
+
 $prompt = "You are a Shopify analytics assistant.\n"
     . "Generate STRICT JSON with keys: summary (string), key_points (array of 3-5 strings), issues (array of objects {title,severity}), actions (array of 3-5 strings).\n"
     . "Severity must be one of: low, medium, high.\n"
@@ -145,15 +258,12 @@ if (!$resAi['ok']) {
 }
 
 $text = (string)($resAi['text'] ?? '');
-$decoded = json_decode($text, true);
-if (!is_array($decoded)) {
-    $decoded = [
-        'summary' => $text !== '' ? $text : 'AI returned an empty response.',
-        'key_points' => [],
-        'issues' => [],
-        'actions' => [],
-    ];
-}
+$decoded = sbm_normalize_ai_report_payload($text);
+$decoded['_meta'] = [
+    'fingerprint' => $currentFingerprint,
+    'generated_at' => gmdate('c'),
+    'model' => $model,
+];
 
 sbm_increment_weekly_usage($shop, 'ai_insights', 1, (string)$aiUsage['week_key']);
 
@@ -210,4 +320,4 @@ sbm_log_write('ai', 'agent_run_completed', [
     'status' => (int)($resAi['status'] ?? 200),
 ]);
 
-echo json_encode(['ok' => true, 'report' => $decoded], JSON_UNESCAPED_UNICODE);
+echo json_encode(['ok' => true, 'cached' => false, 'report' => $decoded], JSON_UNESCAPED_UNICODE);
