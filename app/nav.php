@@ -112,7 +112,6 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
 </div>
 
 <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
-<script src="https://cdn.shopify.com/shopifycloud/app-bridge-utils.js"></script>
 <script>
   (function () {
     if (!window.__sbAppBridgeInit) {
@@ -141,8 +140,8 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
           if (AppBridge && typeof AppBridge.getSessionToken === 'function') {
             return await AppBridge.getSessionToken(app);
           }
-          if (window['app-bridge-utils'] && typeof window['app-bridge-utils'].getSessionToken === 'function') {
-            return await window['app-bridge-utils'].getSessionToken(app);
+          if (AppBridge && AppBridge.utilities && typeof AppBridge.utilities.getSessionToken === 'function') {
+            return await AppBridge.utilities.getSessionToken(app);
           }
         } catch (e) {}
         return '';

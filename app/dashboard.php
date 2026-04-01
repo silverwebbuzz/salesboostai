@@ -38,7 +38,6 @@ if ($hostForBootstrap === '') {
   <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=<?php echo (int)@filemtime(__DIR__ . '/assets/styles.css'); ?>">
 
   <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
-  <script src="https://cdn.shopify.com/shopifycloud/app-bridge-utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
