@@ -432,10 +432,10 @@ if ($hostForBootstrap === '') {
 
       if (!host) {
         // Missing host means embedded context is incomplete.
-        // Re-run install entry top-level to restore valid embedded params.
+        // Do NOT bounce to install; just reload the embedded app URL so Shopify can provide host.
         var shop = params.get('shop') || <?php echo json_encode($shop); ?>;
         if (shop) {
-          var adminUrl = <?php echo json_encode(BASE_URL . '/auth/install?shop='); ?> + encodeURIComponent(shop);
+          var adminUrl = 'https://' + encodeURIComponent(shop) + '/admin/apps/' + <?php echo json_encode((string)SHOPIFY_APP_HANDLE); ?> + '?shop=' + encodeURIComponent(shop);
           if (window.top && window.top !== window) {
             window.top.location.href = adminUrl;
           } else {
@@ -450,8 +450,7 @@ if ($hostForBootstrap === '') {
         return;
       }
 
-      var createApp = AppBridge.createApp;
-      createApp({
+      AppBridge.createApp({
         apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
         host: host,
         forceRedirect: true

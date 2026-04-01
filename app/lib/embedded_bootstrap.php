@@ -85,6 +85,28 @@ function sbm_bootstrap_embedded(array $options = []): array
         exit;
     }
 
+    // If Shopify loads our embedded page without `host`, App Bridge session tokens can fail
+    // (e.g. appTokenGenerate 502). Recover a previously stored host and redirect once to
+    // a canonical URL that includes it.
+    if (($host === '' || !is_string($host)) && is_array($shopRecord)) {
+        $storedHost = (string)($shopRecord['host'] ?? '');
+        if ($storedHost !== '' && (!isset($_GET['host']) || (string)($_GET['host'] ?? '') === '')) {
+            $path = parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+            if (!is_string($path) || $path === '') {
+                $path = '/dashboard';
+            }
+            $clean = $_GET;
+            $clean['shop'] = $shop;
+            $clean['host'] = $storedHost;
+            $qs = http_build_query($clean);
+            header('Location: ' . $path . ($qs !== '' ? ('?' . $qs) : ''));
+            exit;
+        }
+        if ($host === '' && $storedHost !== '') {
+            $host = $storedHost;
+        }
+    }
+
     // Managed Shopify pricing page can redirect directly back to app URL with charge_id.
     // Finalize billing here so subscription is updated even if /billing/confirm is skipped.
     if ($chargeId !== '' && function_exists('sbm_finalize_billing_charge')) {
