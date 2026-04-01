@@ -3,9 +3,10 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/lib/metrics.php';
 require_once __DIR__ . '/lib/usage.php';
 $agentId = isset($_GET['agent_id']) ? (int)$_GET['agent_id'] : 0;
+$agentKey = strtolower(trim((string)($_GET['agent_key'] ?? '')));
 $demoMode = (isset($_GET['demo']) && (string)$_GET['demo'] === '1');
 
-if ($agentId <= 0) {
+if ($agentId <= 0 && $agentKey === '') {
     http_response_code(400);
     echo 'Missing or invalid shop/agent_id parameter.';
     exit;
@@ -41,6 +42,32 @@ function formatTimeAgo(?string $timestamp): string {
     return $d . ' day' . ($d === 1 ? '' : 's') . ' ago';
 }
 
+function sbm_default_agent_by_key(string $key): ?array {
+    $map = [
+        'sales' => [
+            'id' => 0, 'name' => 'Sales Performance Agent',
+            'description' => 'Analyzes revenue, orders, and AOV trends to highlight what is driving growth or decline.',
+            'agent_key' => 'sales', 'model' => 'default', 'version' => 1, 'is_premium' => 0,
+        ],
+        'customers' => [
+            'id' => 0, 'name' => 'Customer Retention Agent',
+            'description' => 'Finds repeat purchase signals, retention gaps, and high-value customer opportunities.',
+            'agent_key' => 'customers', 'model' => 'default', 'version' => 1, 'is_premium' => 0,
+        ],
+        'inventory' => [
+            'id' => 0, 'name' => 'Inventory Optimization Agent',
+            'description' => 'Surfaces low-stock risks, dead-stock pressure, and inventory actions to protect revenue.',
+            'agent_key' => 'inventory', 'model' => 'default', 'version' => 1, 'is_premium' => 0,
+        ],
+        'actions' => [
+            'id' => 0, 'name' => 'Action Recommendations Agent',
+            'description' => 'Generates prioritized next-best actions across products, customers, and promotions.',
+            'agent_key' => 'actions', 'model' => 'default', 'version' => 1, 'is_premium' => 1,
+        ],
+    ];
+    return $map[$key] ?? null;
+}
+
 $agent = null;
 $report = null;
 $errorText = '';
@@ -60,23 +87,27 @@ $reportsScheduledEnabled = (bool)($features['reports_scheduled'] ?? false);
 try {
     $mysqli = db();
 
-    $stmtAgent = $mysqli->prepare("SELECT id, name, description, agent_key, model, version, is_premium, output_schema, data_mapping, prompt_template, config_json FROM ai_agents WHERE id = ? LIMIT 1");
-    if ($stmtAgent) {
-        $stmtAgent->bind_param('i', $agentId);
-        $stmtAgent->execute();
-        $resA = $stmtAgent->get_result();
-        $agent = $resA ? ($resA->fetch_assoc() ?: null) : null;
-        $stmtAgent->close();
+    if ($agentId > 0) {
+        $stmtAgent = $mysqli->prepare("SELECT id, name, description, agent_key, model, version, is_premium, output_schema, data_mapping, prompt_template, config_json FROM ai_agents WHERE id = ? LIMIT 1");
+        if ($stmtAgent) {
+            $stmtAgent->bind_param('i', $agentId);
+            $stmtAgent->execute();
+            $resA = $stmtAgent->get_result();
+            $agent = $resA ? ($resA->fetch_assoc() ?: null) : null;
+            $stmtAgent->close();
+        }
+    } elseif ($agentKey !== '') {
+        $agent = sbm_default_agent_by_key($agentKey);
     }
 
     $agentVersion = (int)($agent['version'] ?? 1);
-    $stmtReport = $mysqli->prepare(
+    $stmtReport = $agentId > 0 ? $mysqli->prepare(
         "SELECT report_json, status, agent_version, created_at
          FROM ai_reports
          WHERE shop = ? AND agent_id = ? AND status = 'completed' AND agent_version = ?
          ORDER BY created_at DESC
          LIMIT 1"
-    );
+    ) : null;
     if ($stmtReport) {
         $stmtReport->bind_param('sii', $shop, $agentId, $agentVersion);
         $stmtReport->execute();
@@ -94,7 +125,7 @@ try {
         }
     }
 
-    if (!$report) {
+    if (!$report && $agentId > 0) {
         $stmtReportFallback = $mysqli->prepare(
             "SELECT report_json, status, agent_version, created_at
              FROM ai_reports

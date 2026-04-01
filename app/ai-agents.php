@@ -31,6 +31,57 @@ function formatTimeAgo(?string $timestamp): string {
     return $d . ' day' . ($d === 1 ? '' : 's') . ' ago';
 }
 
+$defaultAgents = [
+    [
+        'id' => 0,
+        'name' => 'Sales Performance Agent',
+        'description' => 'Analyzes revenue, orders, and AOV trends to highlight what is driving growth or decline.',
+        'agent_key' => 'sales',
+        'model' => 'default',
+        'version' => 1,
+        'is_premium' => 0,
+        'output_schema' => '',
+        'data_mapping' => '',
+        'last_created_at' => '',
+    ],
+    [
+        'id' => 0,
+        'name' => 'Customer Retention Agent',
+        'description' => 'Finds repeat purchase signals, retention gaps, and high-value customer opportunities.',
+        'agent_key' => 'customers',
+        'model' => 'default',
+        'version' => 1,
+        'is_premium' => 0,
+        'output_schema' => '',
+        'data_mapping' => '',
+        'last_created_at' => '',
+    ],
+    [
+        'id' => 0,
+        'name' => 'Inventory Optimization Agent',
+        'description' => 'Surfaces low-stock risks, dead-stock pressure, and inventory actions to protect revenue.',
+        'agent_key' => 'inventory',
+        'model' => 'default',
+        'version' => 1,
+        'is_premium' => 0,
+        'output_schema' => '',
+        'data_mapping' => '',
+        'last_created_at' => '',
+    ],
+    [
+        'id' => 0,
+        'name' => 'Action Recommendations Agent',
+        'description' => 'Generates prioritized next-best actions across products, customers, and promotions.',
+        'agent_key' => 'actions',
+        'model' => 'default',
+        'version' => 1,
+        'is_premium' => 1,
+        'output_schema' => '',
+        'data_mapping' => '',
+        'last_created_at' => '',
+    ],
+];
+
 $storeName = (string)($shopRecord['store_name'] ?? '');
 $agents = [];
 $dbError = '';
@@ -91,6 +142,12 @@ try {
     }
 } catch (Throwable $e) {
     $dbError = 'Unable to load AI agents right now.';
+}
+if (empty($agents)) {
+    $agents = $defaultAgents;
+    if ($dbError === '') {
+        $dbError = 'Using default AI agents. Add rows in `ai_agents` to customize agents and history.';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -186,10 +243,19 @@ try {
                 <?php if (!$hasReport && $aiUsage['reached']): ?>
                   <a class="btn btn-primary" href="<?php echo e($upgradeUrl); ?>">Upgrade to <?php echo e(sbm_plan_label($nextPlan)); ?></a>
                 <?php else: ?>
-                  <a
-                    class="btn btn-primary"
-                    href="<?php echo e(BASE_URL); ?>/agent-report.php?agent_id=<?php echo (int)$agent['id']; ?>&shop=<?php echo urlencode($shop); ?><?php if ($host !== ''): ?>&host=<?php echo urlencode($host); ?><?php endif; ?><?php if (!$hasReport): ?>&demo=1<?php endif; ?>"
-                  ><?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?></a>
+                  <?php
+                    $aid = (int)($agent['id'] ?? 0);
+                    $aKey = (string)($agent['agent_key'] ?? '');
+                    $reportUrl = e(BASE_URL) . '/agent-report.php?shop=' . urlencode($shop);
+                    if ($aid > 0) {
+                        $reportUrl .= '&agent_id=' . $aid;
+                    } else {
+                        $reportUrl .= '&agent_key=' . urlencode($aKey !== '' ? $aKey : 'sales');
+                    }
+                    if ($host !== '') $reportUrl .= '&host=' . urlencode($host);
+                    if (!$hasReport) $reportUrl .= '&demo=1';
+                  ?>
+                  <a class="btn btn-primary" href="<?php echo $reportUrl; ?>"><?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?></a>
                 <?php endif; ?>
               </div>
             </div>
