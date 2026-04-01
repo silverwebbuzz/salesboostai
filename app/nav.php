@@ -117,44 +117,15 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     if (!window.__sbAppBridgeInit) {
       window.__sbAppBridgeInit = true;
 
-      var AppBridge = window['app-bridge'];
       var params0 = new URLSearchParams(window.location.search);
       var sbmDebug = params0.get('debug') === '1';
       var sbmConsole = (sbmDebug && window.console) ? window.console : null;
-      var host0 = params0.get('host') || <?php echo json_encode((string)$hostForPlan); ?>;
-      var app = null;
-
-      if (AppBridge && typeof AppBridge.createApp === 'function' && host0) {
-        app = AppBridge.createApp({
-          apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
-          host: host0,
-          forceRedirect: true
-        });
-      }
-      window.__sbmApp = app;
 
       window.getToken = async function getToken() {
         try {
-          // Modern App Bridge runtime (Shopify CDN).
           var shopifyNow = window.shopify || null;
           if (shopifyNow && typeof shopifyNow.idToken === 'function') {
             return await shopifyNow.idToken();
-          }
-          if (!app && AppBridge && typeof AppBridge.createApp === 'function' && host0) {
-            app = AppBridge.createApp({
-              apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
-              host: host0,
-              forceRedirect: true
-            });
-            window.__sbmApp = app;
-          }
-          if (!app) return '';
-          // Compatibility: App Bridge utility location differs by build/version.
-          if (AppBridge && typeof AppBridge.getSessionToken === 'function') {
-            return await AppBridge.getSessionToken(app);
-          }
-          if (AppBridge && AppBridge.utilities && typeof AppBridge.utilities.getSessionToken === 'function') {
-            return await AppBridge.utilities.getSessionToken(app);
           }
         } catch (e) {}
         return '';
@@ -183,17 +154,11 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
       };
 
       // Embedded-safe redirect helper for plan upgrades and external flows.
+      // Use top-level navigation directly to avoid cross-origin postMessage mismatches.
       window.sbmOpenRemote = function sbmOpenRemote(url) {
         try {
           var target = String(url || '');
           if (!target) return;
-          var AppBridgeNow = window['app-bridge'];
-          var appNow = window.__sbmApp || null;
-          if (AppBridgeNow && appNow && AppBridgeNow.actions && AppBridgeNow.actions.Redirect) {
-            var Redirect = AppBridgeNow.actions.Redirect;
-            Redirect.create(appNow).dispatch(Redirect.Action.REMOTE, target);
-            return;
-          }
           if (window.top && window.top !== window) {
             window.top.location.href = target;
             return;
