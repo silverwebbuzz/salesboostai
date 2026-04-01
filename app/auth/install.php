@@ -73,6 +73,7 @@ header('Content-Type: text/html; charset=UTF-8');
   </head>
   <body>
     <p>Redirecting to Shopify…</p>
+    <p style="margin-top:12px;"><a id="sbOauthTop" href="<?php echo htmlspecialchars($installUrl, ENT_QUOTES, 'UTF-8'); ?>" target="_top" style="color:#2563eb;">Open Shopify install (if stuck)</a></p>
     <script>
       (function () {
         var url = <?php echo json_encode($installUrl); ?>;
@@ -99,7 +100,13 @@ header('Content-Type: text/html; charset=UTF-8');
           }
         } catch (e1) {}
 
-        // If App Bridge isn't available for some reason, fall back.
+        // Never load Shopify OAuth inside the admin iframe (CSP / X-Frame-Options).
+        try {
+          if (window.top && window.top !== window) {
+            window.top.location.href = url;
+            return;
+          }
+        } catch (e2) {}
         window.location.href = url;
       })();
     </script>
