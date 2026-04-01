@@ -84,14 +84,7 @@ function dashboardShellPayload(string $tz, array $syncStatus): array {
     ];
 }
 
-$shop = sanitizeShopDomain($_GET['shop'] ?? null);
-if ($shop === null) {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'error' => 'Invalid shop.'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-requireSessionTokenAuth($shop);
+$shop = resolveApiShopFromToken($_GET['shop'] ?? null);
 
 $store = getShopByDomain($shop);
 if (!$store || (($store['status'] ?? '') === 'uninstalled')) {

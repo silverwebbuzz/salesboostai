@@ -138,3 +138,40 @@ if (!function_exists('requireSessionTokenAuth')) {
     }
 }
 
+if (!function_exists('sessionTokenShopDomain')) {
+    function sessionTokenShopDomain(array $payload): ?string
+    {
+        $dest = (string)($payload['dest'] ?? '');
+        if ($dest === '') {
+            return null;
+        }
+        $host = parse_url($dest, PHP_URL_HOST);
+        if (!is_string($host) || $host === '') {
+            return null;
+        }
+        return sanitizeShopDomain($host);
+    }
+}
+
+if (!function_exists('resolveApiShopFromToken')) {
+    function resolveApiShopFromToken(?string $requestedShop = null): string
+    {
+        $payload = requireSessionTokenAuth(null);
+        $tokenShop = sessionTokenShopDomain($payload);
+        if (!is_string($tokenShop) || $tokenShop === '') {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Invalid token shop'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $cleanRequested = sanitizeShopDomain($requestedShop);
+        if ($cleanRequested !== null && strtolower($cleanRequested) !== strtolower($tokenShop)) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Token shop mismatch'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        return $tokenShop;
+    }
+}
+
