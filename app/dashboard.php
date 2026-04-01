@@ -35,7 +35,7 @@ if ($hostForBootstrap === '') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SalesBoost AI Dashboard</title>
-  <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=<?php echo (int)@filemtime(__DIR__ . '/assets/styles.css'); ?>">
+  <link rel="stylesheet" href="assets/styles.css?v=<?php echo (int)@filemtime(__DIR__ . '/assets/styles.css'); ?>">
 
   <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -427,7 +427,7 @@ if ($hostForBootstrap === '') {
       host: <?php echo json_encode((string)$hostForBootstrap); ?>
     };
   </script>
-  <script src="<?php echo e(BASE_URL); ?>/assets/dashboard.js?v=<?php echo (int)@filemtime(__DIR__ . '/assets/dashboard.js'); ?>"></script>
+  <script src="assets/dashboard.js?v=<?php echo (int)@filemtime(__DIR__ . '/assets/dashboard.js'); ?>"></script>
 
 </body>
 </html>
