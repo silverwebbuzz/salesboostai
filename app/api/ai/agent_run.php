@@ -167,8 +167,37 @@ try {
         );
         if ($stmtIns) {
             $stmtIns->bind_param('sisi', $shop, $agentId, $reportJson, $agentVersion);
-            $stmtIns->execute();
+            $okInsert = $stmtIns->execute();
+            $insertErr = (string)$stmtIns->error;
             $stmtIns->close();
+            if (!$okInsert && stripos($insertErr, "Field 'id' doesn't have a default value") !== false) {
+                // Compatibility fallback for schemas where ai_reports.id is NOT AUTO_INCREMENT.
+                $nextId = 1;
+                if ($resMax = $mysqli->query("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM ai_reports")) {
+                    $rowMax = $resMax->fetch_assoc() ?: [];
+                    $nextId = max(1, (int)($rowMax['next_id'] ?? 1));
+                }
+                $stmtIns2 = $mysqli->prepare(
+                    "INSERT INTO ai_reports (id, shop, agent_id, report_json, status, agent_version, created_at)
+                     VALUES (?, ?, ?, ?, 'completed', ?, NOW())"
+                );
+                if ($stmtIns2) {
+                    $stmtIns2->bind_param('isisi', $nextId, $shop, $agentId, $reportJson, $agentVersion);
+                    $okInsert2 = $stmtIns2->execute();
+                    $insertErr2 = (string)$stmtIns2->error;
+                    $stmtIns2->close();
+                    if (!$okInsert2) {
+                        throw new RuntimeException($insertErr2 !== '' ? $insertErr2 : 'Insert failed with explicit id');
+                    }
+                    sbm_log_write('ai', 'agent_run_persist_used_explicit_id', [
+                        'shop' => $shop,
+                        'agent_id' => $agentId,
+                        'inserted_id' => $nextId,
+                    ]);
+                }
+            } elseif (!$okInsert) {
+                throw new RuntimeException($insertErr !== '' ? $insertErr : 'Insert failed');
+            }
         }
     }
 } catch (Throwable $e) {
