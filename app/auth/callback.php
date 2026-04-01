@@ -166,14 +166,14 @@ try {
 
 unset($_SESSION['nonce'], $_SESSION['shop']);
 
-$shopDomain = (string)$shop;
-$shopHandle = explode('.', $shopDomain)[0] ?? '';
-$adminUrl = 'https://admin.shopify.com/store/' . rawurlencode((string)$shopHandle)
-    . '/apps/' . rawurlencode((string)SHOPIFY_APP_HANDLE)
-    . '?shop=' . urlencode($shopDomain)
-    . ($host ? ('&host=' . urlencode((string)$host)) : '');
+// March-19 style: redirect back into the shop’s embedded app URL (not admin.shopify.com).
+$redirectUrl = 'https://' . $shop . '/admin/apps/' . rawurlencode((string)SHOPIFY_APP_HANDLE);
+$qs = [];
+$qs['shop'] = $shop;
+if (is_string($host) && $host !== '') {
+    $qs['host'] = $host;
+}
+$redirectUrl .= '?' . http_build_query($qs);
 
-// Clean flow (matches your previous behavior):
-// callback is a top-level page on our domain, so a normal redirect is safe.
-header('Location: ' . $adminUrl);
+header('Location: ' . $redirectUrl);
 exit;

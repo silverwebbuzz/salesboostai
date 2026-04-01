@@ -75,73 +75,13 @@ function sbm_bootstrap_embedded(array $options = []): array
 
     $shopRecord = getShopByDomain($shop);
     if (!$shopRecord) {
-        // Do NOT 302 to /auth/install from inside the embedded iframe: the iframe would load
-        // install.php, App Bridge REMOTE to Shopify OAuth can hang, and merchants see a stuck
-        // "Redirecting to Shopify…" page. Break out to top-level install entry instead.
-        if (function_exists('sbm_log_write')) {
-            sbm_log_write('auth', 'embedded_bootstrap_no_store_breakout_install', [
-                'shop' => $shop,
-                'host_present' => $host !== '',
-            ]);
-        }
-        $installQuery = ['shop' => $shop];
-        if (is_string($host) && $host !== '') {
-            $installQuery['host'] = $host;
-        }
-        $installEntry = BASE_URL . '/auth/install?' . http_build_query($installQuery);
-
-        header('Content-Type: text/html; charset=UTF-8');
-        http_response_code(200);
-        ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Install app</title>
-  <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
-</head>
-<body style="font-family:system-ui,sans-serif;padding:24px;">
-  <p><strong>This app needs to be installed.</strong></p>
-  <p>If you are not redirected automatically, click below.</p>
-  <p><a id="sbContinueInstall" href="<?php echo htmlspecialchars($installEntry, ENT_QUOTES, 'UTF-8'); ?>" target="_top" style="display:inline-block;padding:10px 16px;background:#111827;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Continue to install</a></p>
-  <script>
-    (function () {
-      var installEntry = <?php echo json_encode($installEntry); ?>;
-      var host = <?php echo json_encode(is_string($host) ? $host : ''); ?>;
-      try {
-        if (window.__sbEmbedInstallBreakout) return;
-        window.__sbEmbedInstallBreakout = true;
-      } catch (e0) {}
-      try {
-        var AppBridge = window['app-bridge'];
-        if (AppBridge && host) {
-          var app = AppBridge.createApp({
-            apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
-            host: host,
-            forceRedirect: true
-          });
-          if (AppBridge.actions && AppBridge.actions.Redirect) {
-            var Redirect = AppBridge.actions.Redirect;
-            Redirect.create(app).dispatch(Redirect.Action.REMOTE, installEntry);
-            return;
-          }
-        }
-      } catch (e1) {}
-      try {
-        if (window.top && window.top !== window) {
-          window.top.location.href = installEntry;
-        } else {
-          window.location.href = installEntry;
-        }
-      } catch (e2) {
-        window.location.href = installEntry;
-      }
-    })();
-  </script>
-</body>
-</html>
-        <?php
+        header(
+            'Location: ' .
+            BASE_URL .
+            '/auth/install?shop=' .
+            urlencode($shop) .
+            ($host ? '&host=' . urlencode($host) : '')
+        );
         exit;
     }
 
