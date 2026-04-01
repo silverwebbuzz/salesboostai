@@ -111,8 +111,8 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
   </div>
 </div>
 
-<script src="https://unpkg.com/@shopify/app-bridge@3"></script>
-<script src="https://unpkg.com/@shopify/app-bridge-utils@3"></script>
+<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+<script src="https://cdn.shopify.com/shopifycloud/app-bridge-utils.js"></script>
 <script>
   (function () {
     if (!window.__sbAppBridgeInit) {
