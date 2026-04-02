@@ -111,7 +111,6 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
   </div>
 </div>
 
-<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
 <script>
   (function () {
     try {
@@ -134,13 +133,18 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
       var sbmDebug = params0.get('debug') === '1';
       var sbmConsole = (sbmDebug && window.console) ? window.console : null;
 
+      // Do not load app-bridge.js from CDN here: Shopify Admin already provides window.shopify
+      // in the embedded iframe. A second bridge load causes postMessage origin mismatches.
       window.getToken = async function getToken() {
-        try {
-          var shopifyNow = window.shopify || null;
-          if (shopifyNow && typeof shopifyNow.idToken === 'function') {
-            return await shopifyNow.idToken();
-          }
-        } catch (e) {}
+        for (var attempt = 0; attempt < 12; attempt++) {
+          try {
+            var shopifyNow = window.shopify || null;
+            if (shopifyNow && typeof shopifyNow.idToken === 'function') {
+              return await shopifyNow.idToken();
+            }
+          } catch (e) {}
+          await new Promise(function (r) { setTimeout(r, 100); });
+        }
         return '';
       };
 
@@ -267,16 +271,6 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     }
     if (path.includes("agent-report") && agentsLink) {
       agentsLink.classList.add("active");
-    }
-  })();
-</script>
-<script>
-  (async () => {
-    if (window.getToken) {
-      try {
-        const t = await window.getToken();
-        // Intentionally silent in production to avoid console noise during Shopify review.
-      } catch (e) {}
     }
   })();
 </script>
