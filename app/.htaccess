@@ -57,6 +57,7 @@
     RewriteRule ^jobs/run_sync$ jobs/run_sync.php [L,QSA]
     RewriteRule ^jobs/ai_weekly_digest$ jobs/ai_weekly_digest.php [L,QSA]
     RewriteRule ^jobs/ai_dynamic_actions$ jobs/ai_dynamic_actions.php [L,QSA]
+    RewriteRule ^jobs/register_webhooks$ jobs/register_webhooks.php [L,QSA]
 
     # ---- API: dashboard (JS uses extensionless) ----
     RewriteRule ^api/dashboard$ api/dashboard.php [L,QSA]

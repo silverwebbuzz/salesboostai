@@ -11,8 +11,28 @@ startEmbeddedSession();
  
 $debug = SHOPIFY_DEBUG || (($_GET['debug'] ?? '') === '1');
 
+// --- Callback debug breadcrumbs (must run before HMAC/state checks) ---
+if (function_exists('sbm_log_write')) {
+    sbm_log_write('auth', '[callback] received', [
+        'query' => $_GET,
+        'ip' => (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+        'ua' => (string)($_SERVER['HTTP_USER_AGENT'] ?? ''),
+    ]);
+}
+register_shutdown_function(function (): void {
+    $err = error_get_last();
+    if ($err && function_exists('sbm_log_write')) {
+        sbm_log_write('auth', '[callback] shutdown_error', ['error' => $err]);
+    }
+});
+
 $params = $_GET;
-if (!verifyHmac($params)) die('Invalid HMAC');
+if (!verifyHmac($params)) {
+    if (function_exists('sbm_log_write')) {
+        sbm_log_write('auth', '[callback] invalid_hmac', ['query' => $_GET]);
+    }
+    die('Invalid HMAC');
+}
 
 // newcode/callback.php: reject stale OAuth callbacks (when Shopify sends timestamp)
 $ts = $_GET['timestamp'] ?? null;
@@ -138,6 +158,13 @@ if ($lockAcquired && is_file($codeLock)) {
     @unlink($codeLock);
 }
 
+if (function_exists('sbm_log_write')) {
+    sbm_log_write('auth', '[callback] token_exchanged', [
+        'shop' => $shop,
+        'host_present' => is_string($host) && $host !== '',
+    ]);
+}
+
 try {
     /*
      * Lightweight OAuth install path:
@@ -166,8 +193,9 @@ try {
     // Default subscription row on first install.
     ensureFreeSubscription($shop);
 
-    // Register operational webhooks during callback (as requested).
-    registerWebhooks($shop, $accessToken);
+    if (function_exists('sbm_log_write')) {
+        sbm_log_write('auth', '[callback] token_saved', ['shop' => $shop, 'host_present' => is_string($host) && $host !== '']);
+    }
 } catch (Throwable $e) {
     sbm_log_write('app', '[shopify_callback] setup_failed', ['error' => $e->getMessage()]);
     http_response_code(500);
@@ -176,6 +204,43 @@ try {
 }
 
 unset($_SESSION['nonce'], $_SESSION['shop']);
+
+// Fire-and-forget webhook registration in background.
+// This keeps OAuth callback fast and avoids Shopify install timeouts.
+try {
+    $jobUrlBase = rtrim((string)(defined('BASE_URL') ? BASE_URL : SHOPIFY_APP_URL), '/');
+    $ts = (string)time();
+    $sig = hash_hmac('sha256', $shop . '|' . $ts, SHOPIFY_API_SECRET);
+    $jobUrl = $jobUrlBase
+        . '/jobs/register_webhooks'
+        . '?shop=' . urlencode($shop)
+        . ($host ? ('&host=' . urlencode((string)$host)) : '')
+        . '&ts=' . urlencode($ts)
+        . '&sig=' . urlencode($sig);
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($jobUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 1,
+            CURLOPT_CONNECTTIMEOUT => 1,
+            CURLOPT_NOSIGNAL => 1,
+        ]);
+        @curl_exec($ch);
+        @curl_close($ch);
+    } else {
+        // Best-effort fallback; do not block callback.
+        @file_get_contents($jobUrl, false, stream_context_create(['http' => ['timeout' => 1]]));
+    }
+
+    if (function_exists('sbm_log_write')) {
+        sbm_log_write('auth', '[callback] webhook_job_fired', ['shop' => $shop]);
+    }
+} catch (Throwable $e) {
+    if (function_exists('sbm_log_write')) {
+        sbm_log_write('auth', '[callback] webhook_job_fire_failed', ['shop' => $shop, 'error' => $e->getMessage()]);
+    }
+}
 
 // March-19 style: redirect back into the shop’s embedded app URL (not admin.shopify.com).
 $redirectUrl = 'https://' . $shop . '/admin/apps/' . rawurlencode((string)SHOPIFY_APP_HANDLE);
