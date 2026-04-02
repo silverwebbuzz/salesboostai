@@ -142,7 +142,9 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
           app = AppBridge.createApp({
             apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
             host: host0,
-            forceRedirect: true
+            // Avoid forcing iframe → admin.shopify.com navigations (can trigger X-Frame-Options: deny).
+            // Embedded correctness is ensured by preserving `host` and the callback redirect into admin.shopify.com.
+            forceRedirect: false
           });
         } catch (eCreate) {
           if (sbmConsole) sbmConsole.error('App Bridge createApp failed', eCreate);
