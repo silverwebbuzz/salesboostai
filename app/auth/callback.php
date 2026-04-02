@@ -242,14 +242,29 @@ try {
     }
 }
 
-// March-19 style: redirect back into the shop’s embedded app URL (not admin.shopify.com).
-$redirectUrl = 'https://' . $shop . '/admin/apps/' . rawurlencode((string)SHOPIFY_APP_HANDLE);
-$qs = [];
-$qs['shop'] = $shop;
+// Redirect back into Shopify Admin embedded app URL (admin.shopify.com).
+// Prefer `host` (base64url) from the callback so App Bridge can postMessage to the parent.
+$adminAppUrl = '';
+if (is_string($host) && $host !== '') {
+    $decoded = base64_decode(strtr($host, '-_', '+/'), true);
+    if (is_string($decoded) && $decoded !== '') {
+        // $decoded example: "admin.shopify.com/store/{storeHandle}"
+        $adminAppUrl = 'https://' . rtrim($decoded, '/') . '/apps/' . rawurlencode((string)SHOPIFY_APP_HANDLE);
+    }
+}
+
+if ($adminAppUrl === '') {
+    // Fallback: build admin URL from shop domain.
+    $adminHandle = (string)explode('.', $shop)[0];
+    $adminAppUrl = 'https://admin.shopify.com/store/' . rawurlencode($adminHandle) . '/apps/' . rawurlencode((string)SHOPIFY_APP_HANDLE);
+}
+
+// Keep `shop` and `host` on the URL so subsequent app loads preserve context.
+$qs = ['shop' => $shop];
 if (is_string($host) && $host !== '') {
     $qs['host'] = $host;
 }
-$redirectUrl .= '?' . http_build_query($qs);
+$adminAppUrl .= '?' . http_build_query($qs);
 
-header('Location: ' . $redirectUrl);
+header('Location: ' . $adminAppUrl);
 exit;
