@@ -14,13 +14,24 @@ $debug = SHOPIFY_DEBUG || (($_GET['debug'] ?? '') === '1');
 $params = $_GET;
 if (!verifyHmac($params)) die('Invalid HMAC');
 
-// Validate nonce/state
-/*$sessionNonce = $_SESSION['nonce'] ?? null;
+// newcode/callback.php: reject stale OAuth callbacks (when Shopify sends timestamp)
+$ts = $_GET['timestamp'] ?? null;
+if (is_string($ts) && $ts !== '' && ctype_digit($ts)) {
+    if (abs(time() - (int)$ts) > 3600) {
+        http_response_code(403);
+        die('Request expired.');
+    }
+}
+
+// State / CSRF: validate when both session nonce and query state are present (newcode pattern)
+$sessionNonce = $_SESSION['nonce'] ?? null;
 $state = $_GET['state'] ?? null;
-if (!is_string($sessionNonce) || $sessionNonce === '' || !is_string($state) || $state === '' || !hash_equals($sessionNonce, $state)) {
-    http_response_code(400);
-    die('Invalid state');
-}*/
+if (is_string($sessionNonce) && $sessionNonce !== '' && is_string($state) && $state !== '') {
+    if (!hash_equals($sessionNonce, $state)) {
+        http_response_code(403);
+        die('Invalid state');
+    }
+}
 
 $shop = sanitizeShopDomain($_GET['shop'] ?? null);
 $code = $_GET['code'] ?? null;

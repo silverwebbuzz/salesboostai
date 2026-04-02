@@ -124,6 +124,11 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     } catch (e0) {}
   })();
 </script>
+<!-- App Bridge: CDN + data-api-key (same pattern as newcode/index.php) -->
+<script
+  src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
+  data-api-key="<?php echo htmlspecialchars((string)SHOPIFY_API_KEY, ENT_QUOTES, 'UTF-8'); ?>"
+></script>
 <script>
   (function () {
     if (!window.__sbAppBridgeInit) {
@@ -132,18 +137,48 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
       var params0 = new URLSearchParams(window.location.search);
       var sbmDebug = params0.get('debug') === '1';
       var sbmConsole = (sbmDebug && window.console) ? window.console : null;
+      var host0 = params0.get('host') || <?php echo json_encode((string)$hostForPlan); ?>;
 
-      // Do not load app-bridge.js from CDN here: Shopify Admin already provides window.shopify
-      // in the embedded iframe. A second bridge load causes postMessage origin mismatches.
+      // Legacy App Bridge namespace (fallback if shopify.idToken is unavailable)
+      var AppBridge = window['app-bridge'];
+      var app = null;
+      if (AppBridge && typeof AppBridge.createApp === 'function' && host0) {
+        try {
+          app = AppBridge.createApp({
+            apiKey: <?php echo json_encode(SHOPIFY_API_KEY); ?>,
+            host: host0,
+            forceRedirect: true
+          });
+        } catch (eCreate) {
+          if (sbmConsole) sbmConsole.error('App Bridge createApp failed', eCreate);
+        }
+      }
+      window.__sbmApp = app;
+
+      // newcode pattern: shopify.idToken() + Bearer on fetch; verify HS256 in lib/auth.php (same as newcode/verify-token.php)
       window.getToken = async function getToken() {
-        for (var attempt = 0; attempt < 12; attempt++) {
+        for (var attempt = 0; attempt < 8; attempt++) {
           try {
-            var shopifyNow = window.shopify || null;
-            if (shopifyNow && typeof shopifyNow.idToken === 'function') {
-              return await shopifyNow.idToken();
+            var g = window.shopify;
+            if (g && typeof g.idToken === 'function') {
+              var t = await g.idToken();
+              if (t) return t;
             }
-          } catch (e) {}
-          await new Promise(function (r) { setTimeout(r, 100); });
+          } catch (e1) {
+            if (attempt === 7 && sbmConsole) sbmConsole.error('shopify.idToken failed', e1);
+          }
+          await new Promise(function (r) { setTimeout(r, 80); });
+        }
+        if (!app) return '';
+        try {
+          if (AppBridge && AppBridge.utilities && typeof AppBridge.utilities.getSessionToken === 'function') {
+            return await AppBridge.utilities.getSessionToken(app);
+          }
+          if (AppBridge && typeof AppBridge.getSessionToken === 'function') {
+            return await AppBridge.getSessionToken(app);
+          }
+        } catch (e2) {
+          if (sbmConsole) sbmConsole.error('getSessionToken failed', e2);
         }
         return '';
       };
