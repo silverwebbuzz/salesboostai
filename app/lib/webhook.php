@@ -2,6 +2,14 @@
 
 /**
  * Shared Shopify webhook utilities.
+ *
+ * Compliance webhooks (GDPR) must also be registered in the Partner Dashboard:
+ * Configuration → Compliance webhooks — not only implemented here.
+ *
+ * Example URLs (replace host if needed):
+ *   …/webhooks/customers_data_request
+ *   …/webhooks/customers_redact
+ *   …/webhooks/shop_redact
  */
 require_once __DIR__ . '/logger.php';
 
@@ -52,7 +60,7 @@ if (!function_exists('validateWebhookRequest')) {
         }
 
         $calculatedHmac = base64_encode(hash_hmac('sha256', $rawBody, SHOPIFY_API_SECRET, true));
-        if (!hash_equals(trim($hmacHeader), $calculatedHmac)) {
+        if (!hash_equals($calculatedHmac, trim($hmacHeader))) {
             webhookLog(['event' => 'webhook_hmac_failed', 'topic' => $topic, 'shop' => $shop]);
             http_response_code(401);
             echo 'Unauthorized';
@@ -91,12 +99,23 @@ if (!function_exists('validateWebhookRequest')) {
 }
 
 if (!function_exists('respondWebhookAccepted')) {
+    /**
+     * Send 200 immediately (Shopify ~5s timeout), then optional background work.
+     */
     function respondWebhookAccepted(): void
     {
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=UTF-8');
+        }
         http_response_code(200);
-        echo 'OK';
+        echo json_encode(['status' => 'received'], JSON_UNESCAPED_SLASHES);
         if (function_exists('fastcgi_finish_request')) {
             fastcgi_finish_request();
+        } else {
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+            flush();
         }
         @ignore_user_abort(true);
     }
