@@ -41,6 +41,7 @@ function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8')
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?php include __DIR__ . '/partials/app_bridge_first.php'; ?>
   <title>SalesBoost AI</title>
   <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@12/build/esm/styles.css">
   <style>

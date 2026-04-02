@@ -45,6 +45,7 @@ $actionCenterUrl = BASE_URL . '/action-center.php?shop=' . urlencode($shop) . ($
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?php include __DIR__ . '/partials/app_bridge_first.php'; ?>
   <title>Reports</title>
   <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=<?php echo (int)@filemtime(__DIR__ . '/assets/styles.css'); ?>">
 </head>

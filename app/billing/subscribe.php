@@ -80,10 +80,16 @@ if ($plan === 'free') {
     exit;
 }
 
-// Prefer app base URL callback and include shop explicitly.
-// This makes the confirm step resilient in embedded admin flows.
+// Prefer app base URL callback and include shop + host (embedded App Bridge needs host).
 $returnBase = rtrim((string)(defined('BASE_URL') ? BASE_URL : SHOPIFY_APP_URL), '/');
+$hostForReturn = trim((string)($_GET['host'] ?? ''));
+if ($hostForReturn === '' && is_array($store)) {
+    $hostForReturn = trim((string)($store['host'] ?? ''));
+}
 $returnUrl = $returnBase . '/billing/confirm?shop=' . urlencode($shop);
+if ($hostForReturn !== '') {
+    $returnUrl .= '&host=' . urlencode($hostForReturn);
+}
 sbm_billing_subscribe_debug('create_charge_start', [
     'shop' => $shop,
     'plan' => $plan,

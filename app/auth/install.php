@@ -68,9 +68,9 @@ if ($embedded === 1) {
     http_response_code(200);
     $apiKeyEsc = htmlspecialchars((string)SHOPIFY_API_KEY, ENT_QUOTES, 'UTF-8');
     $authJson  = json_encode($installUrl, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
-    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Installing…</title>';
+    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
     echo '<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" data-api-key="' . $apiKeyEsc . '"></script>';
-    echo '</head><body style="font-family:system-ui,sans-serif;padding:24px;">';
+    echo '<title>Installing…</title></head><body style="font-family:system-ui,sans-serif;padding:24px;">';
     echo '<p>Redirecting to Shopify for authorization…</p>';
     echo '<script>(function(){var authUrl=' . $authJson . ';function go(){try{';
     echo 'if(window.shopify&&shopify.redirects&&typeof shopify.redirects.toRemote==="function"){shopify.redirects.toRemote(authUrl);return;}';

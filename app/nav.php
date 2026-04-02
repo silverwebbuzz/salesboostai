@@ -124,11 +124,6 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     } catch (e0) {}
   })();
 </script>
-<!-- App Bridge: CDN + data-api-key (same pattern as newcode/index.php) -->
-<script
-  src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
-  data-api-key="<?php echo htmlspecialchars((string)SHOPIFY_API_KEY, ENT_QUOTES, 'UTF-8'); ?>"
-></script>
 <script>
   (function () {
     if (!window.__sbAppBridgeInit) {
