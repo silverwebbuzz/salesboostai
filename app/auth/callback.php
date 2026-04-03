@@ -244,19 +244,29 @@ try {
 
 // Redirect back into Shopify Admin embedded app URL (admin.shopify.com).
 // Prefer `host` (base64url) from the callback so App Bridge can postMessage to the parent.
+$appHandle = defined('SHOPIFY_APP_HANDLE') ? trim((string)SHOPIFY_APP_HANDLE) : '';
 $adminAppUrl = '';
+
 if (is_string($host) && $host !== '') {
     $decoded = base64_decode(strtr($host, '-_', '+/'), true);
-    if (is_string($decoded) && $decoded !== '') {
-        // $decoded example: "admin.shopify.com/store/{storeHandle}"
-        $adminAppUrl = 'https://' . rtrim($decoded, '/') . '/apps/' . rawurlencode((string)SHOPIFY_APP_HANDLE);
+    // Validate decoded value looks like a Shopify admin host (admin.shopify.com/store/...)
+    if (is_string($decoded) && $decoded !== '' && strpos($decoded, 'admin.shopify.com') !== false) {
+        if ($appHandle !== '') {
+            $adminAppUrl = 'https://' . rtrim($decoded, '/') . '/apps/' . rawurlencode($appHandle);
+        }
     }
 }
 
-if ($adminAppUrl === '') {
-    // Fallback: build admin URL from shop domain.
+if ($adminAppUrl === '' && $appHandle !== '') {
+    // Fallback: build admin URL from shop domain store handle.
     $adminHandle = (string)explode('.', $shop)[0];
-    $adminAppUrl = 'https://admin.shopify.com/store/' . rawurlencode($adminHandle) . '/apps/' . rawurlencode((string)SHOPIFY_APP_HANDLE);
+    $adminAppUrl = 'https://admin.shopify.com/store/' . rawurlencode($adminHandle) . '/apps/' . rawurlencode($appHandle);
+}
+
+// Last-resort fallback: redirect to the app's own URL directly.
+// This ensures the merchant always lands somewhere useful even if SHOPIFY_APP_HANDLE is misconfigured.
+if ($adminAppUrl === '') {
+    $adminAppUrl = rtrim((string)(defined('BASE_URL') ? BASE_URL : ''), '/') . '/dashboard';
 }
 
 // Keep `shop` and `host` on the URL so subsequent app loads preserve context.
@@ -264,7 +274,7 @@ $qs = ['shop' => $shop];
 if (is_string($host) && $host !== '') {
     $qs['host'] = $host;
 }
-$adminAppUrl .= '?' . http_build_query($qs);
+$adminAppUrl .= (strpos($adminAppUrl, '?') !== false ? '&' : '?') . http_build_query($qs);
 
 header('Location: ' . $adminAppUrl);
 exit;

@@ -75,13 +75,13 @@ function sbm_bootstrap_embedded(array $options = []): array
 
     $shopRecord = getShopByDomain($shop);
     if (!$shopRecord) {
-        header(
-            'Location: ' .
-            BASE_URL .
-            '/auth/install?shop=' .
-            urlencode($shop) .
-            ($host ? '&host=' . urlencode($host) : '')
-        );
+        // Redirect to install. Pass embedded=1 when host is present (we are inside Shopify Admin
+        // iframe) so install.php uses App Bridge to break out of the iframe before OAuth.
+        $installQs = 'shop=' . urlencode($shop);
+        if ($host !== '' && is_string($host)) {
+            $installQs .= '&host=' . urlencode($host) . '&embedded=1';
+        }
+        header('Location: ' . BASE_URL . '/auth/install?' . $installQs);
         exit;
     }
 
@@ -91,17 +91,26 @@ function sbm_bootstrap_embedded(array $options = []): array
     if (($host === '' || !is_string($host)) && is_array($shopRecord)) {
         $storedHost = (string)($shopRecord['host'] ?? '');
         if ($storedHost !== '' && (!isset($_GET['host']) || (string)($_GET['host'] ?? '') === '')) {
-            $path = parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
-            if (!is_string($path) || $path === '') {
-                $path = '/dashboard';
+            $base = rtrim((string)(defined('BASE_URL') ? BASE_URL : (defined('SHOPIFY_APP_URL') ? SHOPIFY_APP_URL : '')), '/');
+
+            // Strip BASE_URL's path prefix from REQUEST_URI to avoid double-path like /app/app/dashboard.
+            $reqPath = (string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+            $basePath = rtrim((string)(parse_url($base, PHP_URL_PATH) ?? ''), '/');
+            if ($basePath !== '' && strpos($reqPath, $basePath) === 0) {
+                $reqPath = substr($reqPath, strlen($basePath));
             }
+            if ($reqPath === '' || $reqPath === false) {
+                $reqPath = '/dashboard';
+            }
+            if ($reqPath[0] !== '/') {
+                $reqPath = '/' . $reqPath;
+            }
+
             $clean = $_GET;
             $clean['shop'] = $shop;
             $clean['host'] = $storedHost;
             $qs = http_build_query($clean);
-            // Absolute URL: relative Location breaks many embedded iframe loads in Shopify Admin.
-            $base = rtrim((string)(defined('BASE_URL') ? BASE_URL : (defined('SHOPIFY_APP_URL') ? SHOPIFY_APP_URL : '')), '/');
-            header('Location: ' . $base . $path . ($qs !== '' ? ('?' . $qs) : ''));
+            header('Location: ' . $base . $reqPath . ($qs !== '' ? ('?' . $qs) : ''));
             exit;
         }
         if ($host === '' && $storedHost !== '') {

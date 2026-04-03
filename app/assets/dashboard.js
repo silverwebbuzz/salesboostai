@@ -128,46 +128,83 @@ function renderSyncGate(sync) {
   setText('sbSyncGateHint', 'Click "Sync Now" to run immediate background steps.');
 }
 
-async function runSyncNow() {
+// Auto-poll state: track rounds to avoid infinite loops
+let _syncPollCount = 0;
+const _syncPollMax = 30; // max 30 rounds × 4s = ~2 min auto-poll
+
+async function runSyncNow(isAutoPoll) {
   const shop = getQueryParam('shop');
   const host = getQueryParam('host');
   const btn = document.getElementById('btnRunSync');
   const refreshBtn = document.getElementById('btnRefreshDashboard');
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = 'Syncing...';
+
+  if (!isAutoPoll) {
+    _syncPollCount = 0; // reset counter on manual click
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Syncing...';
+    }
+    setText('sbSyncGateHint', 'Importing your store data, please wait…');
   }
-  setText('sbSyncGateHint', 'Running sync steps, please wait...');
 
   try {
     const doFetch = window.authFetch || fetch;
-    const res = await doFetch(`/app/api/sync/run?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}&steps=12`, {
-      method: 'POST',
-      headers: { Accept: 'application/json' }
-    });
-    const data = await res.json();
-    if (!res.ok || !data?.ok) {
-      throw new Error(data?.error || 'Sync run failed');
+    const res = await doFetch(
+      `/app/api/sync/run?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}&steps=15`,
+      { method: 'POST', headers: { Accept: 'application/json' } }
+    );
+
+    // Handle auth failure gracefully — token may not be ready yet on first load
+    if (res.status === 401) {
+      if (!isAutoPoll) {
+        setText('sbSyncGateHint', 'Authentication not ready. Please wait a moment and try again.');
+      }
+      return;
     }
 
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      throw new Error(data?.error || 'Sync failed. Please try again.');
+    }
+
+    const state = data?.sync_status?.state || 'ready';
     renderSyncGate(data.sync_status || null);
-    if ((data?.sync_status?.state || 'ready') === 'ready') {
-      setText('sbSyncGateHint', 'Sync completed. Click "Go to Dashboard" to load your data.');
-      if (refreshBtn) {
-        refreshBtn.textContent = 'Go to Dashboard';
-        show('btnRefreshDashboard', true);
-      }
+
+    if (state === 'ready') {
+      // Sync complete — automatically load the dashboard
+      setText('sbSyncGateHint', 'Data imported! Loading your dashboard…');
+      if (btn) { btn.disabled = false; btn.textContent = 'Sync Now'; }
+      setTimeout(() => loadDashboard({ nocache: true }), 800);
+      return;
+    }
+
+    if (state === 'error') {
+      setText('sbSyncGateHint', 'Sync encountered an error. Click "Sync Now" to retry.');
+      show('btnRefreshDashboard', false);
+      return;
+    }
+
+    // Still syncing — auto-poll up to _syncPollMax rounds
+    _syncPollCount++;
+    if (_syncPollCount <= _syncPollMax) {
+      const pending = Number(data?.sync_status?.pending || 0);
+      const inProgress = Number(data?.sync_status?.in_progress || 0);
+      setText('sbSyncGateHint', `Importing data… (${pending + inProgress} steps remaining)`);
+      setTimeout(() => runSyncNow(true), 4000);
     } else {
-      setText('sbSyncGateHint', 'Sync is still running. Click "Sync Now" again after a few moments to check progress.');
+      setText('sbSyncGateHint', 'Import is taking longer than expected. Click "Sync Now" to continue.');
       if (refreshBtn) {
-        refreshBtn.textContent = 'Go to Dashboard';
+        refreshBtn.textContent = 'Check Progress';
         show('btnRefreshDashboard', true);
+        refreshBtn.onclick = () => loadDashboard({ nocache: true });
       }
     }
   } catch (e) {
-    setText('sbSyncGateHint', (e && e.message) ? e.message : 'Sync failed. Please try again.');
+    const msg = (e && e.message) ? e.message : 'Sync failed. Please try again.';
+    setText('sbSyncGateHint', msg);
+    show('btnRefreshDashboard', false);
   } finally {
-    if (btn) {
+    if (!isAutoPoll && btn) {
       btn.disabled = false;
       btn.textContent = 'Sync Now';
     }
@@ -832,8 +869,15 @@ async function loadDashboard(opts = {}) {
     if (shouldGateDashboard(data?.sync_status || null)) {
       const btnSync = document.getElementById('btnRunSync');
       const btnRefresh = document.getElementById('btnRefreshDashboard');
-      if (btnSync) btnSync.onclick = runSyncNow;
+      if (btnSync) btnSync.onclick = () => runSyncNow(false);
       if (btnRefresh) btnRefresh.onclick = () => loadDashboard({ nocache: true });
+
+      // On first load (needs_sync), automatically kick off sync so the merchant
+      // doesn't have to manually click the button after install.
+      if ((data?.sync_status?.state || '') === 'needs_sync') {
+        setTimeout(() => runSyncNow(false), 600);
+      }
+
       show('sbSkeleton', false);
       show('sbContent', true);
       return;
