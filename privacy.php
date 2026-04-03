@@ -1,105 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SWB SalesBoost AI - Privacy Policy</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <style>
-      body {
-        font-family: "Inter", sans-serif;
-        line-height: 1.6;
-        margin: 0;
-        padding: 0;
-        background: #fff;
-        color: #1d1d1d;
-      }
-      header {
-        padding: 10px 30px;
-        border-bottom: 1px solid #dddada;
-        box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
-      }
-      .header_container {
-        max-width: 1280px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        justify-content: space-between;
-      }
-      .brand {
-        font-weight: 700;
-        font-size: 20px;
-        color: #111827;
-        text-decoration: none;
-      }
-      .brand span {
-        color: #2563eb;
-      }
-      header .menu ul li {
-        list-style: none;
-      }
-      header .menu ul {
-        display: flex;
-        gap: 20px;
-        align-items: center;
-        padding: 0;
-      }
-      .privacy-policy-container {
-        max-width: 1280px;
-        margin: 40px auto;
-        padding: 30px;
-        background: #f9f9f9;
-      }
-      h1 {
-        color: #1d1d1d;
-        font-size: 32px;
-        margin: 0 0 20px;
-      }
-      h2 {
-        color: #1d1d1d;
-        font-size: 24px;
-        margin-top: 30px;
-        margin-bottom: 10px;
-      }
-      p {
-        font-size: 16px;
-        margin-bottom: 15px;
-      }
-      ul {
-        padding-left: 20px;
-        margin-bottom: 15px;
-      }
-      ul li {
-        margin-bottom: 8px;
-        font-weight: 500;
-      }
-      a {
-        color: #1d1d1d;
-        text-decoration: none;
-      }
-      a:hover {
-        color: #2563eb;
-        text-decoration: underline;
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <div class="header_container">
-        <div>
-          <a class="brand" href="/">SWB <span>SalesBoost AI</span></a>
-        </div>
-        <div class="menu">
-          <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/privacy">Privacy Policy</a></li>
-          </ul>
-        </div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SWB SalesBoost AI — Privacy Policy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;" aria-hidden="true">
+    <symbol id="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></symbol>
+    <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+  </svg>
+
+  <nav class="navbar navbar-initial scrolled" id="navbar" role="navigation">
+    <div class="container navbar-inner">
+      <a href="/" class="nav-logo">
+        <div class="icon-box">SB</div>
+        <span class="logo-text">SWB <span class="blue">SalesBoost AI</span></span>
+      </a>
+      <div class="nav-desktop">
+        <a href="/#features">Features</a>
+        <a href="/#how-it-works">How It Works</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="/privacy">Privacy</a>
+        <a href="mailto:support.salesboost@silverwebbuzz.com">Contact</a>
+        <a href="/#cta" class="nav-cta">Get Early Access</a>
       </div>
-    </header>
-    <div class="privacy-policy-container">
-      <h1>Privacy Policy</h1>
+      <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Toggle menu">
+        <svg width="24" height="24"><use href="#icon-menu"/></svg>
+      </button>
+    </div>
+    <div class="mobile-menu" id="mobile-menu">
+      <div class="mobile-menu-inner">
+        <a href="/#features" class="nav-mobile-link">Features</a>
+        <a href="/#how-it-works" class="nav-mobile-link">How It Works</a>
+        <a href="/#pricing" class="nav-mobile-link">Pricing</a>
+        <a href="/privacy" class="nav-mobile-link">Privacy</a>
+        <a href="mailto:support.salesboost@silverwebbuzz.com" class="nav-mobile-link">Contact</a>
+        <a href="/#cta" class="nav-cta nav-mobile-link">Get Early Access</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="legal-page section">
+    <div class="container legal-prose">
+      <h1 class="text-gradient">Privacy Policy</h1>
       <p>
         At <strong>SWB SalesBoost AI</strong>, we value your privacy and are committed to protecting merchant and store data.
         This Privacy Policy explains how we collect, use, and safeguard information when you install and use our Shopify app.
@@ -131,7 +79,7 @@
         or when required by law.
       </p>
 
-      <h2>4. Data Storage & Security</h2>
+      <h2>4. Data Storage &amp; Security</h2>
       <p>
         We use reasonable administrative, technical, and organizational safeguards to protect data against unauthorized access,
         alteration, disclosure, or destruction.
@@ -159,9 +107,47 @@
 
       <h2>8. Contact Us</h2>
       <p>
-        If you have any privacy questions, please contact us at:<br />
-        <a href="mailto:support.salesboost@silverwebbuzz.com">support.salesboost@silverwebbuzz.com</a>
+        If you have any privacy questions, please contact us at
+        <a href="mailto:support.salesboost@silverwebbuzz.com">support.salesboost@silverwebbuzz.com</a>.
       </p>
     </div>
-  </body>
+  </main>
+
+  <footer id="footer" class="footer">
+    <div class="footer-bg-text">SalesBoost AI</div>
+    <div class="container footer-inner">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="logo nav-logo">
+            <div class="icon-box">SB</div>
+            <span class="logo-text">SWB <span class="blue">SalesBoost AI</span></span>
+          </div>
+          <p>AI-powered analytics and insights for Shopify—monitor performance, catch risks early, and act with confidence.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/#features">Features</a></li>
+            <li><a href="/#pricing">Pricing</a></li>
+            <li><a href="mailto:support.salesboost@silverwebbuzz.com">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Contact</h4>
+          <a href="mailto:support.salesboost@silverwebbuzz.com">support.salesboost@silverwebbuzz.com</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; <span id="year"></span> SWB SalesBoost AI. All rights reserved.</p>
+        <div>
+          <a href="/privacy">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
 </html>

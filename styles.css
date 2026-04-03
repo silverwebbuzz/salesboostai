@@ -302,8 +302,9 @@ body {
 .tag { font-size: 10px; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 9999px; }
 
 /* Pricing */
-.pricing-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; max-width: 64rem; margin: 0 auto; }
-@media (min-width: 768px) { .pricing-grid { grid-template-columns: repeat(3, 1fr); } }
+.pricing-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; max-width: 90rem; margin: 0 auto; }
+@media (min-width: 768px) { .pricing-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1200px) { .pricing-grid { grid-template-columns: repeat(4, 1fr); } }
 .pricing-card { position: relative; padding: 2rem; border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); backdrop-filter: blur(24px); transition: all 0.3s; display: flex; flex-direction: column; }
 .pricing-card.popular { border: 2px solid rgba(59,130,246,0.4); background: rgba(37,99,235,0.05); box-shadow: 0 0 40px -10px rgba(37,99,235,0.3); transform: scale(1.02); }
 .pricing-card .tag { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--blue-600); color: var(--white); font-size: 0.75rem; font-weight: 500; padding: 0.375rem 1rem; border-radius: 9999px; }
@@ -318,6 +319,21 @@ body {
 .pricing-card .btn.primary:hover { background: var(--blue-500); box-shadow: 0 0 20px -5px rgba(37,99,235,0.4); transform: translateY(-2px); }
 .pricing-card .btn.secondary { background: rgba(255,255,255,0.05); color: var(--white); border: 1px solid rgba(255,255,255,0.1); }
 .pricing-card .btn.secondary:hover { background: rgba(255,255,255,0.1); }
+.pricing-card .pricing-year { font-size: 0.8125rem; font-weight: 500; color: var(--emerald-500); margin: -0.5rem 0 1rem; min-height: 1.25rem; }
+.pricing-card .pricing-trial { margin-top: 0.75rem; padding: 0.875rem 1rem; font-size: 0.8125rem; color: var(--slate-400); text-align: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 0.75rem; }
+.pricing-card .btn { margin-top: auto; }
+
+/* Legal / static content pages */
+.legal-page { padding-top: 6rem; padding-bottom: 5rem; min-height: 70vh; }
+.legal-prose { max-width: 48rem; margin: 0 auto; }
+.legal-prose h1 { font-size: 2.25rem; font-weight: 600; letter-spacing: -0.025em; margin: 0 0 1rem; color: var(--white); }
+@media (min-width: 768px) { .legal-prose h1 { font-size: 2.75rem; } }
+.legal-prose h2 { font-size: 1.25rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--white); }
+.legal-prose p { font-size: 0.9375rem; color: var(--slate-400); line-height: 1.75; margin: 0 0 1rem; }
+.legal-prose ul { padding-left: 1.25rem; margin: 0 0 1rem; }
+.legal-prose li { font-size: 0.9375rem; color: var(--slate-400); line-height: 1.65; margin-bottom: 0.5rem; }
+.legal-prose a { color: var(--blue-400); text-decoration: none; }
+.legal-prose a:hover { text-decoration: underline; }
 
 /* Testimonials */
 .testimonials-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
