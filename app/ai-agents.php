@@ -149,6 +149,7 @@ if (empty($agents)) {
         $dbError = 'Using default AI agents. Add rows in `ai_agents` to customize agents and history.';
     }
 }
+$isEmbed = !empty($_GET['embed']) && $_GET['embed'] === '1';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -158,11 +159,15 @@ if (empty($agents)) {
   <?php include __DIR__ . '/partials/app_bridge_first.php'; ?>
   <title>AI Agents</title>
   <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=<?php echo (int)@filemtime(__DIR__ . '/assets/styles.css'); ?>">
+  <?php if ($isEmbed): ?>
+  <style>body{background:#f9fafb;} .container{padding-top:0;}</style>
+  <?php endif; ?>
 </head>
 <body>
   <main class="container">
-    <?php include __DIR__ . '/nav.php'; ?>
+    <?php if (!$isEmbed): include __DIR__ . '/nav.php'; endif; ?>
 
+    <?php if (!$isEmbed): ?>
     <div class="hero">
       <div class="hero-head">
         <div>
@@ -172,6 +177,7 @@ if (empty($agents)) {
       </div>
       <div class="hero-subtitle"><?php echo e($storeName !== '' ? $storeName : $shop); ?></div>
     </div>
+    <?php endif; ?>
 
     <?php if ($dbError !== ''): ?>
       <div class="section">

@@ -19,10 +19,9 @@ $recoLimit = (int)($limits['recommendations_per_week'] ?? 1);
 $recoUsage = sbm_usage_state($shop, 'recommendations', $recoLimit);
 
 // Deep links
-$reportsUrl = BASE_URL . '/reports.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
-$alertsUrl = BASE_URL . '/alerts.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
-$salesBoostUrl = BASE_URL . '/sales-boost.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
-$analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
+$reportsUrl = BASE_URL . '/reports?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
+$analyticsUrl = BASE_URL . '/analytics?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
+$aiAgentsEmbedUrl = BASE_URL . '/ai-agents?shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '') . '&embed=1';
 
 ?>
 <!DOCTYPE html>
@@ -126,8 +125,8 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
         </div>
 
         <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-          <a class="btn btn-primary btn-sm" href="<?php echo e($alertsUrl); ?>">Open Alerts →</a>
-          <a class="btn btn-primary btn-sm" href="<?php echo e($salesBoostUrl); ?>">Open Sales Boost →</a>
+          <button class="btn btn-primary btn-sm" type="button" onclick="acSwitchTab('alerts')">View Alerts</button>
+          <button class="btn btn-primary btn-sm" type="button" onclick="acSwitchTab('recommendations')">View Recommendations</button>
           <a class="btn btn-primary btn-sm" href="<?php echo e($analyticsUrl); ?>">Open Analytics →</a>
         </div>
       </div>
@@ -138,8 +137,8 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
         <button class="tab active" type="button" data-tab="overview">Overview</button>
         <button class="tab" type="button" data-tab="alerts">Alerts</button>
         <button class="tab" type="button" data-tab="recommendations">Recommendations</button>
-        <button class="tab" type="button" data-tab="reports">Reports</button>
-        <button class="tab" type="button" data-tab="history">Actions (History)</button>
+        <button class="tab" type="button" data-tab="ai-agents">AI Agents</button>
+        <button class="tab" type="button" data-tab="history">History</button>
       </div>
     </div>
 
@@ -169,9 +168,6 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
           <div style="margin-top:12px;" id="acAlertsCritical"></div>
           <div style="height:12px;"></div>
           <div id="acAlertsWarning"></div>
-          <div style="margin-top:14px;">
-            <a class="btn btn-primary btn-sm" href="<?php echo e($alertsUrl); ?>">Open full Alerts →</a>
-          </div>
         </div>
         <div class="card">
           <div class="kpi-title">Top Alert Themes</div>
@@ -186,9 +182,6 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
           <div class="kpi-title">Recommendations</div>
           <div class="hero-subtitle" style="margin-top:6px;">Product bundles, upsells, and quick boosts based on your recent orders.</div>
           <div style="margin-top:12px;" id="acRecoFromReports"></div>
-          <div style="margin-top:14px;">
-            <a class="btn btn-primary btn-sm" href="<?php echo e($salesBoostUrl); ?>">Open full Sales Boost →</a>
-          </div>
         </div>
         <div class="card">
           <div class="kpi-title">Quick Wins</div>
@@ -197,37 +190,17 @@ $analyticsUrl = BASE_URL . '/analytics.php?shop=' . urlencode($shop) . ($host !=
       </div>
     </div>
 
-    <div id="ac-tab-reports" class="tab-panel">
-      <div class="section reports-grid">
-        <div class="card">
-          <div class="kpi-title">Revenue</div>
-          <ul class="report-list" id="acReportsRevenue"></ul>
-          <div style="margin-top:12px;">
-            <a class="btn btn-primary btn-sm" href="<?php echo e($reportsUrl); ?>&tab=revenue">Open Revenue Report →</a>
-          </div>
-        </div>
-        <div class="card">
-          <div class="kpi-title">Customers</div>
-          <ul class="report-list" id="acReportsCustomers"></ul>
-          <div style="margin-top:12px;">
-            <a class="btn btn-primary btn-sm" href="<?php echo e($reportsUrl); ?>&tab=customers">Open Customer Report →</a>
-          </div>
-        </div>
-      </div>
-      <div class="section reports-grid">
-        <div class="card">
-          <div class="kpi-title">Inventory</div>
-          <ul class="report-list" id="acReportsInventory"></ul>
-          <div style="margin-top:12px;">
-            <a class="btn btn-primary btn-sm" href="<?php echo e($reportsUrl); ?>&tab=inventory">Open Inventory Report →</a>
-          </div>
-        </div>
-        <div class="card">
-          <div class="kpi-title">Weekly Plan</div>
-          <div class="hero-subtitle" style="margin-top:6px;">AI-generated weekly digest (cached).</div>
-          <div id="acWeeklyDigest" style="margin-top:10px;"></div>
-          <div style="height:12px;"></div>
-          <div id="acWeeklyPlan"></div>
+    <div id="ac-tab-ai-agents" class="tab-panel">
+      <div class="section">
+        <div class="card" style="padding:0;overflow:hidden;min-height:520px;">
+          <iframe
+            id="acAgentsFrame"
+            src=""
+            data-src="<?php echo e($aiAgentsEmbedUrl); ?>"
+            title="AI Agents"
+            frameborder="0"
+            style="width:100%;min-height:520px;border:none;display:block;"
+          ></iframe>
         </div>
       </div>
     </div>

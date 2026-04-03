@@ -99,6 +99,14 @@ if ($hostForBootstrap === '') {
       </div>
 
       <div id="sbDashboardBody">
+      <div class="section" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:0;">
+        <div class="hero-subtitle" style="margin:0;" id="sbRangeLabel">Last 30 days</div>
+        <div class="time-filters">
+          <button type="button" class="btn btn-primary btn-sm db-range" data-range="7">7 days</button>
+          <button type="button" class="btn btn-primary btn-sm db-range active" data-range="30">30 days</button>
+          <button type="button" class="btn btn-primary btn-sm db-range" data-range="90">90 days</button>
+        </div>
+      </div>
       <div class="section health-ai-row">
         <div class="card store-health-card">
           <div class="store-health-head">

@@ -84,6 +84,12 @@ function dashboardShellPayload(string $tz, array $syncStatus): array {
     ];
 }
 
+// Range param: 7, 30, or 90 days. Defaults to 30.
+$rangeDays = (int)($_GET['range'] ?? 30);
+if (!in_array($rangeDays, [7, 30, 90], true)) {
+    $rangeDays = 30;
+}
+
 $shop = resolveApiShopFromToken($_GET['shop'] ?? null);
 
 $store = getShopByDomain($shop);
@@ -219,7 +225,9 @@ try {
     $safe = $mysqli->real_escape_string($analyticsTable);
     $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
     if (!$bypassCache && $exists && $exists->num_rows > 0) {
-        $stmt = $mysqli->prepare("SELECT payload_json, fetched_at FROM `{$analyticsTable}` WHERE metric_key='dashboard_cache' LIMIT 1");
+        $cacheKey = 'dashboard_cache_' . $rangeDays;
+        $stmt = $mysqli->prepare("SELECT payload_json, fetched_at FROM `{$analyticsTable}` WHERE metric_key=? LIMIT 1");
+        if ($stmt) { $stmt->bind_param('s', $cacheKey); }
         if ($stmt) {
             $stmt->execute();
             $res = $stmt->get_result();
@@ -231,7 +239,9 @@ try {
                     $cached = json_decode((string)$row['payload_json'], true);
                     if (is_array($cached)) {
                         $liveFp = dashboardCacheLiveFingerprint($shop);
-                        $stmtSig = $mysqli->prepare("SELECT metric_value FROM `{$analyticsTable}` WHERE metric_key='dashboard_cache_sig' LIMIT 1");
+                        $sigKey = 'dashboard_cache_sig_' . $rangeDays;
+                        $stmtSig = $mysqli->prepare("SELECT metric_value FROM `{$analyticsTable}` WHERE metric_key=? LIMIT 1");
+                        if ($stmtSig) { $stmtSig->bind_param('s', $sigKey); }
                         $storedSig = '';
                         if ($stmtSig) {
                             $stmtSig->execute();
@@ -269,36 +279,40 @@ try {
     // ignore cache errors
 }
 
-$labels = lastNDaysLabels(30, $tz);
+$labels = lastNDaysLabels($rangeDays, $tz);
 $revSeries = array_fill(0, count($labels), 0.0);
 $ordSeries = array_fill(0, count($labels), 0);
 $labelIndex = array_flip($labels);
 
-// ---- KPIs ----
+// ---- KPIs (date-filtered by range) ----
 $totalOrders = 0;
 $totalCustomers = 0;
 $totalRevenue = 0.0;
 
-// Counts
-if ($res = $mysqli->query("SELECT COUNT(*) AS c FROM `{$ordersTable}`")) {
+$kpiSince = (new DateTime('now', new DateTimeZone($tz)))->modify('-' . ($rangeDays - 1) . ' days')->setTime(0, 0, 0);
+$kpiSinceStr = $mysqli->real_escape_string($kpiSince->format('Y-m-d H:i:s'));
+
+// Orders in range
+if ($res = $mysqli->query("SELECT COUNT(*) AS c FROM `{$ordersTable}` WHERE COALESCE(created_at,fetched_at) >= '{$kpiSinceStr}'")) {
     $row = $res->fetch_assoc();
     $totalOrders = (int)($row['c'] ?? 0);
 }
+// Customers: all-time total (cumulative metric, not period-based)
 if ($res = $mysqli->query("SELECT COUNT(*) AS c FROM `{$customersTable}`")) {
     $row = $res->fetch_assoc();
     $totalCustomers = (int)($row['c'] ?? 0);
 }
 
-// Revenue total (best-effort using JSON_EXTRACT)
+// Revenue in range (best-effort using JSON_EXTRACT)
 $revSql = "SELECT SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.total_price')) AS DECIMAL(12,2))) AS s
-           FROM `{$ordersTable}`";
+           FROM `{$ordersTable}` WHERE COALESCE(created_at,fetched_at) >= '{$kpiSinceStr}'";
 $revRes = $mysqli->query($revSql);
 if ($revRes) {
     $row = $revRes->fetch_assoc();
     $totalRevenue = (float)($row['s'] ?? 0);
 } else {
-    // Fallback: compute from up to 500 orders
-    $fallback = $mysqli->query("SELECT payload_json FROM `{$ordersTable}` ORDER BY COALESCE(created_at,fetched_at) DESC LIMIT 500");
+    // Fallback: scan recent orders within range
+    $fallback = $mysqli->query("SELECT payload_json, COALESCE(created_at,fetched_at) AS ts FROM `{$ordersTable}` WHERE COALESCE(created_at,fetched_at) >= '{$kpiSinceStr}' LIMIT 500");
     if ($fallback) {
         while ($r = $fallback->fetch_assoc()) {
             $p = json_decode((string)($r['payload_json'] ?? ''), true);
@@ -311,8 +325,8 @@ if ($revRes) {
 
 $aov = $totalOrders > 0 ? ($totalRevenue / $totalOrders) : 0.0;
 
-// ---- Charts (last 30 days) ----
-$since = (new DateTime('now', new DateTimeZone($tz)))->modify('-29 days')->setTime(0,0,0);
+// ---- Charts (last $rangeDays days) ----
+$since = (new DateTime('now', new DateTimeZone($tz)))->modify('-' . ($rangeDays - 1) . ' days')->setTime(0, 0, 0);
 $sinceStr = $since->format('Y-m-d H:i:s');
 
 // Orders count per day
@@ -630,19 +644,21 @@ try {
     $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
     if ($exists && $exists->num_rows > 0) {
         $payloadJson = json_encode($out, JSON_UNESCAPED_UNICODE);
+        $writeCacheKey = 'dashboard_cache_' . $rangeDays;
         $stmt = $mysqli->prepare("INSERT INTO `{$analyticsTable}` (metric_key, metric_value, payload_json)
-            VALUES ('dashboard_cache', '', ?)
+            VALUES (?, '', ?)
             ON DUPLICATE KEY UPDATE payload_json = VALUES(payload_json), fetched_at = NOW()");
         if ($stmt) {
-            $stmt->bind_param('s', $payloadJson);
+            $stmt->bind_param('ss', $writeCacheKey, $payloadJson);
             $stmt->execute();
             $stmt->close();
         }
+        $writeSigKey = 'dashboard_cache_sig_' . $rangeDays;
         $stmtSig = $mysqli->prepare("INSERT INTO `{$analyticsTable}` (metric_key, metric_value, payload_json)
-            VALUES ('dashboard_cache_sig', ?, NULL)
+            VALUES (?, ?, NULL)
             ON DUPLICATE KEY UPDATE metric_value = VALUES(metric_value), fetched_at = NOW()");
         if ($stmtSig) {
-            $stmtSig->bind_param('s', $dataFingerprint);
+            $stmtSig->bind_param('ss', $writeSigKey, $dataFingerprint);
             $stmtSig->execute();
             $stmtSig->close();
         }

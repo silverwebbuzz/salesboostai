@@ -844,10 +844,45 @@ function renderGoals(goals) {
   }).join('');
 }
 
+function getActiveDashRange() {
+  const btn = document.querySelector('.db-range.active');
+  if (btn) return parseInt(btn.getAttribute('data-range') || '30', 10);
+  const p = parseInt(new URLSearchParams(window.location.search).get('range') || '30', 10);
+  return [7, 30, 90].includes(p) ? p : 30;
+}
+
+function setDashRangeUrl(rangeDays) {
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.set('range', String(rangeDays));
+    window.history.replaceState({}, '', u.toString());
+  } catch (e) {}
+}
+
+function updateNavBadge(criticalCount) {
+  const badge = document.getElementById('nav-actions-badge');
+  if (!badge) return;
+  if (criticalCount > 0) {
+    badge.textContent = String(criticalCount);
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
 async function loadDashboard(opts = {}) {
   const shop = getQueryParam('shop');
   const host = getQueryParam('host');
+  const rangeDays = opts.range || getActiveDashRange();
   const nocache = opts.nocache ? '&nocache=1' : '';
+
+  // Sync active button state
+  document.querySelectorAll('.db-range').forEach((b) => {
+    b.classList.toggle('active', parseInt(b.getAttribute('data-range') || '30', 10) === rangeDays);
+  });
+  const rangeLabel = document.getElementById('sbRangeLabel');
+  if (rangeLabel) rangeLabel.textContent = 'Last ' + rangeDays + ' days';
+  setDashRangeUrl(rangeDays);
 
   show('sbSkeleton', true);
   show('sbContent', false);
@@ -856,7 +891,7 @@ async function loadDashboard(opts = {}) {
   try {
     const doFetch = window.authFetch || fetch;
     const res = await doFetch(
-      `/app/api/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}${nocache}`,
+      `/app/api/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}&range=${rangeDays}${nocache}`,
       {
         headers: { Accept: 'application/json' }
       }
@@ -982,7 +1017,12 @@ async function loadDashboard(opts = {}) {
     // Critical issues (premium cards + empty state)
     renderGoals(data?.goals || {});
     renderActionCenter(data?.action_center || []);
-    renderCriticalIssues(data?.critical_issues || []);
+    const criticalIssues = data?.critical_issues || [];
+    renderCriticalIssues(criticalIssues);
+
+    // Update nav alert badge with high-severity issue count.
+    const highCount = criticalIssues.filter((i) => String(i?.severity || '').toLowerCase() === 'high').length;
+    updateNavBadge(highCount);
 
     show('sbSkeleton', false);
     show('sbContent', true);
@@ -995,6 +1035,14 @@ async function loadDashboard(opts = {}) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Wire global range picker buttons.
+  document.querySelectorAll('.db-range').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const days = parseInt(btn.getAttribute('data-range') || '30', 10);
+      loadDashboard({ range: days, nocache: true });
+    });
+  });
+
   loadDashboard();
 
   // AI anomaly explanation modal (Growth+ gated server-side).

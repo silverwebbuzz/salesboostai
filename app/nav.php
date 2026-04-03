@@ -17,10 +17,13 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
 <nav class="top-nav" aria-label="Primary">
   <div class="top-nav__center" aria-label="Main navigation tabs">
     <ul class="top-nav__menu">
-      <li><a id="nav-dashboard" class="top-nav__link">Home</a></li>
+      <li><a id="nav-dashboard" class="top-nav__link">Dashboard</a></li>
       <li><a id="nav-analytics" class="top-nav__link">Analytics</a></li>
-      <li><a id="nav-action-center" class="top-nav__link">Actions</a></li>
-      <li><a id="nav-ai-insights" class="top-nav__link">AI Insights</a></li>
+      <li>
+        <a id="nav-action-center" class="top-nav__link">
+          Actions<span id="nav-actions-badge" class="nav-alert-badge" style="display:none;"></span>
+        </a>
+      </li>
       <li><a id="nav-reports" class="top-nav__link">Reports</a></li>
     </ul>
   </div>
@@ -229,7 +232,6 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     var dashboardLink = document.getElementById("nav-dashboard");
     var analyticsLink = document.getElementById("nav-analytics");
     var actionCenterLink = document.getElementById("nav-action-center");
-    var aiInsightsLink = document.getElementById("nav-ai-insights");
     var reportsLink = document.getElementById("nav-reports");
     var planTrigger = document.getElementById("nav-plan-trigger");
     var planModal = document.getElementById("planCompareModal");
@@ -238,7 +240,6 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     if (dashboardLink) dashboardLink.href = "dashboard" + query;
     if (analyticsLink) analyticsLink.href = "analytics" + query;
     if (actionCenterLink) actionCenterLink.href = "action-center" + query;
-    if (aiInsightsLink) aiInsightsLink.href = "ai-agents" + query;
     if (reportsLink) reportsLink.href = "reports" + query;
     if (planTrigger && planModal) {
       var openPlanModal = function () {
@@ -294,11 +295,8 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     if (path.includes("customers") && analyticsLink) {
       analyticsLink.classList.add("active");
     }
-    if ((path.includes("action-center") || path.includes("alerts") || path.includes("sales-boost")) && actionCenterLink) {
+    if ((path.includes("action-center") || path.includes("alerts") || path.includes("sales-boost") || path.includes("ai-agents") || path.includes("agent-report")) && actionCenterLink) {
       actionCenterLink.classList.add("active");
-    }
-    if ((path.includes("ai-agents") || path.includes("agent-report")) && aiInsightsLink) {
-      aiInsightsLink.classList.add("active");
     }
     if (path.includes("reports") && reportsLink) {
       reportsLink.classList.add("active");

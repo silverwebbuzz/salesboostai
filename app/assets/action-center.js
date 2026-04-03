@@ -535,7 +535,7 @@
 
   function applyInitialStateFromUrl() {
     var tab = (getParam('tab') || 'overview').toLowerCase();
-    var allowedTabs = { overview: 1, alerts: 1, recommendations: 1, reports: 1, history: 1 };
+    var allowedTabs = { overview: 1, alerts: 1, recommendations: 1, 'ai-agents': 1, history: 1 };
     if (!allowedTabs[tab]) tab = 'overview';
 
     var range = Number(getParam('range') || 7);
@@ -631,15 +631,15 @@
         if (name === 'overview' || name === 'alerts') {
           loadOverview(range).catch(function (e) { showNotice(e && e.message ? e.message : 'Failed to load Action Center.', 'error'); });
         }
-        if (name === 'reports') {
-          loadReports(range).catch(function () {});
-        }
         if (name === 'history') {
           loadHistory().catch(function () {});
         }
         if (name === 'recommendations') {
           loadRecommendations(range).catch(function () {});
           setHTML('acRecoQuickWins', '<ul class="report-list"><li>Start with 1 cross-sell bundle on your top product page.</li><li>Add an upsell to cart for best sellers.</li><li>Send a 7-day post-purchase offer.</li></ul>');
+        }
+        if (name === 'ai-agents') {
+          loadAgentsFrame();
         }
       });
     });
@@ -653,7 +653,6 @@
         var range = getActiveRange();
         setUrlState(name, range);
         if (name === 'overview' || name === 'alerts') loadOverview(range).catch(function () {});
-        if (name === 'reports') loadReports(range).catch(function () {});
         if (name === 'recommendations') loadRecommendations(range).catch(function () {});
       });
     });
@@ -667,14 +666,30 @@
       loadOverview(initialRange).catch(function (e) {
         showNotice(e && e.message ? e.message : 'Failed to load Action Center.', 'error');
       });
-    } else if (initialTab === 'reports') {
-      loadReports(initialRange).catch(function () {});
     } else if (initialTab === 'recommendations') {
       loadRecommendations(initialRange).catch(function () {});
       setHTML('acRecoQuickWins', '<ul class="report-list"><li>Start with 1 cross-sell bundle on your top product page.</li><li>Add an upsell to cart for best sellers.</li><li>Send a 7-day post-purchase offer.</li></ul>');
     } else if (initialTab === 'history') {
       loadHistory().catch(function () {});
+    } else if (initialTab === 'ai-agents') {
+      loadAgentsFrame();
     }
   });
+
+  // Load the embedded AI Agents iframe on demand (lazy — only when tab is first opened).
+  function loadAgentsFrame() {
+    var frame = document.getElementById('acAgentsFrame');
+    if (!frame) return;
+    var src = frame.getAttribute('data-src') || '';
+    if (src && frame.src !== src) {
+      frame.src = src;
+    }
+  }
+
+  // Allow sidebar buttons (and any other code) to switch tabs programmatically.
+  window.acSwitchTab = function (tabName) {
+    var tab = document.querySelector('#acTabs .tab[data-tab="' + tabName + '"]');
+    if (tab) tab.click();
+  };
 })();
 
