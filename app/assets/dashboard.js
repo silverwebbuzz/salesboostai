@@ -929,7 +929,7 @@ async function loadDashboard(opts = {}) {
     setTrend('trendAov', null);
 
     // Insights
-    renderList('topProductsList', (data?.insights?.top_products || []).slice(0, 5), (p, idx) => {
+    renderList('topProductsList', (data?.insights?.top_products || []).slice(0, 3), (p, idx) => {
       const title = escapeHtml(p?.title || '—');
       const qty = Number(p?.quantity || 0);
       const revenue = Number(p?.revenue_estimate || 0);
@@ -955,7 +955,7 @@ async function loadDashboard(opts = {}) {
       `;
       return row;
     });
-    renderList('highValueCustomersList', (data?.insights?.high_value_customers || []).slice(0, 5), (c, idx) => {
+    renderList('highValueCustomersList', (data?.insights?.high_value_customers || []).slice(0, 3), (c, idx) => {
       const label = c.label || c.email || `Customer ${c.customer_id || ''}`.trim() || '—';
       const email = c.email || '';
       const orderCount = Number(c.order_count || 0);

@@ -6,6 +6,11 @@ require_once __DIR__ . '/lib/embedded_bootstrap.php';
 require_once __DIR__ . '/lib/ui.php';
 [$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
+// Redirect to Action Center → Alerts tab. Page preserved for backwards compatibility.
+$_redirectUrl = BASE_URL . '/action-center?tab=alerts&shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
+header('Location: ' . $_redirectUrl);
+exit;
+
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 
 $criticalAlerts = [];

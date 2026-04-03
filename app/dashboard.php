@@ -251,50 +251,17 @@ if ($hostForBootstrap === '') {
       </div>
 
       <div class="section">
-        <div class="card inventory-insights-card feature-lock-card" data-lock-inventory="<?php echo $lockInventory ? '1' : '0'; ?>">
-          <div class="<?php echo $lockInventory ? 'feature-lock-blur' : ''; ?>">
-          <div class="inventory-insights-head">
-            <div class="inventory-insights-title-wrap">
-              <span class="inventory-insights-icon" aria-hidden="true">📦</span>
-              <div class="inventory-insights-title">Inventory</div>
+        <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span aria-hidden="true">📦</span>
+              <div class="kpi-title">Inventory Insights</div>
             </div>
-            <a class="inventory-outline-btn" href="#" id="btnViewProducts">View all products</a>
+            <div class="hero-subtitle" style="margin-top:4px;">View stock value, dead stock, and restock alerts in Analytics.</div>
           </div>
-          <div class="inventory-insights-grid">
-            <div class="inventory-metric inventory-metric--cash">
-              <div class="inventory-metric-label">Cash in inventory</div>
-              <div class="kpi-value" id="kpiCashInventory">0</div>
-              <div class="inventory-metric-help">Total stock value</div>
-            </div>
-            <div class="inventory-metric inventory-metric--dead" id="deadStockMetric">
-              <div class="inventory-metric-top">
-                <div class="inventory-metric-label">Dead stock value</div>
-                <span class="inventory-pill inventory-pill--danger" id="deadStockBadge">High</span>
-              </div>
-              <div class="kpi-value" id="kpiDeadStock">0</div>
-              <div class="inventory-metric-help">Products not sold in last 30 days</div>
-            </div>
-            <div class="inventory-metric inventory-metric--restock">
-              <div class="inventory-metric-top">
-                <div class="inventory-metric-label">Restock needed</div>
-                <span class="inventory-pill" id="restockBadge">Healthy</span>
-              </div>
-              <div class="kpi-value" id="kpiRestockValue">0</div>
-              <div class="inventory-metric-help">Items below preferred stock threshold</div>
-            </div>
-          </div>
-          <div class="top-list-rows" id="inventoryForecastList" style="margin-top:14px;"></div>
-          </div>
-          <?php if ($lockInventory): ?>
-            <div class="feature-lock-overlay">
-              <?php renderLockedFeatureBlock(
-                  'Inventory Insights',
-                  'Unlock full inventory value, dead stock alerts, and restock intelligence.',
-                  $inventoryRequiredPlan,
-                  $inventoryUpgradeUrl
-              ); ?>
-            </div>
-          <?php endif; ?>
+          <a class="btn btn-primary" href="<?php echo e(BASE_URL . '/analytics?tab=products&shop=' . urlencode($shop) . ($host !== '' ? '&host=' . urlencode($host) : '')); ?>">
+            Open Inventory in Analytics →
+          </a>
         </div>
       </div>
 
@@ -379,7 +346,7 @@ if ($hostForBootstrap === '') {
             </div>
           </div>
           <div class="top-list-rows" id="topProductsList"></div>
-          <a class="top-list-link" href="#" id="btnViewAllProducts2">View all products →</a>
+          <a class="top-list-link" href="<?php echo e(BASE_URL . '/analytics?tab=products&shop=' . urlencode($shop) . ($host !== '' ? '&host=' . urlencode($host) : '')); ?>">View all products in Analytics →</a>
           </div>
           <?php if ($lockTopLists): ?>
             <div class="feature-lock-overlay">
@@ -401,7 +368,7 @@ if ($hostForBootstrap === '') {
             </div>
           </div>
           <div class="top-list-rows" id="highValueCustomersList"></div>
-          <a class="top-list-link" href="#" id="btnViewCustomers">View all customers →</a>
+          <a class="top-list-link" href="<?php echo e(BASE_URL . '/analytics?tab=customers&shop=' . urlencode($shop) . ($host !== '' ? '&host=' . urlencode($host) : '')); ?>">View all customers in Analytics →</a>
           </div>
           <?php if ($lockTopLists): ?>
             <div class="feature-lock-overlay">

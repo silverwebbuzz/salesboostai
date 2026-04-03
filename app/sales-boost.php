@@ -5,6 +5,11 @@ require_once __DIR__ . '/lib/ui.php';
 require_once __DIR__ . '/lib/usage.php';
 [$shop, $host, $shopRecord, $entitlements] = sbm_bootstrap_embedded(['includeEntitlements' => true]);
 
+// Redirect to Action Center → Recommendations tab. Page preserved for backwards compatibility.
+$_redirectUrl = BASE_URL . '/action-center?tab=recommendations&shop=' . urlencode($shop) . ($host !== '' ? ('&host=' . urlencode($host)) : '');
+header('Location: ' . $_redirectUrl);
+exit;
+
 function e(string $v): string
 {
     return htmlspecialchars($v, ENT_QUOTES, 'UTF-8');

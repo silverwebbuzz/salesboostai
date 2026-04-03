@@ -247,15 +247,21 @@ if (empty($agents)) {
                   <?php
                     $aid = (int)($agent['id'] ?? 0);
                     $aKey = (string)($agent['agent_key'] ?? '');
-                    $reportUrl = e(BASE_URL) . '/agent-report.php?shop=' . urlencode($shop);
+                    $panelSrc = BASE_URL . '/agent-report?shop=' . urlencode($shop);
                     if ($aid > 0) {
-                        $reportUrl .= '&agent_id=' . $aid;
+                        $panelSrc .= '&agent_id=' . $aid;
                     } else {
-                        $reportUrl .= '&agent_key=' . urlencode($aKey !== '' ? $aKey : 'sales');
+                        $panelSrc .= '&agent_key=' . urlencode($aKey !== '' ? $aKey : 'sales');
                     }
-                    if ($host !== '') $reportUrl .= '&host=' . urlencode($host);
+                    if ($host !== '') $panelSrc .= '&host=' . urlencode($host);
+                    $panelSrc .= '&panel=1';
                   ?>
-                  <a class="btn btn-primary" href="<?php echo $reportUrl; ?>"><?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?></a>
+                  <button class="btn btn-primary" type="button"
+                    data-panel-src="<?php echo e($panelSrc); ?>"
+                    data-agent-name="<?php echo e($agent['name'] !== '' ? $agent['name'] : ('Agent #' . $aid)); ?>"
+                    onclick="openAgentPanel(this)">
+                    <?php echo e($hasReport ? 'View Report' : 'Generate Report'); ?>
+                  </button>
                 <?php endif; ?>
               </div>
             </div>
@@ -264,5 +270,62 @@ if (empty($agents)) {
       <?php endif; ?>
     </div>
   </main>
+
+  <!-- Agent Report Slide Panel -->
+  <div id="agentPanel" class="agent-panel" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="agentPanelTitle">
+    <div class="agent-panel__backdrop" onclick="closeAgentPanel()"></div>
+    <div class="agent-panel__drawer">
+      <div class="agent-panel__header">
+        <div id="agentPanelTitle" class="agent-panel__title">Agent Report</div>
+        <button class="agent-panel__close" type="button" onclick="closeAgentPanel()" aria-label="Close panel">✕</button>
+      </div>
+      <div class="agent-panel__body">
+        <iframe id="agentPanelFrame" src="" title="Agent Report" frameborder="0" style="width:100%;height:100%;border:none;"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .agent-panel { position:fixed;inset:0;z-index:9000;display:flex;justify-content:flex-end;pointer-events:none; }
+    .agent-panel.is-open { pointer-events:auto; }
+    .agent-panel__backdrop { position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .25s; }
+    .agent-panel.is-open .agent-panel__backdrop { opacity:1; }
+    .agent-panel__drawer { position:relative;width:min(760px,95vw);height:100%;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.15);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1); }
+    .agent-panel.is-open .agent-panel__drawer { transform:translateX(0); }
+    .agent-panel__header { display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0; }
+    .agent-panel__title { font-size:16px;font-weight:600;color:#111827; }
+    .agent-panel__close { background:none;border:none;cursor:pointer;font-size:18px;color:#6b7280;padding:4px 8px;border-radius:4px;line-height:1; }
+    .agent-panel__close:hover { background:#f3f4f6;color:#111827; }
+    .agent-panel__body { flex:1;overflow:hidden; }
+  </style>
+
+  <script>
+    function openAgentPanel(btn) {
+      var src = btn.getAttribute('data-panel-src') || '';
+      var name = btn.getAttribute('data-agent-name') || 'Agent Report';
+      var panel = document.getElementById('agentPanel');
+      var frame = document.getElementById('agentPanelFrame');
+      var title = document.getElementById('agentPanelTitle');
+      if (!panel || !frame) return;
+      if (title) title.textContent = name;
+      frame.src = src;
+      panel.classList.add('is-open');
+      panel.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeAgentPanel() {
+      var panel = document.getElementById('agentPanel');
+      var frame = document.getElementById('agentPanelFrame');
+      if (!panel) return;
+      panel.classList.remove('is-open');
+      panel.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      // Delay src clear so close animation completes before iframe unloads.
+      setTimeout(function () { if (frame) frame.src = ''; }, 300);
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAgentPanel();
+    });
+  </script>
 </body>
 </html>
