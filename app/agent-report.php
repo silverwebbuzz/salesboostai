@@ -241,6 +241,7 @@ $keyPoints = is_array($reportNormalized['key_points'] ?? null) ? $reportNormaliz
 $issues = is_array($reportNormalized['issues'] ?? null) ? $reportNormalized['issues'] : [];
 $actions = is_array($reportNormalized['actions'] ?? null) ? $reportNormalized['actions'] : [];
 
+$isPanel = !empty($_GET['panel']) && (string)$_GET['panel'] === '1';
 $isInventoryAgent = strtolower((string)($agent['agent_key'] ?? '')) === 'inventory';
 $aiStatus = strtolower(trim((string)($_GET['ai_status'] ?? '')));
 $aiStatusMsg = trim((string)($_GET['ai_msg'] ?? ''));
@@ -272,11 +273,27 @@ if ($isInventoryAgent) {
   <?php include __DIR__ . '/partials/app_bridge_first.php'; ?>
   <title><?php echo e((string)$agent['name']); ?> Report</title>
   <link rel="stylesheet" href="<?php echo e(BASE_URL); ?>/assets/styles.css?v=<?php echo (int)@filemtime(__DIR__ . '/assets/styles.css'); ?>">
+  <?php if ($isPanel): ?>
+  <style>
+    body { background: #fff; }
+    .container { padding: 0; max-width: 100%; }
+    .panel-report-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--color-border, #e5e7eb); }
+    .panel-report-head__meta { flex: 1; min-width: 0; }
+    .panel-report-head__title { font-size: 16px; font-weight: 700; color: var(--color-text, #111827); margin-bottom: 2px; }
+    .panel-report-head__desc { font-size: 13px; color: var(--color-muted, #6b7280); }
+    .panel-report-head__badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; font-size: 12px; color: var(--color-muted, #6b7280); }
+    .section { padding: 12px 20px; }
+    .section + .section { padding-top: 0; }
+  </style>
+  <?php endif; ?>
 </head>
 <body>
   <main class="container">
+    <?php if (!$isPanel): ?>
     <?php include __DIR__ . '/nav.php'; ?>
+    <?php endif; ?>
 
+    <?php if (!$isPanel): ?>
     <div class="hero">
       <div class="hero-head">
         <div>
@@ -313,6 +330,22 @@ if ($isInventoryAgent) {
         <button class="btn btn-primary" type="button" id="generateAiBtn">Generate AI Report</button>
       </div>
     </div>
+    <?php else: ?>
+    <div class="panel-report-head">
+      <div class="panel-report-head__meta">
+        <div class="panel-report-head__title"><?php echo e((string)$agent['name']); ?></div>
+        <div class="panel-report-head__desc"><?php $desc = (string)($agent['description'] ?? ''); echo $desc !== '' ? safeHtml($desc) : ''; ?></div>
+        <div class="panel-report-head__badges">
+          <span class="status-badge <?php echo e($hasReport ? 'status-positive' : 'status-medium'); ?>">
+            <?php echo e($hasReport ? '🟢 Ready' : '🟡 Not Generated'); ?>
+          </span>
+          <span>Updated: <?php echo e($hasReport ? formatTimeAgo((string)($reportMeta['created_at'] ?? '')) : 'Never'); ?></span>
+          <span>AI: <?php echo $aiUsage['unlimited'] ? e((string)$aiUsage['used']) . ' (∞)' : e((string)$aiUsage['used']) . '/' . e((string)$aiUsage['limit']); ?></span>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" type="button" id="generateAiBtn">Generate Report</button>
+    </div>
+    <?php endif; ?>
 
     <?php if ($aiStatus !== ''): ?>
       <div class="section">
@@ -325,6 +358,7 @@ if ($isInventoryAgent) {
       </div>
     <?php endif; ?>
 
+    <?php if (!$isPanel): ?>
     <div class="section">
       <div class="card">
         <div class="kpi-title">Saved Report & Digest</div>
@@ -335,6 +369,7 @@ if ($isInventoryAgent) {
         </div>
       </div>
     </div>
+    <?php endif; ?>
 
     <?php if ($errorText !== ''): ?>
       <div class="section">
@@ -349,9 +384,11 @@ if ($isInventoryAgent) {
         <div class="card report-empty">
           <div class="section-title">No AI report generated yet</div>
           <div class="sb-muted">Generate your first AI insight to understand your store performance.</div>
+          <?php if (!$isPanel): ?>
           <div style="margin-top:14px;">
             <button class="btn btn-primary" type="button" id="generateAiBtnEmpty">Generate AI Report</button>
           </div>
+          <?php endif; ?>
         </div>
       </div>
     <?php else: ?>
