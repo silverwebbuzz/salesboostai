@@ -1,7 +1,14 @@
 <?php
-$rawShopForPlan = $_GET['shop'] ?? null;
+// Plan modal needs sbm_upgrade_url(); pages like agent-report.php include nav without loading ui.php.
+require_once __DIR__ . '/lib/ui.php';
+
+$rawShopForPlan = (isset($shop) && is_string($shop) && $shop !== '')
+  ? $shop
+  : ($_GET['shop'] ?? null);
 $shopForPlan = sanitizeShopDomain($rawShopForPlan);
-$hostForPlan = isset($_GET['host']) && is_string($_GET['host']) ? $_GET['host'] : '';
+$hostForPlan = (isset($host) && is_string($host) && $host !== '')
+  ? $host
+  : (isset($_GET['host']) && is_string($_GET['host']) ? $_GET['host'] : '');
 if ($hostForPlan === '' && $shopForPlan) {
   $rec = getShopByDomain((string)$shopForPlan);
   $hostForPlan = is_array($rec) ? (string)($rec['host'] ?? '') : '';
