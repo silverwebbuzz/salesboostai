@@ -56,11 +56,12 @@ if (!is_string($token) || $token === '') {
 
 // Define your plan catalog here (amount in shop currency).
 // NOTE: Keep these aligned with your in-app pricing UI.
+// Keep aligned with marketing site (index.html) and in-app plan modal.
 $plans = [
     'free' => ['name' => 'Free', 'price' => 0.00, 'trial_days' => 0],
-    'starter' => ['name' => 'Starter', 'price' => 109.99, 'trial_days' => 7],
-    'growth' => ['name' => 'Growth', 'price' => 319.99, 'trial_days' => 7],
-    'premium' => ['name' => 'Premium', 'price' => 529.99, 'trial_days' => 7],
+    'starter' => ['name' => 'Starter', 'price' => 9.99, 'trial_days' => 7],
+    'growth' => ['name' => 'Growth', 'price' => 29.99, 'trial_days' => 3],
+    'premium' => ['name' => 'Premium', 'price' => 49.99, 'trial_days' => 1],
 ];
 
 if (!isset($plans[$plan])) {

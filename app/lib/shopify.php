@@ -1350,11 +1350,27 @@ function setSubscriptionPlan(
  */
 function createRecurringApplicationCharge(string $shop, string $token, array $charge): ?array
 {
-    $resp = shopifyRequest($shop, $token, 'POST', '/recurring_application_charges.json', null, [
+    $meta = shopifyRequestWithMeta($shop, $token, 'POST', '/recurring_application_charges.json', null, [
         'recurring_application_charge' => $charge,
     ]);
-    $rac = $resp['recurring_application_charge'] ?? null;
-    return is_array($rac) ? $rac : null;
+    $data = $meta['data'];
+    if (!is_array($data)) {
+        debugLog('[billing] recurring_charge_create_no_json', [
+            'shop' => $shop,
+            'http_code' => $meta['http_code'] ?? 0,
+        ]);
+        return null;
+    }
+    $rac = $data['recurring_application_charge'] ?? null;
+    if (is_array($rac)) {
+        return $rac;
+    }
+    debugLog('[billing] recurring_charge_create_failed', [
+        'shop' => $shop,
+        'http_code' => $meta['http_code'] ?? 0,
+        'errors' => $data['errors'] ?? $data,
+    ]);
+    return null;
 }
 
 function getRecurringApplicationCharge(string $shop, string $token, string $chargeId): ?array

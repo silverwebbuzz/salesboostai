@@ -39,23 +39,41 @@ if (!function_exists('sbm_upgrade_url')) {
     function sbm_upgrade_url(string $shop = '', string $host = '', string $toPlan = 'starter'): string
     {
         $toPlan = strtolower(trim($toPlan));
-        if (!in_array($toPlan, ['starter', 'growth', 'premium'], true)) {
+        if (!in_array($toPlan, ['free', 'starter', 'growth', 'premium'], true)) {
             $toPlan = 'starter';
         }
         $adminHandle = sbm_shop_admin_handle($shop);
         $appHandle = defined('SHOPIFY_APP_HANDLE') ? trim((string)SHOPIFY_APP_HANDLE) : '';
 
-        // Preferred: managed pricing page in Shopify admin (store-aware).
-        if ($adminHandle !== '' && $appHandle !== '') {
+        $forceSubscribe = defined('SBM_FORCE_BILLING_SUBSCRIBE') && (bool)SBM_FORCE_BILLING_SUBSCRIBE;
+
+        // Managed app pricing: one Shopify Admin URL for every tier (Free, Starter, Growth, Premium).
+        // Plan modal uses the same href on all CTAs so merchants always land on pricing_plans.
+        if (!$forceSubscribe && $adminHandle !== '' && $appHandle !== '') {
             return 'https://admin.shopify.com/store/' . rawurlencode($adminHandle)
                 . '/charges/' . rawurlencode($appHandle)
                 . '/pricing_plans';
         }
 
-        // Fallback: app billing subscribe endpoint.
+        // Fallback when admin pricing URL cannot be built (no handle / forced REST billing).
+        if ($toPlan === 'free') {
+            $url = rtrim((string)(defined('BASE_URL') ? BASE_URL : ''), '/') . '/billing/subscribe?plan=free';
+            if ($shop !== '') {
+                $url .= '&shop=' . urlencode($shop);
+            }
+            if ($host !== '') {
+                $url .= '&host=' . urlencode($host);
+            }
+            return $url;
+        }
+
         $url = rtrim((string)(defined('BASE_URL') ? BASE_URL : ''), '/') . '/billing/subscribe?plan=' . urlencode($toPlan);
-        if ($shop !== '') $url .= '&shop=' . urlencode($shop);
-        if ($host !== '') $url .= '&host=' . urlencode($host);
+        if ($shop !== '') {
+            $url .= '&shop=' . urlencode($shop);
+        }
+        if ($host !== '') {
+            $url .= '&host=' . urlencode($host);
+        }
         return $url;
     }
 }
