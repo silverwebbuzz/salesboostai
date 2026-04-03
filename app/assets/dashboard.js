@@ -682,7 +682,7 @@ function renderInventoryForecast(rows) {
   if (!list) return;
   const items = rows || [];
   if (!items.length) {
-    list.innerHTML = '<div class="sb-muted">No stockout forecast yet.</div>';
+    list.innerHTML = '<div class="sb-empty-state"><div class="sb-empty-icon">📦</div><div class="sb-empty-text">No stockout risks detected. Your inventory levels look healthy for the current demand.</div></div>';
     return;
   }
   list.innerHTML = items.map((r) => `
@@ -817,6 +817,44 @@ function renderActionCenter(items) {
   });
 }
 
+function renderTodaysFocus(data) {
+  const focusEl = document.getElementById('sbTodaysFocus');
+  const itemsEl = document.getElementById('sbFocusItems');
+  if (!focusEl || !itemsEl) return;
+
+  // Collect up to 3 high-priority items: high-severity critical issues first, then action center.
+  const issues = (data?.critical_issues || []).filter((i) => String(i?.severity || '').toLowerCase() === 'high');
+  const actions = (data?.action_center || []).filter((a) => String(a?.severity || '').toLowerCase() === 'high');
+  const combined = [...issues, ...actions].slice(0, 3);
+
+  if (!combined.length) {
+    focusEl.style.display = 'none';
+    return;
+  }
+
+  focusEl.style.display = '';
+  itemsEl.innerHTML = combined.map((item) => {
+    const title = escapeHtml(item?.title || 'Issue');
+    const desc = escapeHtml(item?.description || '');
+    const sev = String(item?.severity || 'high').toLowerCase();
+    const icon = sev === 'high' ? '⚠️' : '💡';
+    return `
+      <div class="sb-focus-item">
+        <span class="sb-focus-icon">${icon}</span>
+        <div class="sb-focus-text">
+          <div class="sb-focus-item-title">${title}</div>
+          ${desc ? `<div class="sb-focus-item-desc">${desc}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateKpiPeriodLabel(rangeDays) {
+  const span = document.getElementById('kpiRevenuePeriod');
+  if (span) span.textContent = `(${rangeDays} days)`;
+}
+
 function renderGoals(goals) {
   const list = document.getElementById('goalsList');
   if (!list) return;
@@ -926,6 +964,12 @@ async function loadDashboard(opts = {}) {
     setText('sbOrdersStat', fmtNumber(data?.kpi?.orders || 0));
     setText('sbHvCustomersStat', fmtNumber((data?.insights?.high_value_customers || []).length || 0));
 
+    // Period label on Revenue KPI
+    updateKpiPeriodLabel(rangeDays);
+
+    // Today's Focus strip (top urgent items)
+    renderTodaysFocus(data);
+
     // AI summary
     renderAiSummaryCards(data);
 
@@ -964,7 +1008,12 @@ async function loadDashboard(opts = {}) {
     setTrend('trendAov', null);
 
     // Insights
-    renderList('topProductsList', (data?.insights?.top_products || []).slice(0, 3), (p, idx) => {
+    const topProductsData = (data?.insights?.top_products || []).slice(0, 3);
+    if (!topProductsData.length) {
+      const el = document.getElementById('topProductsList');
+      if (el) el.innerHTML = '<div class="sb-empty-state"><div class="sb-empty-icon">🛍️</div><div class="sb-empty-text">Your best-selling products will appear here once orders are synced. Sync your store to get started.</div></div>';
+    }
+    renderList('topProductsList', topProductsData, (p, idx) => {
       const title = escapeHtml(p?.title || '—');
       const qty = Number(p?.quantity || 0);
       const revenue = Number(p?.revenue_estimate || 0);
@@ -990,7 +1039,12 @@ async function loadDashboard(opts = {}) {
       `;
       return row;
     });
-    renderList('highValueCustomersList', (data?.insights?.high_value_customers || []).slice(0, 3), (c, idx) => {
+    const topCustomersData = (data?.insights?.high_value_customers || []).slice(0, 3);
+    if (!topCustomersData.length) {
+      const el = document.getElementById('highValueCustomersList');
+      if (el) el.innerHTML = '<div class="sb-empty-state"><div class="sb-empty-icon">👥</div><div class="sb-empty-text">Your highest-value customers ranked by lifetime spend will appear here once customer data is synced.</div></div>';
+    }
+    renderList('highValueCustomersList', topCustomersData, (c, idx) => {
       const label = c.label || c.email || `Customer ${c.customer_id || ''}`.trim() || '—';
       const email = c.email || '';
       const orderCount = Number(c.order_count || 0);

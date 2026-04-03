@@ -24,6 +24,7 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
           Actions<span id="nav-actions-badge" class="nav-alert-badge" style="display:none;"></span>
         </a>
       </li>
+      <li><a id="nav-ai-agents" class="top-nav__link">✨ AI Agents</a></li>
       <li><a id="nav-reports" class="top-nav__link">Reports</a></li>
     </ul>
   </div>
@@ -232,6 +233,7 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     var dashboardLink = document.getElementById("nav-dashboard");
     var analyticsLink = document.getElementById("nav-analytics");
     var actionCenterLink = document.getElementById("nav-action-center");
+    var aiAgentsLink = document.getElementById("nav-ai-agents");
     var reportsLink = document.getElementById("nav-reports");
     var planTrigger = document.getElementById("nav-plan-trigger");
     var planModal = document.getElementById("planCompareModal");
@@ -240,6 +242,7 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     if (dashboardLink) dashboardLink.href = "dashboard" + query;
     if (analyticsLink) analyticsLink.href = "analytics" + query;
     if (actionCenterLink) actionCenterLink.href = "action-center" + query;
+    if (aiAgentsLink) aiAgentsLink.href = "ai-agents" + query;
     if (reportsLink) reportsLink.href = "reports" + query;
     if (planTrigger && planModal) {
       var openPlanModal = function () {
@@ -295,8 +298,11 @@ $managePlansUrl = function_exists('sbm_upgrade_url')
     if (path.includes("customers") && analyticsLink) {
       analyticsLink.classList.add("active");
     }
-    if ((path.includes("action-center") || path.includes("alerts") || path.includes("sales-boost") || path.includes("ai-agents") || path.includes("agent-report")) && actionCenterLink) {
+    if ((path.includes("action-center") || path.includes("alerts") || path.includes("sales-boost")) && actionCenterLink) {
       actionCenterLink.classList.add("active");
+    }
+    if ((path.includes("ai-agents") || path.includes("agent-report")) && aiAgentsLink) {
+      aiAgentsLink.classList.add("active");
     }
     if (path.includes("reports") && reportsLink) {
       reportsLink.classList.add("active");

@@ -107,10 +107,27 @@ if ($hostForBootstrap === '') {
           <button type="button" class="btn btn-primary btn-sm db-range" data-range="90">90 days</button>
         </div>
       </div>
+
+      <div id="sbTodaysFocus" style="display:none;">
+        <div class="section" style="padding-bottom:0;">
+          <div class="sb-focus-strip card">
+            <div class="sb-focus-header">
+              <span class="sb-focus-title">Today's Focus</span>
+              <span class="sb-focus-sub">Top issues needing your attention right now</span>
+            </div>
+            <div id="sbFocusItems"></div>
+            <a class="sb-focus-cta" href="<?php echo e(BASE_URL . '/action-center?shop=' . urlencode($shop) . ($host !== '' ? '&host=' . urlencode($host) : '')); ?>">View all actions →</a>
+          </div>
+        </div>
+      </div>
+
       <div class="section health-ai-row">
         <div class="card store-health-card">
           <div class="store-health-head">
-            <div class="store-health-title">Store Health Score</div>
+            <div class="store-health-title">
+              Store Health Score
+              <span class="sb-tooltip-wrap"><button class="sb-tooltip-trigger" type="button" aria-label="What is Health Score?">?</button><span class="sb-tooltip-box">A 0–100 score across Revenue (30pts), Inventory (25pts), Customers (25pts), and Alerts (20pts). 80+ is Good.</span></span>
+            </div>
             <div class="store-health-status" id="storeHealthStatus">Needs Attention</div>
           </div>
           <div class="store-health-score-wrap">
@@ -185,7 +202,8 @@ if ($hostForBootstrap === '') {
           <div class="card kpi kpi--revenue">
             <div class="kpi-head">
               <span class="kpi-icon-wrap" aria-hidden="true">💵</span>
-              <div class="kpi-title">Revenue (30 days)</div>
+              <div class="kpi-title">Revenue <span id="kpiRevenuePeriod" class="kpi-period">(30 days)</span></div>
+              <span class="sb-tooltip-wrap"><button class="sb-tooltip-trigger" type="button" aria-label="What is Revenue?">?</button><span class="sb-tooltip-box">Total money earned from orders placed in the selected period.</span></span>
             </div>
             <div class="kpi-value" id="kpiRevenue">0</div>
             <div id="trendRevenue"></div>
@@ -195,6 +213,7 @@ if ($hostForBootstrap === '') {
             <div class="kpi-head">
               <span class="kpi-icon-wrap" aria-hidden="true">🛒</span>
               <div class="kpi-title">Orders</div>
+              <span class="sb-tooltip-wrap"><button class="sb-tooltip-trigger" type="button" aria-label="What is Orders?">?</button><span class="sb-tooltip-box">Number of orders placed in the selected period.</span></span>
             </div>
             <div class="kpi-value" id="kpiOrders">0</div>
             <div id="trendOrders"></div>
@@ -204,6 +223,7 @@ if ($hostForBootstrap === '') {
             <div class="kpi-head">
               <span class="kpi-icon-wrap" aria-hidden="true">👥</span>
               <div class="kpi-title">Customers</div>
+              <span class="sb-tooltip-wrap"><button class="sb-tooltip-trigger" type="button" aria-label="What is Customers?">?</button><span class="sb-tooltip-box">Total unique customers in your store (all-time). Shows your overall audience size.</span></span>
             </div>
             <div class="kpi-value" id="kpiCustomers">0</div>
             <div id="trendCustomers"></div>
@@ -212,6 +232,7 @@ if ($hostForBootstrap === '') {
             <div class="kpi-head">
               <span class="kpi-icon-wrap" aria-hidden="true">🎯</span>
               <div class="kpi-title">AOV</div>
+              <span class="sb-tooltip-wrap"><button class="sb-tooltip-trigger" type="button" aria-label="What is AOV?">?</button><span class="sb-tooltip-box">Average Order Value — total revenue divided by number of orders. Higher AOV means customers spend more per purchase.</span></span>
             </div>
             <div class="kpi-value" id="kpiAov">0</div>
             <div id="trendAov"></div>
