@@ -249,7 +249,7 @@ if (!in_array($aiStatus, ['ok', 'error'], true)) {
     $aiStatus = '';
 }
 $aiStatusClass = $aiStatus === 'ok' ? 'status-positive' : 'status-high';
-$aiStatusTitle = $aiStatus === 'ok' ? 'AI call success' : 'AI call failed';
+$aiStatusTitle = $aiStatus === 'ok' ? 'AI Call Success' : 'AI Call Failed';
 $inventoryInsights = [
     'low_stock' => [],
     'out_of_stock' => [],
@@ -439,7 +439,7 @@ if ($isInventoryAgent) {
 
       <div class="section">
         <div class="card report-actions">
-          <div class="section-title">Recommended Actions (What you should do next)</div>
+          <div class="section-title">Recommended Actions</div>
           <?php if (empty($actions)): ?>
             <div class="sb-muted">No actions found.</div>
           <?php else: ?>
@@ -461,7 +461,7 @@ if ($isInventoryAgent) {
           <div class="inventory-insights-grid inventory-insights-grid--two-col">
             <div class="card inventory-insight-card">
               <div class="section-title">Stock Alerts</div>
-              <div class="inventory-block-title">Low stock (Top 5)</div>
+              <div class="inventory-block-title">Low Stock (Top 5)</div>
               <?php if (empty($inventoryInsights['low_stock'])): ?>
                 <div class="sb-muted">No low stock products.</div>
               <?php else: ?>
@@ -475,7 +475,7 @@ if ($isInventoryAgent) {
                 </ul>
               <?php endif; ?>
 
-              <div class="inventory-block-title" style="margin-top:12px;">Out of stock (Top 5)</div>
+              <div class="inventory-block-title" style="margin-top:12px;">Out of Stock (Top 5)</div>
               <?php if (empty($inventoryInsights['out_of_stock'])): ?>
                 <div class="sb-muted">No out-of-stock products.</div>
               <?php else: ?>
@@ -491,7 +491,7 @@ if ($isInventoryAgent) {
             </div>
 
             <div class="card inventory-insight-card">
-              <div class="section-title">Product Velocity (Last 30 days)</div>
+              <div class="section-title">Product Velocity (Last 30 Days)</div>
               <div class="velocity-counters">
                 <span class="severity severity-low">FAST: <?php echo (int)$inventoryInsights['velocity_counts']['fast']; ?></span>
                 <span class="severity severity-medium">MEDIUM: <?php echo (int)$inventoryInsights['velocity_counts']['medium']; ?></span>
@@ -499,7 +499,7 @@ if ($isInventoryAgent) {
                 <span class="severity severity-high">DEAD: <?php echo (int)$inventoryInsights['velocity_counts']['dead']; ?></span>
               </div>
 
-              <div class="inventory-block-title">Fast moving</div>
+              <div class="inventory-block-title">Fast Moving</div>
               <?php if (empty($inventoryInsights['velocity_top']['fast'])): ?>
                 <div class="sb-muted">No fast-moving products.</div>
               <?php else: ?>
@@ -510,7 +510,7 @@ if ($isInventoryAgent) {
                 </ul>
               <?php endif; ?>
 
-              <div class="inventory-block-title">Slow moving</div>
+              <div class="inventory-block-title">Slow Moving</div>
               <?php if (empty($inventoryInsights['velocity_top']['slow'])): ?>
                 <div class="sb-muted">No slow-moving products.</div>
               <?php else: ?>
@@ -521,7 +521,7 @@ if ($isInventoryAgent) {
                 </ul>
               <?php endif; ?>
 
-              <div class="inventory-block-title">Dead products</div>
+              <div class="inventory-block-title">Dead Products</div>
               <?php if (empty($inventoryInsights['velocity_top']['dead'])): ?>
                 <div class="sb-muted">No dead products.</div>
               <?php else: ?>
@@ -559,7 +559,7 @@ if ($isInventoryAgent) {
         box.style.display = '';
         box.style.borderColor = ok ? '#86efac' : '#fecaca';
         box.style.background = ok ? '#f0fdf4' : '#fef2f2';
-        box.innerHTML = '<strong>' + (ok ? 'AI call success:' : 'AI call failed:') + '</strong> ' + String(msg || '');
+        box.innerHTML = '<strong>' + (ok ? 'AI Call Success:' : 'AI Call Failed:') + '</strong> ' + String(msg || '');
       }
 
       function wireGenerateButton(id) {

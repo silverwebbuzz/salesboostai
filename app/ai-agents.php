@@ -188,8 +188,6 @@ $isEmbed = !empty($_GET['embed']) && $_GET['embed'] === '1';
     <?php endif; ?>
 
     <div class="section">
-      <div class="section-title">AI Agents</div>
-      <div class="hero-subtitle" style="margin-bottom:12px;">Your AI team for store growth and optimization</div>
       <div class="hero-subtitle" style="margin-bottom:12px;">
         AI insights usage this week:
         <?php if ($aiUsage['unlimited']): ?>

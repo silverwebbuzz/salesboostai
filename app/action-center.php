@@ -93,15 +93,15 @@ $analyticsUrl = BASE_URL . '/analytics?shop=' . urlencode($shop) . ($host !== ''
         </div>
 
         <div class="ac-snapshot" style="margin-top:10px;">
-          <div class="SbListRow"><div class="sb-list-left">Critical issues</div><div class="sb-list-right" id="acCriticalCount">—</div></div>
-          <div class="SbListRow"><div class="sb-list-left">Stockout risks</div><div class="sb-list-right" id="acStockoutCount">—</div></div>
+          <div class="SbListRow"><div class="sb-list-left">Critical Issues</div><div class="sb-list-right" id="acCriticalCount">—</div></div>
+          <div class="SbListRow"><div class="sb-list-left">Stockout Risks</div><div class="sb-list-right" id="acStockoutCount">—</div></div>
         </div>
 
         <div style="height:10px;"></div>
         <div class="kpi-title">Usage</div>
         <div class="ac-snapshot" style="margin-top:10px;">
           <div class="SbListRow">
-            <div class="sb-list-left">AI insights</div>
+            <div class="sb-list-left">AI Insights</div>
             <div class="sb-list-right">
               <?php if ($aiUsage['unlimited']): ?>
                 <?php echo e((string)$aiUsage['used']); ?> (unlimited)

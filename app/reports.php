@@ -70,14 +70,9 @@ $actionCenterUrl = BASE_URL . '/action-center.php?shop=' . urlencode($shop) . ($
           <a class="btn btn-primary btn-sm" href="<?php echo e($actionCenterUrl); ?>">← Back to Action Center</a>
           <?php if ($lockReportsExport): ?>
             <a class="btn btn-primary btn-sm" href="<?php echo e($reportsExportUpgradeUrl); ?>">Upgrade to Export</a>
-          <?php else: ?>
-            <button type="button" class="btn btn-primary btn-sm" id="btnReportsExport">Export (coming soon)</button>
           <?php endif; ?>
-
           <?php if ($lockReportsSchedule): ?>
             <a class="btn btn-primary btn-sm" href="<?php echo e($reportsScheduleUpgradeUrl); ?>">Upgrade to Schedule</a>
-          <?php else: ?>
-            <button type="button" class="btn btn-primary btn-sm" id="btnReportsSchedule">Schedule digest (coming soon)</button>
           <?php endif; ?>
         </div>
       </div>

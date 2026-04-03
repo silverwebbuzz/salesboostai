@@ -731,9 +731,7 @@ function renderCriticalIssues(issues) {
             <div class="critical-item-desc">${escapeHtml(issue.description || '')}</div>
           </div>
         </div>
-        <div class="critical-item-right">
-          <button class="critical-action-btn" type="button">View details</button>
-        </div>
+        <div class="critical-item-right"></div>
       </div>
     `;
     grid.appendChild(card);
@@ -787,8 +785,8 @@ function renderActionCenter(items) {
           </div>
         </div>
         <div class="critical-item-right">
-          <a class="critical-action-btn" href="${escapeHtml(item?.cta_url || '#')}">${escapeHtml(item?.cta_label || 'View details')}</a>
-          <button class="critical-action-btn action-state-btn" type="button" data-action-key="${escapeHtml(item?.key || '')}" data-action-state="acted">Mark acted</button>
+          ${item?.cta_url && item.cta_url !== '#' ? `<a class="critical-action-btn" href="${escapeHtml(item.cta_url)}">${escapeHtml(item?.cta_label || 'View')}</a>` : ''}
+          <button class="critical-action-btn action-state-btn" type="button" data-action-key="${escapeHtml(item?.key || '')}" data-action-state="acted">Mark Acted</button>
         </div>
       </div>
     `;

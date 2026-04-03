@@ -85,7 +85,7 @@ if ($hostForBootstrap === '') {
     <div id="sbContent" style="display:none;">
       <div class="section" id="sbSyncGate" style="display:none;">
         <div class="card" style="border:1px solid #dbeafe;background:#eff6ff;">
-          <div class="section-title" id="sbSyncGateTitle">Sync your store data</div>
+          <div class="section-title" id="sbSyncGateTitle">Sync Your Store Data</div>
           <div class="hero-subtitle" id="sbSyncGateText">
             Sync your store data before using your agents. We need your products and orders to generate insights.
           </div>
@@ -161,7 +161,7 @@ if ($hostForBootstrap === '') {
 
         <div class="card ai-summary-card">
           <div class="ai-summary-head">
-            <div class="ai-summary-title">Key insights</div>
+            <div class="ai-summary-title">Key Insights</div>
             <div class="ai-summary-badge">Action Needed</div>
           </div>
           <div class="ai-summary-grid" id="aiSummaryGrid">
@@ -245,7 +245,7 @@ if ($hostForBootstrap === '') {
         <div class="sb-modal__panel" role="dialog" aria-modal="true">
           <div class="sb-modal__head">
             <div>
-              <div class="sb-modal__title" id="aiExplainTitle">AI explanation</div>
+              <div class="sb-modal__title" id="aiExplainTitle">AI Explanation</div>
               <div class="hero-subtitle" id="aiExplainSubtitle" style="margin-top:2px;">2-sentence explanation based on your store data.</div>
             </div>
             <button class="sb-modal__close" type="button" id="aiExplainClose">Close</button>
@@ -261,7 +261,7 @@ if ($hostForBootstrap === '') {
             <div class="critical-insights-head">
               <div class="critical-insights-title-wrap">
                 <span class="critical-insights-icon" aria-hidden="true">🎯</span>
-                <div class="critical-insights-title">GOALS TRACKING</div>
+                <div class="critical-insights-title">Goals Tracking</div>
               </div>
             </div>
             <div id="goalsList"></div>
@@ -299,8 +299,8 @@ if ($hostForBootstrap === '') {
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px;">
             <div class="kpi-title">Revenue</div>
             <div>
-              <button class="btn btn-primary" type="button" data-range="7">Last 7 days</button>
-              <button class="btn btn-primary" type="button" data-range="30">Last 30 days</button>
+              <button class="btn btn-primary btn-sm" type="button" data-range="7">7 days</button>
+              <button class="btn btn-primary btn-sm" type="button" data-range="30">30 days</button>
             </div>
           </div>
           <div><canvas id="revenueChart"></canvas></div>
@@ -309,8 +309,8 @@ if ($hostForBootstrap === '') {
           <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px;">
             <div class="kpi-title">Orders</div>
             <div>
-              <button class="btn btn-primary" type="button" data-range="7">Last 7 days</button>
-              <button class="btn btn-primary" type="button" data-range="30">Last 30 days</button>
+              <button class="btn btn-primary btn-sm" type="button" data-range="7">7 days</button>
+              <button class="btn btn-primary btn-sm" type="button" data-range="30">30 days</button>
             </div>
           </div>
           <div><canvas id="ordersChart"></canvas></div>
@@ -323,7 +323,7 @@ if ($hostForBootstrap === '') {
             <div class="critical-insights-head">
               <div class="critical-insights-title-wrap">
                 <span class="critical-insights-icon" aria-hidden="true">🎯</span>
-                <div class="critical-insights-title">ACTION CENTER</div>
+                <div class="critical-insights-title">Action Center</div>
               </div>
             </div>
             <div id="actionCenterList"></div>
@@ -347,7 +347,7 @@ if ($hostForBootstrap === '') {
           <div class="critical-insights-head">
             <div class="critical-insights-title-wrap">
               <span class="critical-insights-icon" aria-hidden="true">⚠</span>
-              <div class="critical-insights-title">CRITICAL INSIGHTS</div>
+              <div class="critical-insights-title">Critical Insights</div>
             </div>
           </div>
           <div id="criticalIssuesGrid"></div>

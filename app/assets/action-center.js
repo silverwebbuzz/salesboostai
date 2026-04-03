@@ -296,8 +296,8 @@
               '</div>' +
             '</div>' +
             '<div class="critical-item-right">' +
-              '<a class="critical-action-btn" href="' + esc(it.cta_url || '#') + '">' + esc(it.cta_label || 'View details') + '</a>' +
-              '<button class="critical-action-btn ac-action-btn" type="button" data-action-key="' + esc(key) + '" data-action-state="acted">Mark acted</button>' +
+              (it.cta_url && it.cta_url !== '#' ? '<a class="critical-action-btn" href="' + esc(it.cta_url) + '">' + esc(it.cta_label || 'View') + '</a>' : '') +
+              '<button class="critical-action-btn ac-action-btn" type="button" data-action-key="' + esc(key) + '" data-action-state="acted">Mark Acted</button>' +
             '</div>' +
           '</div>' +
         '</div>'
