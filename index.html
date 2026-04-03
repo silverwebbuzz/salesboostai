@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SWB SalesBoost AI – AI-powered analytics &amp; growth for Shopify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- SVG Icons (hidden) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;">
+    <symbol id="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></symbol>
+    <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></symbol>
+    <symbol id="icon-bar-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+    <symbol id="icon-alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></symbol>
+    <symbol id="icon-trending-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 18l-9.5-9.5-5 5L1 6"/><path d="M17 18h6v-6"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></symbol>
+    <symbol id="icon-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></symbol>
+    <symbol id="icon-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></symbol>
+    <symbol id="icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M12 15v2"/><path d="M8 11V7a4 4 0 118 0v4"/></symbol>
+    <symbol id="icon-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="icon-lightbulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0018 8 6 6 0 006 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 018.91 14"/></symbol>
+    <symbol id="icon-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+    <symbol id="icon-trending-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></symbol>
+    <symbol id="icon-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></symbol>
+    <symbol id="icon-alert-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+    <symbol id="icon-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="icon-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+    <symbol id="icon-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></symbol>
+    <symbol id="icon-shopping-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></symbol>
+    <symbol id="icon-arrow-up-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7h-10v10"/></symbol>
+    <symbol id="icon-arrow-down-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7l10 10M17 7v10H7"/></symbol>
+    <symbol id="icon-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="icon-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 01-4.96.44 2.5 2.5 0 01-2.96-3.08 3 3 0 01-.34-5.58 2.5 2.5 0 011.32-4.24 2.5 2.5 0 001.98-3A2.5 2.5 0 019.5 2z"/><path d="M14.5 2A2.5 2.5 0 0012 4.5v15a2.5 2.5 0 004.96.44 2.5 2.5 0 002.96-3.08 3 3 0 00.34-5.58 2.5 2.5 0 00-1.32-4.24 2.5 2.5 0 01-1.98-3A2.5 2.5 0 0114.5 2z"/></symbol>
+    <symbol id="icon-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+    <symbol id="icon-star" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></symbol>
+  </svg>
+
+  <nav class="navbar navbar-initial" id="navbar" role="navigation">
+    <div class="container navbar-inner">
+      <a href="#hero" class="nav-logo">
+        <div class="icon-box">SB</div>
+        <span class="logo-text">SWB <span class="blue">SalesBoost AI</span></span>
+      </a>
+      <div class="nav-desktop">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#footer">Contact</a>
+        <a href="#cta" class="nav-cta">Get Early Access</a>
+      </div>
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+        <svg width="24" height="24"><use href="#icon-menu" id="icon-menu-use"/></svg>
+      </button>
+    </div>
+    <div class="mobile-menu" id="mobile-menu">
+      <div class="mobile-menu-inner">
+        <a href="#features" class="nav-mobile-link">Features</a>
+        <a href="#how-it-works" class="nav-mobile-link">How It Works</a>
+        <a href="#pricing" class="nav-mobile-link">Pricing</a>
+        <a href="#footer" class="nav-mobile-link">Contact</a>
+        <a href="#cta" class="nav-cta nav-mobile-link">Get Early Access</a>
+      </div>
+    </div>
+  </nav>
+
+  <section id="hero" class="hero">
+    <div class="hero-glow-wrap hero-glow"></div>
+    <div class="hero-blur"></div>
+    <div class="hero-content">
+      <div class="fade-up" data-fade>
+        <span class="hero-badge"><span class="hero-badge-dot"></span>Now in Early Access</span>
+      </div>
+      <h1 class="text-gradient fade-up" data-fade>AI-powered revenue intelligence<br /><span class="blue">for Shopify</span></h1>
+      <p class="hero-sub fade-up" data-fade>SWB SalesBoost AI turns your store data into clear actions—dashboards, alerts, and AI insights that help you sell more.</p>
+      <form class="hero-form fade-up" id="hero-form" data-fade>
+        <input type="email" id="hero-email" placeholder="Enter your email" required />
+        <button type="submit" id="hero-submit">Get Early Access <svg width="16" height="16"><use href="#icon-arrow-right"/></svg></button>
+      </form>
+      <p class="hero-status" id="hero-status" aria-live="polite"></p>
+      <div class="hero-secondary fade-up" data-fade>
+        <a href="https://apps.shopify.com" target="_blank" rel="noopener noreferrer"><svg width="14" height="14"><use href="#icon-play"/></svg> Install App</a>
+      </div>
+      <div class="dashboard-wrap fade-up" data-fade>
+        <div class="dashboard-glow"></div>
+        <div class="dashboard-box">
+          <div class="dashboard-chrome">
+            <div class="dashboard-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+            <div class="dashboard-url"><div class="dashboard-url-inner">salesboost.silverwebbuzz.com/app/dashboard</div></div>
+          </div>
+          <div class="dashboard-body">
+            <div class="dashboard-row">
+              <div class="dashboard-sidebar">
+                <div class="nav-logo" style="margin-bottom:1rem"><div class="icon-box" style="width:1.75rem;height:1.75rem;font-size:0.75rem">SB</div><span style="font-size:0.875rem;color:#111">SalesBoost AI</span></div>
+                <div style="padding:0.5rem 0.75rem;border-radius:0.5rem;background:#eff6ff;color:#1d4ed8;font-size:0.75rem;font-weight:500">Dashboard</div>
+                <div style="padding:0.5rem 0.75rem;color:#6b7280;font-size:0.75rem">Insights</div>
+                <div style="padding:0.5rem 0.75rem;color:#6b7280;font-size:0.75rem">Reports</div>
+                <div style="padding:0.5rem 0.75rem;color:#6b7280;font-size:0.75rem">Settings</div>
+              </div>
+              <div class="dashboard-main">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
+                  <div><p style="font-size:0.75rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin:0">Store Overview</p><p style="font-size:1.125rem;font-weight:600;color:#111;margin:0.25rem 0 0">Good morning, Alex</p></div>
+                  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:0.5rem;padding:0.375rem 0.75rem;font-size:0.75rem;color:#6b7280">Last 30 days</div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+                  <div class="dashboard-card"><p style="font-size:0.75rem;color:#9ca3af;margin:0">Health Score</p><div style="display:flex;align-items:flex-end;gap:0.25rem;margin-top:0.5rem"><p style="font-size:1.875rem;font-weight:700;color:#111;margin:0">82</p><p style="font-size:0.875rem;color:#9ca3af;margin:0 0 0.25rem">/100</p></div><div class="dashboard-score-bar"><div class="dashboard-score-fill"></div></div></div>
+                  <div class="dashboard-card"><p style="font-size:0.75rem;color:#9ca3af;margin:0">Conversion</p><p style="font-size:1.25rem;font-weight:700;color:#111;margin:0.5rem 0 0">3.2%</p><p style="font-size:0.75rem;color:#059669;font-weight:500;margin:0.25rem 0 0">+0.4%</p></div>
+                  <div class="dashboard-card"><p style="font-size:0.75rem;color:#9ca3af;margin:0">Revenue</p><p style="font-size:1.25rem;font-weight:700;color:#111;margin:0.5rem 0 0">$12,450</p><p style="font-size:0.75rem;color:#059669;font-weight:500;margin:0.25rem 0 0">+12%</p></div>
+                  <div class="dashboard-card"><p style="font-size:0.75rem;color:#9ca3af;margin:0">Orders</p><p style="font-size:1.25rem;font-weight:700;color:#111;margin:0.5rem 0 0">156</p><p style="font-size:0.75rem;color:#059669;font-weight:500;margin:0.25rem 0 0">+8%</p></div>
+                </div>
+                <div style="display:grid;grid-template-columns:3fr 2fr;gap:0.75rem">
+                  <div class="dashboard-card"><p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem">Revenue Trend</p><div class="chart-bars"><div class="chart-bar" style="height:35%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:42%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:38%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:55%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:48%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:62%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:58%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:72%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:68%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:78%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:74%"><div class="chart-bar-inner"></div></div><div class="chart-bar" style="height:82%"><div class="chart-bar-inner"></div></div></div>
+                  <div class="insight-card"><div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem"><span style="width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.2);font-size:10px;display:flex;align-items:center;justify-content:center">AI</span><span style="font-size:0.75rem;font-weight:500;color:rgba(255,255,255,0.8)">Top Insight</span></div><p style="font-size:0.875rem;line-height:1.5;margin:0">Checkout abandonment is 23% above average. Adding trust badges could recover ~$1,800/mo.</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="problem" class="section">
+    <div class="container">
+      <div class="section-title center fade-up" data-fade><p class="section-label">The Problem</p><h2 class="text-gradient">Running a Shopify store<br />is complicated</h2></div>
+      <div class="problem-grid">
+        <div class="glass-card problem-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-bar-chart"/></svg></div><h3>Too much data</h3><p>Drowning in analytics dashboards with no clear direction.</p></div>
+        <div class="glass-card problem-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-eye-off"/></svg></div><h3>No clear actions</h3><p>Data everywhere but no one telling you what to actually do.</p></div>
+        <div class="glass-card problem-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-alert-triangle"/></svg></div><h3>Hidden problems</h3><p>Issues silently hurting your revenue without you knowing.</p></div>
+        <div class="glass-card problem-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-trending-down"/></svg></div><h3>Lost revenue</h3><p>Money slipping through the cracks every single day.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="solution" class="section">
+    <div class="container solution-grid">
+      <div class="fade-up" data-fade>
+        <p class="section-label">The Solution</p>
+        <h2 class="section-title text-gradient">Meet SWB SalesBoost AI</h2>
+        <p class="section-sub">SalesBoost AI connects to your Shopify store and surfaces what matters—revenue trends, inventory risk, and next-best actions—so you can grow without living in spreadsheets.</p>
+        <div class="solution-steps">
+          <div class="solution-step fade-left" data-fade-left><div class="icon-wrap"><svg width="18" height="18"><use href="#icon-search"/></svg></div><div><p class="step-label">Detect problems</p><p class="step-desc">AI scans your entire store data daily.</p></div></div>
+          <div class="solution-step fade-left" data-fade-left><div class="icon-wrap"><svg width="18" height="18"><use href="#icon-message"/></svg></div><div><p class="step-label">Explain issues</p><p class="step-desc">Understand exactly what's going wrong.</p></div></div>
+          <div class="solution-step fade-left" data-fade-left><div class="icon-wrap"><svg width="18" height="18"><use href="#icon-wrench"/></svg></div><div><p class="step-label">Recommend fixes</p><p class="step-desc">Get actionable steps to resolve each issue.</p></div></div>
+        </div>
+      </div>
+      <div class="solution-visual fade-up" data-fade>
+        <div class="solution-visual-glow"></div>
+        <div class="glass-card solution-agent-card">
+          <div class="agent-line" style="margin-bottom:1.5rem"><div class="icon-box"><svg width="20" height="20"><use href="#icon-bot"/></svg></div><div><p style="margin:0;font-weight:500;color:#fff">SalesBoost AI</p><p style="margin:0;font-size:0.75rem;color:#64748b">Analyzing your store...</p></div></div>
+          <div class="agent-line"><div class="done yes">✓</div><span style="color:#94a3b8">Scanning 1,247 products...</span></div>
+          <div class="agent-line"><div class="done yes">✓</div><span style="color:#94a3b8">Analyzing conversion funnel...</span></div>
+          <div class="agent-line"><div class="done yes">✓</div><span style="color:#94a3b8">Checking inventory levels...</span></div>
+          <div class="agent-line"><div class="done no">...</div><span style="color:#fff">Generating recommendations...</span></div>
+          <div style="padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.05);margin-top:0.75rem"><p style="font-size:0.75rem;color:#64748b;margin:0">Found 3 issues — generating report</p><div style="margin-top:0.5rem;height:6px;background:rgba(255,255,255,0.05);border-radius:9999px;overflow:hidden"><div class="animate-shimmer" style="height:100%;background:#2563eb;border-radius:9999px;width:75%"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <div class="container">
+      <div class="section-title center fade-up" data-fade><p class="section-label">Features</p><h2 class="text-gradient">Everything you need to<br />grow your store</h2></div>
+      <div class="features-grid">
+        <div class="feature-card accent fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-activity"/></svg></div><h3>AI Store Health Score</h3><p>Understand store performance instantly.</p><div class="feature-example">Store Health Score 82/100</div></div>
+        <div class="feature-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-bar-chart"/></svg></div><h3>Daily AI Insights</h3><p>Automatic daily analysis of your store performance.</p></div>
+        <div class="feature-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-shield"/></svg></div><h3>Problem Detection</h3><p>SalesBoost AI flags issues before they hurt revenue.</p></div>
+        <div class="feature-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-lightbulb"/></svg></div><h3>Actionable Recommendations</h3><p>Clear steps to improve sales.</p></div>
+        <div class="feature-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-file-text"/></svg></div><h3>Weekly AI Reports</h3><p>Automatic business reports.</p></div>
+        <div class="feature-card fade-up" data-fade><div class="icon-wrap"><svg width="22" height="22"><use href="#icon-trending-up"/></svg></div><h3>Growth Tips</h3><p>Smart AI suggestions to grow revenue.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="showcase" class="section">
+    <div class="container">
+      <div class="section-title center fade-up" data-fade><p class="section-label">See It In Action</p><h2 class="text-gradient">Built for Shopify merchants</h2></div>
+      <div class="showcase-grid fade-up" data-fade>
+        <div><span class="showcase-badge"><svg width="14" height="14"><use href="#icon-activity"/></svg> Store Health Score</span><h3>Know your store health at a glance</h3><p>Get an instant score from 0-100 that tells you how well your store is performing. Track improvements over time and know exactly where to focus.</p><ul><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> Real-time performance scoring</li><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> Track progress week over week</li><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> Benchmark against similar stores</li></ul></div>
+        <div class="relative"><div style="position:absolute;inset:-1.5rem;background:rgba(37,99,235,0.1);border-radius:1.5rem;filter:blur(24px)"></div><div class="white-card"><div class="pad"><div style="display:flex;justify-content:space-between;margin-bottom:1rem"><h4 style="font-size:0.875rem;font-weight:600;color:#111;margin:0">Store Health Score</h4><span style="font-size:0.75rem;color:#9ca3af">Updated 2min ago</span></div><div style="display:flex;gap:1.5rem;align-items:center"><div class="score-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#f1f5f9" stroke-width="8"/><circle cx="50" cy="50" r="42" fill="none" stroke="#2563eb" stroke-width="8" stroke-dasharray="216.48 264" stroke-linecap="round"/></svg><div class="score-ring-num"><span class="big">82</span><span class="small">out of 100</span></div></div><div style="flex:1"><div class="bar-row"><span>SEO</span><div class="bar-track"><div class="bar-fill emerald" style="width:91%"></div></div><span style="font-size:0.75rem;font-weight:500;color:#374151;width:2rem">91</span></div><div class="bar-row"><span>Speed</span><div class="bar-track"><div class="bar-fill amber" style="width:76%"></div></div><span style="font-size:0.75rem;width:2rem">76</span></div><div class="bar-row"><span>UX</span><div class="bar-track"><div class="bar-fill blue" style="width:85%"></div></div><span style="font-size:0.75rem;width:2rem">85</span></div><div class="bar-row"><span>Content</span><div class="bar-track"><div class="bar-fill orange" style="width:70%"></div></div><span style="font-size:0.75rem;width:2rem">70</span></div></div></div><div style="background:#ecfdf5;border:1px solid #d1fae5;border-radius:0.75rem;padding:0.75rem;display:flex;gap:0.75rem;margin-top:1rem"><svg width="16" height="16" style="color:#059669;flex-shrink:0"><use href="#icon-arrow-up-right"/></svg><div><p style="font-size:0.75rem;font-weight:500;color:#065f46;margin:0">+5 points this week</p><p style="font-size:0.75rem;color:#059669;margin:0.125rem 0 0">Your store is improving! Keep optimizing product pages.</p></div></div></div></div></div>
+      </div>
+      <div class="showcase-grid reverse fade-up" data-fade>
+        <div class="relative" style="order:2"><div style="position:absolute;inset:-1.5rem;background:rgba(37,99,235,0.1);border-radius:1.5rem;filter:blur(24px)"></div><div class="white-card"><div class="pad"><div style="display:flex;justify-content:space-between;margin-bottom:1rem"><h4 style="font-size:0.875rem;font-weight:600;color:#111;margin:0">Today's AI Insights</h4><span style="background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:500;padding:0.125rem 0.5rem;border-radius:9999px">3 New</span></div><div class="insight-row warning"><svg width="18" height="18" style="color:#f59e0b;flex-shrink:0"><use href="#icon-alert-circle"/></svg><div><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Cart abandonment spike detected</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">Abandonment rate increased 18% in the last 24 hours. Most drop-offs at shipping step.</p></div></div><div class="insight-row success"><svg width="18" height="18" style="color:#10b981;flex-shrink:0"><use href="#icon-trending-up"/></svg><div><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Top product gaining traction</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">"Wireless Headphones Pro" views up 45%. Consider running a promotion.</p></div></div><div class="insight-row danger"><svg width="18" height="18" style="color:#ef4444;flex-shrink:0"><use href="#icon-trending-down"/></svg><div><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Revenue below weekly target</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">You're 22% below your weekly target. Boost marketing spend on top channels.</p></div></div></div></div></div>
+        <div style="order:1"><span class="showcase-badge"><svg width="14" height="14"><use href="#icon-trending-up"/></svg> Daily AI Insights</span><h3>Wake up to actionable insights every morning</h3><p>Every day, SalesBoost AI analyzes your store and delivers prioritized insights ranked by revenue impact—no more digging through dashboards.</p><ul><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> Prioritized by revenue impact</li><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> Automatic overnight analysis</li><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> Clear explanations, not just numbers</li></ul></div>
+      </div>
+      <div class="showcase-grid fade-up" data-fade>
+        <div><span class="showcase-badge"><svg width="14" height="14"><use href="#icon-check-circle"/></svg> Smart Recommendations</span><h3>Step-by-step fixes to grow revenue</h3><p>Don't just see problems — get exact steps to fix them. Each recommendation comes with estimated revenue impact so you can prioritize what matters most.</p><ul><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> Revenue impact estimates</li><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> Step-by-step instructions</li><li><svg width="16" height="16" style="color:#60a5fa"><use href="#icon-check-circle"/></svg> One-click implementation guides</li></ul></div>
+        <div class="relative"><div class="white-card"><div class="pad"><div style="display:flex;justify-content:space-between;margin-bottom:1rem"><h4 style="font-size:0.875rem;font-weight:600;color:#111;margin:0">Recommendations</h4><span style="font-size:0.75rem;color:#9ca3af">3 actions pending</span></div><div class="rec-card"><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Add trust badges to checkout</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">Adding SSL seal and payment badges can reduce abandonment by 12%.</p><div class="rec-tags"><span class="tag" style="background:#dbeafe;color:#1d4ed8">+$1,800/mo</span><span class="tag" style="background:#d1fae5;color:#047857">Easy</span></div></div><div class="rec-card"><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Restock 'Wireless Headphones Pro'</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">This product generates 18% of revenue. Currently showing 'Out of Stock'.</p><div class="rec-tags"><span class="tag" style="background:#dbeafe;color:#1d4ed8">+$2,400/mo</span><span class="tag" style="background:#fef3c7;color:#b45309">Medium</span><div style="width:4rem;height:6px;background:#f3f4f6;border-radius:9999px;overflow:hidden;margin-left:auto"><div style="height:100%;width:60%;background:#2563eb;border-radius:9999px"></div></div><span style="font-size:10px;color:#9ca3af">60%</span></div></div></div><div class="rec-card"><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Optimize product image quality</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">Products with HD images convert 40% better. 8 products need updates.</p><div class="rec-tags"><span class="tag" style="background:#dbeafe;color:#1d4ed8">+$950/mo</span><span class="tag" style="background:#d1fae5;color:#047857">Easy</span></div></div></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ai-report" class="section">
+    <div class="container">
+      <div class="section-title center fade-up" data-fade><p class="section-label">Example Output</p><h2 class="text-gradient">Your daily AI report</h2></div>
+      <div class="report-card fade-up" data-fade><div class="glow"></div><div class="card"><div class="report-header"><div style="display:flex;align-items:center;gap:0.75rem"><div class="icon-box"><svg width="14" height="14"><use href="#icon-zap"/></svg></div><div><p style="font-size:0.875rem;font-weight:600;color:#111;margin:0">Daily AI Report</p><p style="font-size:0.75rem;color:#9ca3af;margin:0;display:flex;align-items:center;gap:0.25rem"><svg width="10" height="10"><use href="#icon-clock"/></svg> December 15, 2025</p></div></div><div style="text-align:right"><p style="font-size:0.75rem;color:#9ca3af;margin:0">Health Score</p><div style="display:flex;align-items:center;gap:0.375rem;justify-content:flex-end"><p style="font-size:1.5rem;font-weight:700;color:#111;margin:0">78</p><span style="font-size:0.75rem;color:#9ca3af">/100</span></div></div></div><div class="report-score-bar"><div class="track"><div class="fill"></div></div></div><div class="report-block"><h4><span style="width:24px;height:24px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" style="color:#ef4444"><use href="#icon-alert-circle"/></svg></span> Problems Detected</h4><span style="background:#fee2e2;color:#dc2626;font-size:10px;font-weight:600;padding:0.125rem 0.5rem;border-radius:9999px;margin-left:auto">2 Issues</span><div class="report-item red"><svg width="16" height="16" style="color:#ef4444;flex-shrink:0"><use href="#icon-trending-down"/></svg><div><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Conversion dropping</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">Down 12% compared to last week</p><span class="impact" style="background:#fee2e2;color:#dc2626">High Impact</span></div></div><div class="report-item amber"><svg width="16" height="16" style="color:#f59e0b;flex-shrink:0"><use href="#icon-package"/></svg><div><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Product out of stock</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">3 best-selling products need restocking</p><span class="impact" style="background:#fef3c7;color:#b45309">Medium Impact</span></div></div></div><div class="report-block"><h4><span style="width:24px;height:24px;border-radius:50%;background:#d1fae5;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" style="color:#10b981"><use href="#icon-check-circle"/></svg></span> Recommendations</h4><div class="report-item green"><span style="width:20px;height:20px;border-radius:50%;background:#10b981;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span><div style="flex:1"><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Improve product images</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">Products with better images convert 40% more</p><div style="display:flex;gap:0.5rem;margin-top:0.5rem"><span class="impact" style="background:#dbeafe;color:#1d4ed8">+$1,200/mo</span><span class="impact" style="background:#d1fae5;color:#047857">Easy Fix</span></div></div><svg width="14" height="14" style="color:#d1d5db"><use href="#icon-arrow-right"/></svg></div><div class="report-item green"><span style="width:20px;height:20px;border-radius:50%;background:#10b981;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span><div style="flex:1"><p style="font-size:0.875rem;font-weight:500;color:#111;margin:0">Restock top products</p><p style="font-size:0.75rem;color:#6b7280;margin:0.25rem 0 0">Estimated $2,400 in lost revenue this week</p><div style="display:flex;gap:0.5rem;margin-top:0.5rem"><span class="impact" style="background:#dbeafe;color:#1d4ed8">+$2,400/mo</span><span class="impact" style="background:#fef3c7;color:#b45309">Medium Effort</span></div></div><svg width="14" height="14" style="color:#d1d5db"><use href="#icon-arrow-right"/></svg></div></div></div></div></div>
+    </div>
+  </section>
+
+  <section id="reports-showcase" class="section">
+    <div class="container">
+      <div class="section-title center fade-up" data-fade><p class="section-label">Weekly AI Reports</p><h2 class="text-gradient">Comprehensive reports,<br />zero effort</h2><p class="section-sub" style="max-width:36rem;margin:1rem auto 0">Every week, receive a full business intelligence report covering revenue, customers, products, and growth opportunities.</p></div>
+      <div class="report-card fade-up" data-fade style="max-width:56rem;margin:0 auto"><div class="card"><div class="reports-hero"><div style="display:flex;align-items:center;gap:0.75rem"><div style="width:32px;height:32px;border-radius:0.5rem;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center"><svg width="16" height="16"><use href="#icon-file-text"/></svg></div><div><p style="font-size:0.875rem;font-weight:600;color:#fff;margin:0">Weekly Performance Report</p><p style="font-size:0.75rem;color:rgba(255,255,255,0.8);margin:0">Dec 9 - Dec 15, 2025</p></div></div><div style="text-align:right"><p style="font-size:0.75rem;color:rgba(255,255,255,0.8);margin:0">Store Health</p><p style="font-size:1.25rem;font-weight:700;color:#fff;margin:0">82/100</p></div></div><div style="padding:1.5rem"><div class="reports-kpis"><div class="reports-kpi"><div class="label"><svg width="14" height="14"><use href="#icon-dollar"/></svg> Total Revenue</div><div class="value">$48,920</div><div style="display:flex;align-items:center;gap:0.25rem;margin-top:0.25rem"><svg width="12" height="12" style="color:#10b981"><use href="#icon-arrow-up-right"/></svg><span style="font-size:0.75rem;font-weight:500;color:#059669">+14% vs last week</span></div></div><div class="reports-kpi"><div class="label"><svg width="14" height="14"><use href="#icon-shopping-cart"/></svg> Orders</div><div class="value">612</div><div style="display:flex;align-items:center;gap:0.25rem;margin-top:0.25rem"><svg width="12" height="12" style="color:#10b981"><use href="#icon-arrow-up-right"/></svg><span style="font-size:0.75rem;font-weight:500;color:#059669">+8% vs last week</span></div></div><div class="reports-kpi"><div class="label"><svg width="14" height="14"><use href="#icon-users"/></svg> New Customers</div><div class="value">184</div><div style="display:flex;align-items:center;gap:0.25rem;margin-top:0.25rem"><svg width="12" height="12" style="color:#10b981"><use href="#icon-arrow-up-right"/></svg><span style="font-size:0.75rem;font-weight:500;color:#059669">+22% vs last week</span></div></div><div class="reports-kpi"><div class="label"><svg width="14" height="14"><use href="#icon-bar-chart"/></svg> Avg. Order Value</div><div class="value">$79.90</div><div style="display:flex;align-items:center;gap:0.25rem;margin-top:0.25rem"><svg width="12" height="12" style="color:#ef4444"><use href="#icon-arrow-down-right"/></svg><span style="font-size:0.75rem;font-weight:500;color:#ef4444">-3% vs last week</span></div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem"><div class="reports-chart"><p style="font-size:0.75rem;font-weight:500;color:#374151;margin:0 0 0.75rem">Daily Revenue (Last 7 Days)</p><div class="reports-bars"><div class="bar" style="height:57%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:79%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:92%"></div><div class="bar" style="height:100%"></div><div class="bar" style="height:67%"></div></div></div><div class="reports-chart"><p style="font-size:0.75rem;font-weight:500;color:#374151;margin:0 0 0.75rem">Top Products</p><div style="display:flex;flex-direction:column;gap:0.75rem"><div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:0.75rem"><span style="width:20px;height:20px;border-radius:50%;background:#dbeafe;font-size:10px;font-weight:700;color:#1d4ed8;display:flex;align-items:center;justify-content:center">1</span><span style="font-size:0.75rem;font-weight:500;color:#374151">Wireless Headphones Pro</span></div><div style="text-align:right"><p style="font-size:0.75rem;font-weight:600;color:#111;margin:0">$8,420</p><p style="font-size:10px;color:#9ca3af;margin:0">94 sold</p></div></div><div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:0.75rem"><span style="width:20px;height:20px;border-radius:50%;background:#dbeafe;font-size:10px;font-weight:700;color:#1d4ed8;display:flex;align-items:center;justify-content:center">2</span><span style="font-size:0.75rem;font-weight:500;color:#374151">Smart Watch Ultra</span></div><div style="text-align:right"><p style="font-size:0.75rem;font-weight:600;color:#111;margin:0">$6,780</p><p style="font-size:10px;color:#9ca3af;margin:0">67 sold</p></div></div><div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:0.75rem"><span style="width:20px;height:20px;border-radius:50%;background:#dbeafe;font-size:10px;font-weight:700;color:#1d4ed8;display:flex;align-items:center;justify-content:center">3</span><span style="font-size:0.75rem;font-weight:500;color:#374151">USB-C Charging Hub</span></div><div style="text-align:right"><p style="font-size:0.75rem;font-weight:600;color:#111;margin:0">$4,120</p><p style="font-size:10px;color:#9ca3af;margin:0">142 sold</p></div></div><div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:0.75rem"><span style="width:20px;height:20px;border-radius:50%;background:#dbeafe;font-size:10px;font-weight:700;color:#1d4ed8;display:flex;align-items:center;justify-content:center">4</span><span style="font-size:0.75rem;font-weight:500;color:#374151">Bluetooth Speaker Mini</span></div><div style="text-align:right"><p style="font-size:0.75rem;font-weight:600;color:#111;margin:0">$3,890</p><p style="font-size:10px;color:#9ca3af;margin:0">88 sold</p></div></div></div></div><div class="reports-summary"><div class="ai-badge"><span>AI</span> AI Weekly Summary</div><p style="font-size:0.875rem;color:#1e3a8a;line-height:1.6;margin:0">Strong week overall with 14% revenue growth. Your weekend promotions drove significant traffic. <strong>Key concern:</strong> Average order value dropped 3% — consider bundling or upsell strategies. <strong>Top opportunity:</strong> "Wireless Headphones Pro" is trending — increase ad spend by 20% for projected +$2,100/week.</p></div></div></div></div>
+    </div>
+  </section>
+
+  <section id="how-it-works" class="section">
+    <div class="container">
+      <div class="section-title center fade-up" data-fade><p class="section-label">How It Works</p><h2 class="text-gradient">Four simple steps</h2></div>
+      <div class="how-steps">
+        <div class="how-step fade-up" data-fade><div class="glass-card card"><span class="big-num">01</span><div class="icon-wrap" style="margin-bottom:1.25rem"><svg width="22" height="22"><use href="#icon-link"/></svg></div><h3 style="font-size:1.125rem;font-weight:500;color:#fff;margin:0 0 0.5rem">Connect Store</h3><p style="font-size:0.875rem;color:#94a3b8;line-height:1.6;margin:0">Install our Shopify app in one click. No code needed.</p></div></div>
+        <div class="how-step fade-up" data-fade><div class="glass-card card"><span class="big-num">02</span><div class="icon-wrap" style="margin-bottom:1.25rem"><svg width="22" height="22"><use href="#icon-brain"/></svg></div><h3 style="font-size:1.125rem;font-weight:500;color:#fff;margin:0 0 0.5rem">AI Analyzes Data</h3><p style="font-size:0.875rem;color:#94a3b8;line-height:1.6;margin:0">SalesBoost AI scans your store data and identifies patterns.</p></div></div>
+        <div class="how-step fade-up" data-fade><div class="glass-card card"><span class="big-num">03</span><div class="icon-wrap" style="margin-bottom:1.25rem"><svg width="22" height="22"><use href="#icon-alert-triangle"/></svg></div><h3 style="font-size:1.125rem;font-weight:500;color:#fff;margin:0 0 0.5rem">Detect Problems</h3><p style="font-size:0.875rem;color:#94a3b8;line-height:1.6;margin:0">Issues are found automatically, before they cost you money.</p></div></div>
+        <div class="how-step fade-up" data-fade><div class="glass-card card"><span class="big-num">04</span><div class="icon-wrap" style="margin-bottom:1.25rem"><svg width="22" height="22"><use href="#icon-rocket"/></svg></div><h3 style="font-size:1.125rem;font-weight:500;color:#fff;margin:0 0 0.5rem">Grow Revenue</h3><p style="font-size:0.875rem;color:#94a3b8;line-height:1.6;margin:0">Follow AI recommendations and watch your sales grow.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="section">
+    <div class="container">
+      <div class="section-title center fade-up" data-fade><p class="section-label">Pricing</p><h2 class="text-gradient">Simple, transparent pricing</h2><p class="section-sub" style="margin-top:1rem">Start free. Upgrade when you're ready.</p></div>
+      <div class="pricing-grid">
+        <div class="pricing-card fade-up" data-fade><h3>Free</h3><p class="desc">Get started with basic insights.</p><div class="price">Free <span></span></div><ul><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> Weekly report</li><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> Basic insights</li><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> 1 store</li></ul><a href="#cta" class="btn secondary">Start Free</a></div>
+        <div class="pricing-card popular fade-up" data-fade><span class="tag">Most Popular</span><h3>Starter</h3><p class="desc">Daily intelligence for growing stores.</p><div class="price">$9 <span>/month</span></div><ul><li><svg width="16" height="16" style="flex-shrink:0;color:#60a5fa"><use href="#icon-check"/></svg> Daily insights</li><li><svg width="16" height="16" style="flex-shrink:0;color:#60a5fa"><use href="#icon-check"/></svg> Alerts &amp; notifications</li><li><svg width="16" height="16" style="flex-shrink:0;color:#60a5fa"><use href="#icon-check"/></svg> Actionable recommendations</li><li><svg width="16" height="16" style="flex-shrink:0;color:#60a5fa"><use href="#icon-check"/></svg> Email reports</li><li><svg width="16" height="16" style="flex-shrink:0;color:#60a5fa"><use href="#icon-check"/></svg> Up to 3 stores</li></ul><a href="#cta" class="btn primary">Get Started</a></div>
+        <div class="pricing-card fade-up" data-fade><h3>Pro</h3><p class="desc">Advanced AI for serious merchants.</p><div class="price">$19 <span>/month</span></div><ul><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> Advanced AI analysis</li><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> Revenue predictions</li><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> Priority processing</li><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> Custom alerts</li><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> Unlimited stores</li><li><svg width="16" height="16" style="flex-shrink:0;color:#64748b"><use href="#icon-check"/></svg> Priority support</li></ul><a href="#cta" class="btn secondary">Get Started</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="testimonials" class="section">
+    <div class="container">
+      <div class="section-title center fade-up" data-fade><p class="section-label">Testimonials</p><h2 class="text-gradient">Loved by merchants</h2></div>
+      <div class="testimonials-grid">
+        <div class="glass-card testimonial-card fade-up" data-fade><div class="stars">★★★★★</div><p class="quote">"SWB SalesBoost AI helped us spot issues early and act faster. It feels like having analytics and coaching in one place."</p><div class="author"><img src="https://images.unsplash.com/photo-1758518727888-ffa196002e59?w=80&h=80&fit=crop" alt="Sarah Jenkins" width="40" height="40" loading="lazy" /><div><p class="author-name">Sarah Jenkins</p><p class="author-role">Founder, GlowCosmetics</p></div></div></div>
+        <div class="glass-card testimonial-card fade-up" data-fade><div class="stars">★★★★★</div><p class="quote">"We improved conversion in the first month by following prioritized recommendations—not guesswork."</p><div class="author"><img src="https://images.unsplash.com/photo-1762522927402-f390672558d8?w=80&h=80&fit=crop" alt="David Chen" width="40" height="40" loading="lazy" /><div><p class="author-name">David Chen</p><p class="author-role">CEO, TechWear</p></div></div></div>
+        <div class="glass-card testimonial-card fade-up" data-fade><div class="stars">★★★★★</div><p class="quote">"The daily insights save hours of manual analysis. SalesBoost AI surfaces what we'd miss on our own."</p><div class="author"><img src="https://images.pexels.com/photos/33871730/pexels-photo-33871730.jpeg?w=80&h=80&fit=crop" alt="Amira Khan" width="40" height="40" loading="lazy" /><div><p class="author-name">Amira Khan</p><p class="author-role">Director, PureHome</p></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cta" class="section cta-section">
+    <div class="cta-bg"></div><div class="cta-blur"></div>
+    <div class="cta-inner">
+      <div class="fade-up" data-fade><h2 class="section-title text-gradient">Grow your Shopify store<br />with SWB SalesBoost AI</h2><p class="section-sub" style="margin-bottom:2.5rem">Join merchants using AI analytics, alerts, and action-focused insights to lift revenue.</p></div>
+      <form class="cta-form fade-up" id="cta-form" data-fade><input type="email" id="cta-email" placeholder="Enter your email" required /><button type="submit" id="cta-submit">Get Early Access <svg width="16" height="16"><use href="#icon-arrow-right"/></svg></button></form>
+      <p class="hero-status" id="cta-status" aria-live="polite"></p>
+      <div class="fade-up" data-fade><a href="https://apps.shopify.com" target="_blank" rel="noopener noreferrer" class="cta-install">Install App <svg width="14" height="14"><use href="#icon-arrow-right"/></svg></a></div>
+    </div>
+  </section>
+
+  <footer id="footer" class="footer">
+    <div class="footer-bg-text">SalesBoost AI</div>
+    <div class="container footer-inner">
+      <div class="footer-grid">
+        <div class="footer-brand"><div class="logo nav-logo"><div class="icon-box">SB</div><span class="logo-text">SWB <span class="blue">SalesBoost AI</span></span></div><p>AI-powered analytics and insights for Shopify—monitor performance, catch risks early, and act with confidence.</p></div>
+        <div class="footer-links"><h4>Quick Links</h4><ul><li><a href="#hero">Home</a></li><li><a href="#features">Features</a></li><li><a href="#pricing">Pricing</a></li><li><a href="mailto:support.salesboost@silverwebbuzz.com">Contact</a></li></ul></div>
+        <div class="footer-links"><h4>Contact</h4><a href="mailto:support.salesboost@silverwebbuzz.com">support.salesboost@silverwebbuzz.com</a></div>
+      </div>
+      <div class="footer-bottom"><p>&copy; <span id="year"></span> SWB SalesBoost AI. All rights reserved.</p><div><a href="/privacy">Privacy Policy</a><a href="#">Terms of Service</a></div></div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
