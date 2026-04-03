@@ -196,13 +196,16 @@ try {
 
     <div class="section">
         <div class="section-title">Top product recommendations</div>
-        <div class="hero-subtitle" style="margin-bottom:10px;">
-            Recommendations usage this week:
-            <?php if ($recoUsage['unlimited']): ?>
-                <strong><?php echo e((string)$recoUsage['used']); ?></strong> used (unlimited)
-            <?php else: ?>
-                <strong><?php echo e((string)$recoUsage['used']); ?></strong> / <strong><?php echo e((string)$recoUsage['limit']); ?></strong>
-            <?php endif; ?>
+        <div class="card sb-usage-meta">
+            <div class="kpi-title">Usage</div>
+            <div class="sb-usage-meta__row">
+                Recommendations this week:
+                <?php if ($recoUsage['unlimited']): ?>
+                    <strong><?php echo e((string)$recoUsage['used']); ?></strong> used (unlimited)
+                <?php else: ?>
+                    <strong><?php echo e((string)$recoUsage['used']); ?></strong> / <strong><?php echo e((string)$recoUsage['limit']); ?></strong>
+                <?php endif; ?>
+            </div>
         </div>
 
         <?php if ($recoUsage['reached']): ?>

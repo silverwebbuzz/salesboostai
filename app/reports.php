@@ -154,6 +154,13 @@ $actionCenterUrl = BASE_URL . '/action-center.php?shop=' . urlencode($shop) . ($
           <div id="reportsInventoryActions"></div>
         </div>
       </div>
+      <div class="section">
+        <div class="card">
+          <div class="kpi-title">Inventory Insights</div>
+          <div class="hero-subtitle" style="margin-top:4px;">Stock alerts and 30-day product velocity (same view as the inventory agent report).</div>
+          <div id="reportsInventoryInsights" style="margin-top:14px;"></div>
+        </div>
+      </div>
     </div>
 
     <div id="tab-funnel" class="tab-panel">

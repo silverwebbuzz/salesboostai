@@ -188,21 +188,24 @@ $isEmbed = !empty($_GET['embed']) && $_GET['embed'] === '1';
     <?php endif; ?>
 
     <div class="section">
-      <div class="hero-subtitle" style="margin-bottom:12px;">
-        AI insights usage this week:
-        <?php if ($aiUsage['unlimited']): ?>
-          <strong><?php echo e((string)$aiUsage['used']); ?></strong> used (unlimited)
-        <?php else: ?>
-          <strong><?php echo e((string)$aiUsage['used']); ?></strong> / <strong><?php echo e((string)$aiUsage['limit']); ?></strong>
-        <?php endif; ?>
-      </div>
-      <div class="hero-subtitle" style="margin-bottom:12px;">
-        Scheduled digests:
-        <?php if ($scheduleUsage['unlimited']): ?>
-          <strong><?php echo e((string)$scheduleUsage['used']); ?></strong> active (unlimited)
-        <?php else: ?>
-          <strong><?php echo e((string)$scheduleUsage['used']); ?></strong> / <strong><?php echo e((string)$scheduleUsage['limit']); ?></strong>
-        <?php endif; ?>
+      <div class="card sb-usage-meta">
+        <div class="kpi-title">Usage</div>
+        <div class="sb-usage-meta__row">
+          AI insights this week:
+          <?php if ($aiUsage['unlimited']): ?>
+            <strong><?php echo e((string)$aiUsage['used']); ?></strong> used (unlimited)
+          <?php else: ?>
+            <strong><?php echo e((string)$aiUsage['used']); ?></strong> / <strong><?php echo e((string)$aiUsage['limit']); ?></strong>
+          <?php endif; ?>
+        </div>
+        <div class="sb-usage-meta__row">
+          Scheduled digests:
+          <?php if ($scheduleUsage['unlimited']): ?>
+            <strong><?php echo e((string)$scheduleUsage['used']); ?></strong> active (unlimited)
+          <?php else: ?>
+            <strong><?php echo e((string)$scheduleUsage['used']); ?></strong> / <strong><?php echo e((string)$scheduleUsage['limit']); ?></strong>
+          <?php endif; ?>
+        </div>
       </div>
       <?php if (empty($agents)): ?>
         <div class="card">

@@ -120,6 +120,12 @@
       renderCritical('reportsInventoryCritical', data.critical_insights || []);
       renderActions('reportsInventoryActions', data.actions || []);
       setHTML('reportsInventoryForecast', data.supporting && data.supporting.forecast_html ? data.supporting.forecast_html : '<div class="sb-muted">No forecast.</div>');
+      setHTML(
+        'reportsInventoryInsights',
+        data.supporting && data.supporting.inventory_insights_html
+          ? data.supporting.inventory_insights_html
+          : '<div class="sb-muted">No inventory insights yet.</div>'
+      );
       return;
     }
 

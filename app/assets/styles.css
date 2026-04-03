@@ -147,6 +147,28 @@ body {
   border-color: #d1d5db;
 }
 
+/* Plan quotas & usage summaries — same surface as cards, used under heroes */
+.card.sb-usage-meta {
+  margin-bottom: var(--space-3);
+  padding: 14px 18px;
+}
+.card.sb-usage-meta .kpi-title {
+  margin-bottom: 10px;
+}
+.card.sb-usage-meta .sb-usage-meta__row {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+.card.sb-usage-meta .sb-usage-meta__row + .sb-usage-meta__row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+.card.sb-usage-meta .report-meta-row {
+  margin-top: 0;
+}
+
 .card.kpi {
   background: var(--color-surface);
   border-radius: var(--card-radius);

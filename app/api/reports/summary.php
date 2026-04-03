@@ -77,6 +77,107 @@ function listRowsHtml(array $rows, string $empty = 'No data yet.'): string
     return $out;
 }
 
+/**
+ * Same layout as agent-report inventory agent (Stock Alerts + Product Velocity).
+ */
+function sbm_inventory_insights_grid_html(array $inv): string
+{
+    $e = static function (string $s): string {
+        return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+    };
+    $lowStock = is_array($inv['low_stock'] ?? null) ? $inv['low_stock'] : [];
+    $outStock = is_array($inv['out_of_stock'] ?? null) ? $inv['out_of_stock'] : [];
+    $vCounts = is_array($inv['velocity_counts'] ?? null) ? $inv['velocity_counts'] : [];
+    $vTop = is_array($inv['velocity_top'] ?? null) ? $inv['velocity_top'] : [];
+
+    $lowLi = '';
+    foreach ($lowStock as $p) {
+        if (!is_array($p)) {
+            continue;
+        }
+        $t = $e((string)($p['title'] ?? ''));
+        $q = (int)($p['inventory_quantity'] ?? 0);
+        $lowLi .= '<li><span class="severity severity-medium">LOW</span> ' . $t . ' (' . $e((string)$q) . ' left)</li>';
+    }
+
+    $outLi = '';
+    foreach ($outStock as $p) {
+        if (!is_array($p)) {
+            continue;
+        }
+        $t = $e((string)($p['title'] ?? ''));
+        $outLi .= '<li><span class="severity severity-high">OUT</span> ' . $t . '</li>';
+    }
+
+    $vf = is_array($vTop['fast'] ?? null) ? $vTop['fast'] : [];
+    $vs = is_array($vTop['slow'] ?? null) ? $vTop['slow'] : [];
+    $vd = is_array($vTop['dead'] ?? null) ? $vTop['dead'] : [];
+
+    $fastLi = '';
+    foreach ($vf as $p) {
+        if (!is_array($p)) {
+            continue;
+        }
+        $vel = (string)($p['velocity'] ?? '0');
+        $fastLi .= '<li>' . $e((string)($p['title'] ?? '')) . ' (' . $e($vel) . '/day)</li>';
+    }
+    $slowLi = '';
+    foreach ($vs as $p) {
+        if (!is_array($p)) {
+            continue;
+        }
+        $vel = (string)($p['velocity'] ?? '0');
+        $slowLi .= '<li>' . $e((string)($p['title'] ?? '')) . ' (' . $e($vel) . '/day)</li>';
+    }
+    $deadLi = '';
+    foreach ($vd as $p) {
+        if (!is_array($p)) {
+            continue;
+        }
+        $deadLi .= '<li>' . $e((string)($p['title'] ?? '')) . ' (0/day)</li>';
+    }
+
+    $cFast = (int)($vCounts['fast'] ?? 0);
+    $cMed = (int)($vCounts['medium'] ?? 0);
+    $cSlow = (int)($vCounts['slow'] ?? 0);
+    $cDead = (int)($vCounts['dead'] ?? 0);
+
+    $lowBlock = $lowLi !== ''
+        ? '<ul class="report-list">' . $lowLi . '</ul>'
+        : '<div class="sb-muted">No low stock products.</div>';
+    $outBlock = $outLi !== ''
+        ? '<ul class="report-list">' . $outLi . '</ul>'
+        : '<div class="sb-muted">No out-of-stock products.</div>';
+    $fastBlock = $fastLi !== ''
+        ? '<ul class="report-list">' . $fastLi . '</ul>'
+        : '<div class="sb-muted">No fast-moving products.</div>';
+    $slowBlock = $slowLi !== ''
+        ? '<ul class="report-list">' . $slowLi . '</ul>'
+        : '<div class="sb-muted">No slow-moving products.</div>';
+    $deadBlock = $deadLi !== ''
+        ? '<ul class="report-list">' . $deadLi . '</ul>'
+        : '<div class="sb-muted">No dead products.</div>';
+
+    return '<div class="inventory-insights-grid inventory-insights-grid--two-col">'
+        . '<div class="card inventory-insight-card">'
+        . '<div class="section-title">Stock Alerts</div>'
+        . '<div class="inventory-block-title">Low Stock (Top 5)</div>' . $lowBlock
+        . '<div class="inventory-block-title" style="margin-top:12px;">Out of Stock (Top 5)</div>' . $outBlock
+        . '</div>'
+        . '<div class="card inventory-insight-card">'
+        . '<div class="section-title">Product Velocity (Last 30 Days)</div>'
+        . '<div class="velocity-counters">'
+        . '<span class="severity severity-low">FAST: ' . $e((string)$cFast) . '</span>'
+        . '<span class="severity severity-medium">MEDIUM: ' . $e((string)$cMed) . '</span>'
+        . '<span class="severity" style="background:#eef2ff;color:#4338ca;">SLOW: ' . $e((string)$cSlow) . '</span>'
+        . '<span class="severity severity-high">DEAD: ' . $e((string)$cDead) . '</span>'
+        . '</div>'
+        . '<div class="inventory-block-title">Fast Moving</div>' . $fastBlock
+        . '<div class="inventory-block-title">Slow Moving</div>' . $slowBlock
+        . '<div class="inventory-block-title">Dead Products</div>' . $deadBlock
+        . '</div></div>';
+}
+
 // Pull a few high-impact actions (shared across tabs).
 $actions = [];
 try {
@@ -244,8 +345,18 @@ if ($tab === 'inventory') {
         }
     } catch (Throwable $e) {}
 
+    $inventoryInsightsHtml = '<div class="sb-muted">Inventory insights are not available.</div>';
+    try {
+        if (function_exists('sbm_getInventoryInsights')) {
+            $inventoryInsightsHtml = sbm_inventory_insights_grid_html(sbm_getInventoryInsights($shop, 180));
+        }
+    } catch (Throwable $e) {
+        $inventoryInsightsHtml = '<div class="sb-muted">Inventory insights could not be loaded.</div>';
+    }
+
     $payload['supporting'] = [
         'forecast_html' => listRowsHtml($forecastRows, 'No stockout forecast yet.'),
+        'inventory_insights_html' => $inventoryInsightsHtml,
     ];
 }
 

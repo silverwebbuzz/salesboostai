@@ -304,27 +304,30 @@ if ($isInventoryAgent) {
               echo $desc !== '' ? safeHtml($desc) : '';
             ?>
           </div>
-          <div class="report-meta-row">
-            <span>Last updated: <?php echo e($hasReport ? formatTimeAgo((string)($reportMeta['created_at'] ?? '')) : 'Not generated yet'); ?></span>
-            <span class="status-badge <?php echo e($hasReport ? 'status-positive' : 'status-medium'); ?>">
-              <?php echo e($hasReport ? '🟢 Completed' : '🟡 Not Generated'); ?>
-            </span>
-            <span>
-              AI usage:
-              <?php if ($aiUsage['unlimited']): ?>
-                <?php echo e((string)$aiUsage['used']); ?> (unlimited)
-              <?php else: ?>
-                <?php echo e((string)$aiUsage['used']); ?>/<?php echo e((string)$aiUsage['limit']); ?>
-              <?php endif; ?>
-            </span>
-            <span>
-              Schedules:
-              <?php if ($scheduleUsage['unlimited']): ?>
-                <?php echo e((string)$scheduleUsage['used']); ?> (unlimited)
-              <?php else: ?>
-                <?php echo e((string)$scheduleUsage['used']); ?>/<?php echo e((string)$scheduleUsage['limit']); ?>
-              <?php endif; ?>
-            </span>
+          <div class="card sb-usage-meta">
+            <div class="kpi-title">Report status</div>
+            <div class="report-meta-row">
+              <span>Last updated: <?php echo e($hasReport ? formatTimeAgo((string)($reportMeta['created_at'] ?? '')) : 'Not generated yet'); ?></span>
+              <span class="status-badge <?php echo e($hasReport ? 'status-positive' : 'status-medium'); ?>">
+                <?php echo e($hasReport ? '🟢 Completed' : '🟡 Not Generated'); ?>
+              </span>
+              <span>
+                AI usage:
+                <?php if ($aiUsage['unlimited']): ?>
+                  <?php echo e((string)$aiUsage['used']); ?> (unlimited)
+                <?php else: ?>
+                  <?php echo e((string)$aiUsage['used']); ?>/<?php echo e((string)$aiUsage['limit']); ?>
+                <?php endif; ?>
+              </span>
+              <span>
+                Schedules:
+                <?php if ($scheduleUsage['unlimited']): ?>
+                  <?php echo e((string)$scheduleUsage['used']); ?> (unlimited)
+                <?php else: ?>
+                  <?php echo e((string)$scheduleUsage['used']); ?>/<?php echo e((string)$scheduleUsage['limit']); ?>
+                <?php endif; ?>
+              </span>
+            </div>
           </div>
         </div>
         <button class="btn btn-primary" type="button" id="generateAiBtn">Generate AI Report</button>
