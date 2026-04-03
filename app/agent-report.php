@@ -358,18 +358,6 @@ if ($isInventoryAgent) {
       </div>
     <?php endif; ?>
 
-    <?php if (!$isPanel): ?>
-    <div class="section">
-      <div class="card">
-        <div class="kpi-title">Saved Report & Digest</div>
-        <div class="hero-subtitle" style="margin-top:6px;">Export this report and schedule recurring digests (feature rollout ready).</div>
-        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-primary" type="button" <?php echo $hasReport ? '' : 'disabled'; ?>>Export snapshot (coming soon)</button>
-          <button class="btn btn-primary" type="button" <?php echo $reportsScheduledEnabled ? '' : 'disabled'; ?>>Schedule weekly digest (coming soon)</button>
-        </div>
-      </div>
-    </div>
-    <?php endif; ?>
 
     <?php if ($errorText !== ''): ?>
       <div class="section">

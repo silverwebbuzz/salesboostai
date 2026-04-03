@@ -50,7 +50,6 @@ $analyticsUrl = BASE_URL . '/analytics?shop=' . urlencode($shop) . ($host !== ''
             <button type="button" class="btn btn-primary btn-sm ac-range" data-range="30">30 days</button>
             <button type="button" class="btn btn-primary btn-sm ac-range" data-range="90">90 days</button>
           </div>
-          <button class="sb-kpi-why" type="button" id="btnAcExplainRevenue" data-ai-metric="revenue">Why did revenue change?</button>
           <a class="btn btn-primary btn-sm" href="<?php echo e($reportsUrl); ?>">Open Reports →</a>
         </div>
       </div>
@@ -123,9 +122,7 @@ $analyticsUrl = BASE_URL . '/analytics?shop=' . urlencode($shop) . ($host !== ''
           </div>
         </div>
 
-        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-primary btn-sm" type="button" onclick="acSwitchTab('alerts')">View Alerts</button>
-          <button class="btn btn-primary btn-sm" type="button" onclick="acSwitchTab('recommendations')">View Recommendations</button>
+        <div style="margin-top:12px;">
           <a class="btn btn-primary btn-sm" href="<?php echo e($analyticsUrl); ?>">Open Analytics →</a>
         </div>
       </div>
