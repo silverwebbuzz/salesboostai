@@ -165,41 +165,98 @@ if (function_exists('sbm_log_write')) {
     ]);
 }
 
+/*
+ * Lightweight OAuth install path:
+ * - Save auth/store basics only (must succeed so app can authenticate)
+ * - Do NOT create per-store tables (deferred until first sync)
+ * - Do NOT enqueue sync tasks
+ * - Do NOT register webhooks here (fired in background below)
+ *
+ * Each step is wrapped independently so a non-essential failure cannot
+ * abort install with a "Server setup failed" page. Shopify App Review
+ * (and merchants) must always be able to land in the embedded app once
+ * OAuth completes successfully.
+ */
 try {
-    /*
-     * Lightweight OAuth install path:
-     * - Save auth/store basics only
-     * - Do NOT create per-store tables
-     * - Do NOT enqueue sync tasks
-     * - Do NOT register webhooks here
-     *
-     * First dashboard view should be fast and show Sync box immediately.
-     * Heavy/operational setup runs when merchant clicks Sync Now.
-     */
     ensureGlobalAppSchema();
+} catch (Throwable $e) {
+    sbm_log_write('auth', '[callback] ensure_global_schema_failed', [
+        'shop' => $shop,
+        'error' => $e->getMessage(),
+    ]);
+}
 
-    // Best-effort shop details. If unavailable, still proceed with basic install.
-    $shopDetails = [];
-    try {
-        $maybe = fetchShopDetails($shop, $accessToken);
-        if (is_array($maybe)) {
-            $shopDetails = $maybe;
-        }
-    } catch (Throwable $e) {
-        $shopDetails = [];
-    }
-    upsertStore($shop, $accessToken, $host, $shopDetails);
-
-    // Default subscription row on first install.
-    ensureFreeSubscription($shop);
-
-    if (function_exists('sbm_log_write')) {
-        sbm_log_write('auth', '[callback] token_saved', ['shop' => $shop, 'host_present' => is_string($host) && $host !== '']);
+// Best-effort shop details. If unavailable, still proceed with basic install.
+$shopDetails = [];
+try {
+    $maybe = fetchShopDetails($shop, $accessToken);
+    if (is_array($maybe)) {
+        $shopDetails = $maybe;
     }
 } catch (Throwable $e) {
-    sbm_log_write('app', '[shopify_callback] setup_failed', ['error' => $e->getMessage()]);
+    sbm_log_write('auth', '[callback] fetch_shop_details_failed', [
+        'shop' => $shop,
+        'error' => $e->getMessage(),
+    ]);
+    $shopDetails = [];
+}
+
+// Persist access token. This is the only step that truly must succeed:
+// without it the embedded app cannot make API calls. Fall back to a
+// minimal write if the full upsert fails (e.g. schema drift).
+$tokenPersisted = false;
+try {
+    upsertStore($shop, $accessToken, $host, $shopDetails);
+    $tokenPersisted = true;
+} catch (Throwable $e) {
+    sbm_log_write('auth', '[callback] upsert_store_full_failed', [
+        'shop' => $shop,
+        'error' => $e->getMessage(),
+    ]);
+    if (function_exists('upsertStoreMinimal')) {
+        try {
+            upsertStoreMinimal($shop, $accessToken, is_string($host) ? $host : null);
+            $tokenPersisted = true;
+            sbm_log_write('auth', '[callback] upsert_store_minimal_ok', ['shop' => $shop]);
+        } catch (Throwable $e2) {
+            sbm_log_write('auth', '[callback] upsert_store_minimal_failed', [
+                'shop' => $shop,
+                'error' => $e2->getMessage(),
+            ]);
+        }
+    }
+}
+
+// Default subscription row on first install. Non-fatal.
+try {
+    ensureFreeSubscription($shop);
+} catch (Throwable $e) {
+    sbm_log_write('auth', '[callback] ensure_free_subscription_failed', [
+        'shop' => $shop,
+        'error' => $e->getMessage(),
+    ]);
+}
+
+if (function_exists('sbm_log_write')) {
+    sbm_log_write('auth', '[callback] token_saved', [
+        'shop' => $shop,
+        'host_present' => is_string($host) && $host !== '',
+        'token_persisted' => $tokenPersisted,
+    ]);
+}
+
+// Only return a fatal error if we could not persist the access token at all,
+// because without it the embedded app cannot function. In every other case
+// continue to the embedded app so the merchant (and Shopify App Review) can
+// always reach the UI after OAuth completes.
+if (!$tokenPersisted) {
+    sbm_log_write('app', '[shopify_callback] token_persist_failed', [
+        'shop' => $shop,
+    ]);
     http_response_code(500);
-    echo $debug ? ('ERROR: ' . $e->getMessage()) : 'Server setup failed.';
+    echo $debug
+        ? 'ERROR: Unable to persist access token. Please verify database connectivity and the `stores` table schema.'
+        : 'We could not finish setting up your store. Please reinstall the app or contact support.';
     exit;
 }
 

@@ -23,16 +23,27 @@ if (!headers_sent() && (($_GET['view'] ?? '') !== 'legacy')) {
 }
 
 $shopRecord = getShopByDomain($shop);
+$shopRecordHasToken = is_array($shopRecord)
+    && is_string($shopRecord['access_token'] ?? null)
+    && trim((string)$shopRecord['access_token']) !== '';
 
-if (!$shopRecord) {
-    header('Location: ' . BASE_URL . '/auth/install?shop=' . urlencode($shop) . ($host ? '&host=' . urlencode($host) : ''));
+if (!$shopRecord || !$shopRecordHasToken) {
+    $installQs = 'shop=' . urlencode($shop);
+    if ($host) {
+        $installQs .= '&host=' . urlencode($host) . '&embedded=1';
+    }
+    header('Location: ' . BASE_URL . '/auth/install?' . $installQs);
     exit;
 }
 
-$accessToken = $shopRecord['access_token'];
-$totalOrders = getOrders($shop, $accessToken);
-$totalProducts = getProducts($shop, $accessToken);
-$totalCustomers = getCustomers($shop, $accessToken);
+$accessToken = (string)$shopRecord['access_token'];
+// Best-effort: don't fail the whole page if a single count call fails.
+$totalOrders = null;
+$totalProducts = null;
+$totalCustomers = null;
+try { $totalOrders    = getOrders($shop, $accessToken); }    catch (Throwable $e) {}
+try { $totalProducts  = getProducts($shop, $accessToken); }  catch (Throwable $e) {}
+try { $totalCustomers = getCustomers($shop, $accessToken); } catch (Throwable $e) {}
 
 function e(string $v): string { return htmlspecialchars($v, ENT_QUOTES, 'UTF-8'); }
 ?>

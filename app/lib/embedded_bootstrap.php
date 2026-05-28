@@ -74,9 +74,24 @@ function sbm_bootstrap_embedded(array $options = []): array
     }
 
     $shopRecord = getShopByDomain($shop);
-    if (!$shopRecord) {
-        // Redirect to install. Pass embedded=1 when host is present (we are inside Shopify Admin
-        // iframe) so install.php uses App Bridge to break out of the iframe before OAuth.
+    $shopRecordHasToken = is_array($shopRecord)
+        && is_string($shopRecord['access_token'] ?? null)
+        && trim((string)$shopRecord['access_token']) !== '';
+    if (!$shopRecord || !$shopRecordHasToken) {
+        // Either the store has never been installed or a previous install
+        // wrote a partial row without a usable access token. In both cases,
+        // the only correct action is to (re)run OAuth — never render the
+        // embedded app, because every API call would 401.
+        //
+        // Pass embedded=1 when host is present (we are inside Shopify Admin
+        // iframe) so install.php uses App Bridge to break out of the iframe
+        // before OAuth.
+        sbm_log_write('auth', '[embedded_bootstrap] redirect_to_install', [
+            'shop' => $shop,
+            'has_record' => is_array($shopRecord),
+            'has_token' => $shopRecordHasToken,
+            'host_present' => $host !== '' && is_string($host),
+        ]);
         $installQs = 'shop=' . urlencode($shop);
         if ($host !== '' && is_string($host)) {
             $installQs .= '&host=' . urlencode($host) . '&embedded=1';

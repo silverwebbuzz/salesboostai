@@ -543,6 +543,111 @@ function upsertStore(
 }
 
 /**
+ * Minimal fallback store upsert.
+ *
+ * Used when the full upsertStore() throws (e.g. production `stores` table is
+ * missing one of the optional columns added by later migrations). This writes
+ * only the columns required for OAuth + embedded app to function:
+ *   shop, access_token, host, status='installed'
+ *
+ * Optional columns (domain, store_name, etc.) are only written if they exist
+ * in the live schema. The goal is to never leave a merchant without a token
+ * persisted, even when the DB schema has drifted from `app/lib/shopify.php`.
+ */
+function upsertStoreMinimal(string $shop, string $accessToken, ?string $host = null): void
+{
+    $mysqli = db();
+
+    // Probe which optional columns exist so we can fall back gracefully.
+    $cols = [];
+    $colsRes = @$mysqli->query("SHOW COLUMNS FROM `stores`");
+    if ($colsRes) {
+        while ($row = $colsRes->fetch_assoc()) {
+            if (isset($row['Field'])) {
+                $cols[(string)$row['Field']] = true;
+            }
+        }
+    }
+
+    if (!isset($cols['shop'])) {
+        throw new Exception('stores.shop column is missing; cannot persist access token.');
+    }
+    if (!isset($cols['access_token'])) {
+        throw new Exception('stores.access_token column is missing; cannot persist access token.');
+    }
+
+    // Build INSERT column list dynamically from what exists.
+    $insertCols = ['shop', 'access_token'];
+    $insertVals = ['?', '?'];
+    $bindTypes  = 'ss';
+    $bindValues = [$shop, $accessToken];
+
+    if (isset($cols['domain'])) {
+        $insertCols[] = 'domain';
+        $insertVals[] = '?';
+        $bindTypes   .= 's';
+        $bindValues[] = $shop;
+    }
+    if (isset($cols['host']) && is_string($host) && $host !== '') {
+        $insertCols[] = 'host';
+        $insertVals[] = '?';
+        $bindTypes   .= 's';
+        $bindValues[] = $host;
+    }
+    if (isset($cols['status'])) {
+        $insertCols[] = 'status';
+        $insertVals[] = "'installed'";
+    }
+    if (isset($cols['created_at'])) {
+        $insertCols[] = 'created_at';
+        $insertVals[] = 'NOW()';
+    }
+    if (isset($cols['updated_at'])) {
+        $insertCols[] = 'updated_at';
+        $insertVals[] = 'NOW()';
+    }
+    if (isset($cols['app_install_date'])) {
+        $insertCols[] = 'app_install_date';
+        $insertVals[] = 'NOW()';
+    }
+
+    // ON DUPLICATE KEY UPDATE: always refresh access_token + host + status.
+    $updates = ['access_token = VALUES(access_token)'];
+    if (isset($cols['host']) && is_string($host) && $host !== '') {
+        $updates[] = 'host = VALUES(host)';
+    }
+    if (isset($cols['status'])) {
+        $updates[] = "status = 'installed'";
+    }
+    if (isset($cols['updated_at'])) {
+        $updates[] = 'updated_at = NOW()';
+    }
+    if (isset($cols['app_install_date'])) {
+        $updates[] = 'app_install_date = NOW()';
+    }
+
+    $sql = 'INSERT INTO stores (' . implode(', ', $insertCols) . ') VALUES ('
+        . implode(', ', $insertVals) . ') ON DUPLICATE KEY UPDATE '
+        . implode(', ', $updates);
+
+    $stmt = $mysqli->prepare($sql);
+    if (!$stmt) {
+        throw new Exception('upsertStoreMinimal prepare failed: ' . $mysqli->error);
+    }
+    if (!$stmt->bind_param($bindTypes, ...$bindValues)) {
+        $err = $stmt->error;
+        $stmt->close();
+        throw new Exception('upsertStoreMinimal bind_param failed: ' . $err);
+    }
+    if (!$stmt->execute()) {
+        $err = $stmt->error;
+        $stmt->close();
+        throw new Exception('upsertStoreMinimal execute failed: ' . $err);
+    }
+    $stmt->close();
+}
+
+/**
  * Upsert a metric into analytics table.
  *
  * @param mysqli $mysqli

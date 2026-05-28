@@ -1,0 +1,15 @@
+# Real credentials live in app/config.php on the production server.
+# Some git providers (e.g. GitHub secret scanning) will reject pushes that
+# include credentials, which is why we keep config.php out of the repo.
+app/config.php
+
+# Runtime logs.
+app/logs/
+app/storage/logs/
+
+# OS junk.
+.DS_Store
+**/.DS_Store
+
+# Local-only override files (developer machines).
+app/config.local.php
