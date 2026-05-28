@@ -431,6 +431,73 @@ function upsertStore(
     $createdAt = isset($details['created_at']) ? date('Y-m-d H:i:s', strtotime((string)$details['created_at'])) : null;
     $updatedAt = isset($details['updated_at']) ? date('Y-m-d H:i:s', strtotime((string)$details['updated_at'])) : null;
 
+    // Defensive: clamp string values that would exceed their column's CHAR/VARCHAR
+    // max length so a single edge-case shop (very long money_format template,
+    // unusually long shop_owner, etc.) cannot fail the entire install with a
+    // "Data too long for column X" MySQL error. The column-length map is cached
+    // per-request via the helper so this is essentially free.
+    $sbmColLimits = function_exists('sbm_stores_column_char_limits')
+        ? sbm_stores_column_char_limits($mysqli)
+        : [];
+    if (!empty($sbmColLimits)) {
+        $sbmTruncatable = [
+            'domain' => &$domain,
+            'shopify_id' => &$shopifyId,
+            'store_name' => &$storeName,
+            'shop_owner' => &$shopOwner,
+            'email' => &$email,
+            'phone' => &$phone,
+            'plan_display_name' => &$planDisplayName,
+            'plan_name' => &$planName,
+            'country' => &$country,
+            'currency' => &$currency,
+            'timezone' => &$timezone,
+            'iana_timezone' => &$ianaTimezone,
+            'country_code' => &$countryCode,
+            'country_name' => &$countryName,
+            'address1' => &$address1,
+            'address2' => &$address2,
+            'city' => &$city,
+            'zip' => &$zip,
+            'province' => &$province,
+            'province_code' => &$provinceCode,
+            'primary_locale' => &$primaryLocale,
+            'money_format' => &$moneyFormat,
+            'money_with_currency_format' => &$moneyWithCurrencyFormat,
+            'money_in_emails_format' => &$moneyInEmailsFormat,
+            'money_with_currency_in_emails_format' => &$moneyWithCurrencyInEmailsFormat,
+            'tax_id' => &$taxId,
+            'gstin' => &$gstin,
+        ];
+        foreach ($sbmTruncatable as $sbmColName => &$sbmValRef) {
+            if (!is_string($sbmValRef) || $sbmValRef === '') {
+                continue;
+            }
+            $sbmLimit = $sbmColLimits[$sbmColName] ?? null;
+            if (!is_int($sbmLimit) || $sbmLimit <= 0) {
+                continue;
+            }
+            $sbmLen = function_exists('mb_strlen')
+                ? mb_strlen($sbmValRef, 'UTF-8')
+                : strlen($sbmValRef);
+            if ($sbmLen > $sbmLimit) {
+                $sbmTruncated = function_exists('mb_substr')
+                    ? mb_substr($sbmValRef, 0, $sbmLimit, 'UTF-8')
+                    : substr($sbmValRef, 0, $sbmLimit);
+                if (function_exists('sbm_log_write')) {
+                    sbm_log_write('auth', '[upsertStore] truncated_value', [
+                        'shop' => $shop,
+                        'column' => $sbmColName,
+                        'from_length' => $sbmLen,
+                        'to_length' => $sbmLimit,
+                    ]);
+                }
+                $sbmValRef = $sbmTruncated;
+            }
+        }
+        unset($sbmValRef);
+    }
+
     $stmt = $mysqli->prepare("
         INSERT INTO stores (
             shop, domain, access_token, host, shopify_id, store_name, shop_owner, logo_url, email, phone,
@@ -540,6 +607,42 @@ function upsertStore(
         throw new Exception('Execute failed in upsertStore: ' . $stmt->error);
     }
     $stmt->close();
+}
+
+/**
+ * Return a `<column_name> => <character_max_length>` map for the live
+ * `stores` table. Used by upsertStore() to defensively clamp string values
+ * to their column limit before INSERT, avoiding "Data too long for column"
+ * failures when Shopify returns an unusually long field (e.g. a custom
+ * `money_format` HTML template).
+ *
+ * Cached per-request via a static so repeated calls are essentially free.
+ * Only CHAR / VARCHAR columns are returned; other types (TEXT, INT, …)
+ * are intentionally omitted because they either have effectively no
+ * length cap or are not bound as strings here.
+ */
+function sbm_stores_column_char_limits(mysqli $mysqli): array
+{
+    static $cache = null;
+    if (is_array($cache)) {
+        return $cache;
+    }
+    $cache = [];
+    $res = @$mysqli->query("SHOW COLUMNS FROM `stores`");
+    if (!$res) {
+        return $cache;
+    }
+    while ($row = $res->fetch_assoc()) {
+        $name = (string)($row['Field'] ?? '');
+        $type = (string)($row['Type'] ?? '');
+        if ($name === '' || $type === '') {
+            continue;
+        }
+        if (preg_match('/^(?:var)?char\s*\(\s*(\d+)\s*\)/i', $type, $m)) {
+            $cache[$name] = (int)$m[1];
+        }
+    }
+    return $cache;
 }
 
 /**
