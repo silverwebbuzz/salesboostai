@@ -13,7 +13,7 @@ webhookLog(['event' => 'incoming_webhook', 'topic' => $topic, 'shop' => $shop, '
 try {
     $mysqli = db();
 
-    // Mark and delete store-scoped data.
+    // Mark uninstalled first so any concurrent request sees the correct state.
     $stmt = $mysqli->prepare("UPDATE stores SET status='uninstalled', updated_at=NOW() WHERE shop=?");
     if ($stmt) {
         $stmt->bind_param('s', $shop);
@@ -23,27 +23,11 @@ try {
 
     markSubscriptionUninstalled($shop);
 
-    // Remove async webhook queue entries.
-    $stmt = $mysqli->prepare("DELETE FROM webhook_events WHERE shop=?");
-    if ($stmt) {
-        $stmt->bind_param('s', $shop);
-        $stmt->execute();
-        $stmt->close();
-    }
-
-    // Best-effort: delete per-store tables.
-    $shopName = makeShopName($shop);
-    $tables = [
-        perStoreTableName($shopName, 'order'),
-        perStoreTableName($shopName, 'customer'),
-        perStoreTableName($shopName, 'products_inventory'),
-        perStoreTableName($shopName, 'analytics'),
-    ];
-    foreach ($tables as $table) {
-        if (preg_match('/^[a-z0-9_]{1,64}$/', $table) === 1) {
-            $mysqli->query("DROP TABLE IF EXISTS `{$table}`");
-        }
-    }
+    // Purge ALL store-scoped artifacts: sync progress, subscription, webhook
+    // queue, and every per-store data table. Removing store_sync_state is the
+    // critical part — without it, a later reinstall keeps the stale 'done'
+    // status and never re-syncs (which is the reported bug).
+    purgeStoreData($shop);
 
     // Remove store row last.
     $stmt = $mysqli->prepare("DELETE FROM stores WHERE shop=?");
@@ -52,6 +36,8 @@ try {
         $stmt->execute();
         $stmt->close();
     }
+
+    webhookLog(['event' => 'app_uninstalled_cleanup_done', 'shop' => $shop]);
 } catch (Throwable $e) {
     webhookLog(['event' => 'app_uninstalled_processing_error', 'shop' => $shop, 'error' => $e->getMessage()]);
 }

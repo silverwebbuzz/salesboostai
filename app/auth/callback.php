@@ -201,6 +201,17 @@ try {
     $shopDetails = [];
 }
 
+// Determine whether this is a fresh install / reinstall (vs. a re-auth of an
+// already-installed store, e.g. after a scope change). If the store was not
+// previously installed-with-token, we must clear any stale sync progress so
+// the data re-syncs. This is a defensive backstop in case the app/uninstalled
+// webhook was missed or failed when the merchant removed the app.
+$preExisting = getShopByDomain($shop);
+$wasInstalledWithToken = is_array($preExisting)
+    && (($preExisting['status'] ?? '') === 'installed')
+    && is_string($preExisting['access_token'] ?? null)
+    && trim((string)$preExisting['access_token']) !== '';
+
 // Persist access token. This is the only step that truly must succeed:
 // without it the embedded app cannot make API calls. Fall back to a
 // minimal write if the full upsert fails (e.g. schema drift).
@@ -235,6 +246,21 @@ try {
         'shop' => $shop,
         'error' => $e->getMessage(),
     ]);
+}
+
+// Fresh install / reinstall: clear any stale sync progress so data re-syncs.
+// Skipped for a re-auth of an already-installed store to avoid a redundant
+// full re-sync. Non-fatal.
+if (!$wasInstalledWithToken && function_exists('resetStoreSyncState')) {
+    try {
+        resetStoreSyncState($shop);
+        sbm_log_write('auth', '[callback] sync_state_reset_for_reinstall', ['shop' => $shop]);
+    } catch (Throwable $e) {
+        sbm_log_write('auth', '[callback] sync_state_reset_failed', [
+            'shop' => $shop,
+            'error' => $e->getMessage(),
+        ]);
+    }
 }
 
 if (function_exists('sbm_log_write')) {

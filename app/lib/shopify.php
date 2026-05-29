@@ -916,19 +916,161 @@ function fetchAndStoreInitialData(string $shop, string $accessToken, array $tabl
 }
 
 /**
+ * All per-store table names for a shop (whether or not they currently exist).
+ *
+ * Used by uninstall cleanup so we never leave stale, store-scoped tables
+ * behind. Must stay in sync with the suffixes created by ensurePerStoreTables().
+ *
+ * @return string[]
+ */
+function allPerStoreTableNames(string $shop): array
+{
+    $shopName = makeShopName($shop);
+    $suffixes = [
+        'order',
+        'customer',
+        'products_inventory',
+        'analytics',
+        'action_items',
+        'cohorts',
+        'funnel',
+        'attribution',
+        'forecasts',
+    ];
+    $names = [];
+    foreach ($suffixes as $suffix) {
+        $name = perStoreTableName($shopName, $suffix);
+        if (preg_match('/^[a-z0-9_]{1,64}$/', $name) === 1) {
+            $names[] = $name;
+        }
+    }
+    return $names;
+}
+
+/**
+ * Remove all sync progress rows for a shop.
+ *
+ * Critical for the uninstall → reinstall flow: if these rows survive an
+ * uninstall with status='done', the next install will never re-sync because
+ * enqueueFullSync() preserves the 'done' status and runOneSyncStep() finds
+ * no pending work. Always clear them so a reinstall starts fresh.
+ */
+function resetStoreSyncState(string $shop): void
+{
+    $mysqli = db();
+    $stmt = $mysqli->prepare("DELETE FROM store_sync_state WHERE shop = ?");
+    if ($stmt) {
+        $stmt->bind_param('s', $shop);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+/**
+ * Fully purge every store-scoped artifact for a shop.
+ *
+ * Called on app/uninstalled so that a later reinstall behaves exactly like a
+ * brand-new install (data re-syncs, no stale tables, no stuck sync state).
+ *
+ * Removes:
+ * - store_sync_state rows (otherwise reinstall never re-syncs)
+ * - store_subscription rows
+ * - webhook_events queue rows
+ * - all per-store data tables
+ *
+ * Each step is best-effort; a single failure does not abort the rest.
+ */
+function purgeStoreData(string $shop): void
+{
+    $mysqli = db();
+
+    foreach (
+        [
+            "DELETE FROM store_sync_state WHERE shop = ?",
+            "DELETE FROM store_subscription WHERE shop = ?",
+            "DELETE FROM webhook_events WHERE shop = ?",
+        ] as $sql
+    ) {
+        try {
+            $stmt = $mysqli->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param('s', $shop);
+                $stmt->execute();
+                $stmt->close();
+            }
+        } catch (Throwable $e) {
+            if (function_exists('sbm_log_write')) {
+                sbm_log_write('webhooks', '[purgeStoreData] delete_failed', [
+                    'shop' => $shop,
+                    'sql' => $sql,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    foreach (allPerStoreTableNames($shop) as $table) {
+        try {
+            $mysqli->query("DROP TABLE IF EXISTS `{$table}`");
+        } catch (Throwable $e) {
+            if (function_exists('sbm_log_write')) {
+                sbm_log_write('webhooks', '[purgeStoreData] drop_table_failed', [
+                    'shop' => $shop,
+                    'table' => $table,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+}
+
+/**
  * Create/refresh sync tasks for a shop.
+ *
+ * Self-healing: if a resource's per-store data table is missing (e.g. it was
+ * dropped on uninstall and this is a reinstall), force its sync row back to
+ * 'pending' even if a stale 'done' row survived. This guarantees a reinstall
+ * always re-syncs instead of showing an empty dashboard.
  */
 function enqueueFullSync(string $shop): void
 {
     ensureGlobalAppSchema();
     $mysqli = db();
+    $shopName = makeShopName($shop);
+
+    // Resource -> per-store data table whose presence proves the data exists.
+    $resourceTable = [
+        'orders'    => perStoreTableName($shopName, 'order'),
+        'customers' => perStoreTableName($shopName, 'customer'),
+        'products'  => perStoreTableName($shopName, 'products_inventory'),
+    ];
 
     foreach (['orders', 'customers', 'products'] as $resource) {
-        $stmt = $mysqli->prepare(
-            "INSERT INTO store_sync_state (shop, resource, next_page_info, status, last_error)
-             VALUES (?, ?, NULL, 'pending', NULL)
-             ON DUPLICATE KEY UPDATE status = IF(status='done','done','pending'), last_error = NULL"
-        );
+        // Detect a dropped data table → underlying data is gone, so a stale
+        // 'done' row must not block re-syncing.
+        $forcePending = false;
+        $table = (string)($resourceTable[$resource] ?? '');
+        if ($table !== '' && preg_match('/^[a-z0-9_]{1,64}$/', $table) === 1) {
+            $safe = $mysqli->real_escape_string($table);
+            $exists = $mysqli->query("SHOW TABLES LIKE '{$safe}'");
+            if (!$exists || $exists->num_rows < 1) {
+                $forcePending = true;
+            }
+        }
+
+        if ($forcePending) {
+            $stmt = $mysqli->prepare(
+                "INSERT INTO store_sync_state (shop, resource, next_page_info, status, last_error)
+                 VALUES (?, ?, NULL, 'pending', NULL)
+                 ON DUPLICATE KEY UPDATE status = 'pending', next_page_info = NULL, last_error = NULL"
+            );
+        } else {
+            $stmt = $mysqli->prepare(
+                "INSERT INTO store_sync_state (shop, resource, next_page_info, status, last_error)
+                 VALUES (?, ?, NULL, 'pending', NULL)
+                 ON DUPLICATE KEY UPDATE status = IF(status='done','done','pending'), last_error = NULL"
+            );
+        }
         if ($stmt) {
             $stmt->bind_param('ss', $shop, $resource);
             $stmt->execute();

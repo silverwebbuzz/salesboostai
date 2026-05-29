@@ -13,21 +13,10 @@ webhookLog(['event' => 'incoming_webhook', 'topic' => $topic, 'shop' => $shop, '
 try {
     $mysqli = db();
 
-    // Remove queue entries first.
-    $stmt = $mysqli->prepare("DELETE FROM webhook_events WHERE shop=?");
-    if ($stmt) {
-        $stmt->bind_param('s', $shop);
-        $stmt->execute();
-        $stmt->close();
-    }
-
-    // Remove subscription / store.
-    $stmt = $mysqli->prepare("DELETE FROM store_subscription WHERE shop=?");
-    if ($stmt) {
-        $stmt->bind_param('s', $shop);
-        $stmt->execute();
-        $stmt->close();
-    }
+    // GDPR shop/redact: erase every store-scoped artifact. purgeStoreData()
+    // removes sync progress, subscription, webhook queue, and all per-store
+    // data tables; we then remove the stores row itself.
+    purgeStoreData($shop);
 
     $stmt = $mysqli->prepare("DELETE FROM stores WHERE shop=?");
     if ($stmt) {
@@ -36,19 +25,7 @@ try {
         $stmt->close();
     }
 
-    // Remove per-store tables.
-    $shopName = makeShopName($shop);
-    $tables = [
-        perStoreTableName($shopName, 'order'),
-        perStoreTableName($shopName, 'customer'),
-        perStoreTableName($shopName, 'products_inventory'),
-        perStoreTableName($shopName, 'analytics'),
-    ];
-    foreach ($tables as $table) {
-        if (preg_match('/^[a-z0-9_]{1,64}$/', $table) === 1) {
-            $mysqli->query("DROP TABLE IF EXISTS `{$table}`");
-        }
-    }
+    webhookLog(['event' => 'shop_redact_cleanup_done', 'shop' => $shop]);
 } catch (Throwable $e) {
     webhookLog(['event' => 'shop_redact_processing_error', 'shop' => $shop, 'error' => $e->getMessage()]);
 }
