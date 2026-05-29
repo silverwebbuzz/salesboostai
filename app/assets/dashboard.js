@@ -154,10 +154,17 @@ async function runSyncNow(isAutoPoll) {
       { method: 'POST', headers: { Accept: 'application/json' } }
     );
 
-    // Handle auth failure gracefully — token may not be ready yet on first load
+    // Handle auth failure gracefully — the App Bridge session token may not be
+    // ready on the very first load after (re)install. Do NOT give up: schedule
+    // an automatic retry with a short backoff so the sync always proceeds once
+    // the token becomes available, instead of leaving the dashboard stuck.
     if (res.status === 401) {
-      if (!isAutoPoll) {
-        setText('sbSyncGateHint', 'Authentication not ready. Please wait a moment and try again.');
+      _syncPollCount++;
+      if (_syncPollCount <= _syncPollMax) {
+        setText('sbSyncGateHint', 'Preparing secure connection… import will start automatically.');
+        setTimeout(() => runSyncNow(true), 2000);
+      } else {
+        setText('sbSyncGateHint', 'Authentication not ready. Please click "Sync Now" to try again.');
       }
       return;
     }
